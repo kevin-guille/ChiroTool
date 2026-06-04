@@ -8,6 +8,7 @@ keyring>=24.0        ; sys_platform == "win32"   # stockage token Windows
 # --- Interface graphique ---
 customtkinter>=5.2   # UI moderne (dark/light)
 tkintermapview>=1.29 # carte OSM dans Tkinter
+Pillow>=10.0         # rendu/export PNG des graphes d'activité
 
 # --- Développement / packaging (optionnel) ---
 # pyinstaller>=6.0     # création du .exe portable
