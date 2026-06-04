@@ -1,0 +1,24 @@
+[package]
+name = "chirotool_fast"
+version = "0.1.0"
+edition = "2021"
+authors = ["ChiroTool contributors"]
+description = "Rust-accelerated hot paths for ChiroTool (TE×10, scan)"
+license = "MIT"
+
+[lib]
+name = "chirotool_fast"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { version = "0.22", features = ["extension-module"] }
+rayon = "1.10"
+memmap2 = "0.9"
+
+# Profils de build optimisés (vitesse de run, pas de compile)
+[profile.release]
+lto = "fat"
+codegen-units = 1
+opt-level = 3
+strip = true
+panic = "abort"

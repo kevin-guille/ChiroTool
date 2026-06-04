@@ -1,0 +1,15 @@
+# Dépendances ChiroTool
+
+# --- Moteur CLI ---
+openpyxl>=3.1        # lecture/écriture xlsx (Suivi, observations)
+requests>=2.31       # API Vigie-Chiro + Nominatim
+keyring>=24.0        ; sys_platform == "win32"   # stockage token Windows
+
+# --- Interface graphique ---
+customtkinter>=5.2   # UI moderne (dark/light)
+tkintermapview>=1.29 # carte OSM dans Tkinter
+
+# --- Développement / packaging (optionnel) ---
+# pyinstaller>=6.0     # création du .exe portable
+# python-docx>=1.1     # lecture .docx (déjà installé pour tuto)
+# python-pptx>=0.6     # lecture .pptx (supports)

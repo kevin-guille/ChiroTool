@@ -1,0 +1,17 @@
+[build-system]
+requires = ["maturin>=1.5"]
+build-backend = "maturin"
+
+[project]
+name = "chirotool_fast"
+version = "0.1.0"
+description = "Rust-accelerated hot paths for ChiroTool"
+requires-python = ">=3.10"
+classifiers = [
+    "Programming Language :: Rust",
+    "Programming Language :: Python :: Implementation :: CPython",
+]
+
+[tool.maturin]
+module-name = "chirotool_fast"
+features = ["pyo3/extension-module"]

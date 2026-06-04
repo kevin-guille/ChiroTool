@@ -1,0 +1,9 @@
+# Normalise les fins de ligne : LF dans le dépôt, natif au checkout
+* text=auto
+
+# Fichiers binaires (jamais de conversion de fin de ligne)
+*.png binary
+*.ico binary
+*.pdf binary
+*.wav binary
+*.xlsx binary

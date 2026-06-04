@@ -1,0 +1,60 @@
+# ChiroTool — fichiers à ne pas versionner
+
+# Build PyInstaller
+build/
+dist/
+*.spec.bak
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+
+# Extension Rust (artefacts de build)
+rust_ext/target/
+rust_ext/*.so
+rust_ext/*.pyd
+
+# Données utilisateur / test (jamais versionnées)
+test_output/
+scan_report.json
+*.session_manifest.json
+_campaign_log.jsonl
+_chirotool/
+registry.db
+registry.db-*
+*.backup_*
+
+# Données sensibles
+credentials.json
+materiels.json
+chirotool_materiels_*.json
+*_export*.csv
+*_observations*.xlsx
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Éditeurs
+.vscode/
+.idea/
+*.swp
+
+# Build distribuable
+*.exe
+*.spec
+
+# Publication : outils d'anonymisation des captures
+# (contiennent des fragments de noms de clients réels — NE PAS publier)
+docs/captures/anonymize.py
+docs/captures/do_anonymize.py
+docs/captures/*.orig.png
+docs/captures/*.heic
+docs/captures/*.heif
+
+# Logs
+*.log
