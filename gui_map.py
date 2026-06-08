@@ -145,6 +145,7 @@ class MapPanel(ctk.CTkFrame):
         self._current_focus: str | None = None
         self._add_point_mode = False
         self._add_point_marker = None
+        self._carre_preview_markers: list = []   # points du carré résolu (aperçu)
         # Registre optionnel pour colorer les markers selon l'état des sites.
         # Alimenté via set_registry() par gui_app au changement de workspace.
         self._registry = None
@@ -1603,6 +1604,8 @@ class MapPanel(ctk.CTkFrame):
             except Exception:
                 pass
             self._add_point_marker = None
+        # Retirer l'aperçu des points du carré
+        self._clear_carre_points()
         # Retire le handler en forçant un set (tkintermapview n'expose pas de
         # remove, mais un nouveau add écrase les précédents)
         try:
@@ -1616,6 +1619,8 @@ class MapPanel(ctk.CTkFrame):
             lat, lon = float(coords[0]), float(coords[1])
         except Exception:
             return
+        # Nouveau clic : on retire l'aperçu de points du carré précédent
+        self._clear_carre_points()
         # Marker temporaire (point rouge pour distinguer)
         if self._add_point_marker:
             try:
@@ -1663,6 +1668,41 @@ class MapPanel(ctk.CTkFrame):
             ],
         }
 
+    def _draw_carre_points(self, points: list, is_mine):
+        """Dessine sur la carte les points existants du carré résolu (aperçu).
+
+        Permet de VOIR un éventuel point proche à réutiliser, y compris ceux des
+        autres observateurs (non chargés par défaut car la carte n'affiche que
+        tes propres sites). Couleur verte si à toi, orange sinon.
+        """
+        self._clear_carre_points()
+        if is_mine:
+            circle, outside, txt = "#2ea043", "#1b6828", "#1b6828"
+        else:
+            circle, outside, txt = "#e8a23a", "#7a5a24", "#7a5a24"
+        for p in points or []:
+            if p.get("lat") is None or p.get("lon") is None:
+                continue
+            try:
+                m = self.map.set_marker(
+                    float(p["lat"]), float(p["lon"]),
+                    text=p.get("nom") or "?",
+                    marker_color_circle=circle,
+                    marker_color_outside=outside,
+                    text_color=txt,
+                )
+                self._carre_preview_markers.append(m)
+            except Exception:
+                pass
+
+    def _clear_carre_points(self):
+        for m in self._carre_preview_markers:
+            try:
+                m.delete()
+            except Exception:
+                pass
+        self._carre_preview_markers = []
+
     def _open_add_wizard(self, lat: float, lon: float, target: dict):
         from gui_site_wizard import AddPointWizard
         wiz = AddPointWizard(
@@ -1696,6 +1736,8 @@ class MapPanel(ctk.CTkFrame):
 
         if res.get("exists"):
             target = self._build_target_site(res["site"], res["points"], numero)
+            # Aperçu visuel : dessine les points du carré (dont ceux des autres)
+            self._draw_carre_points(res["points"], res.get("is_mine"))
             if not res.get("is_mine"):
                 owner = res.get("owner") or "un autre observateur"
                 messagebox.showinfo(

@@ -64,20 +64,23 @@ class AddPointWizard(ctk.CTkToplevel):
         self.on_confirm = on_confirm
         self.target_site = target_site
 
+        self._show_all_carre_points = target_site is not None
         if target_site is not None:
             # Mode "carré résolu par localisation" : on cible UN site précis
             # (le carré de la cellule cliquée, même appartenant à un autre
             # observateur, éventuellement vide). On bypass le filtrage.
             self.sites = [target_site]
             self._min_distances = {target_site["id"]: 0.0}
+            # On liste TOUS les points du carré (triés par distance), pas
+            # seulement ceux < 50 m : l'utilisateur doit voir l'existant pour
+            # décider de réutiliser ou créer.
             self.nearby_points = []
             for pt in target_site.get("points", []) or []:
                 try:
                     d = haversine_m(lat, lon, pt["lat"], pt["lon"])
                 except Exception:
                     continue
-                if d <= NEARBY_THRESHOLD_M:
-                    self.nearby_points.append((d, target_site, pt))
+                self.nearby_points.append((d, target_site, pt))
             self.nearby_points.sort(key=lambda x: x[0])
             self._nearest_site_idx = 0
         else:
@@ -414,19 +417,29 @@ class AddPointWizard(ctk.CTkToplevel):
         )
         banner.grid_columnconfigure(0, weight=1)
 
+        if getattr(self, "_show_all_carre_points", False):
+            title_txt = "📍  Points déjà présents sur ce carré"
+            intro_txt = ("Ce carré contient déjà les points ci-dessous (triés du "
+                         "plus proche au plus loin du clic). Si l'un d'eux est au "
+                         "même endroit que ton point, réutilise-le (recommandé "
+                         "pour un suivi long-terme) ; sinon, crée un nouveau "
+                         "point dans le formulaire.")
+        else:
+            title_txt = "📍  Points existants à proximité"
+            intro_txt = (f"Un ou plusieurs points existent à moins de "
+                         f"{NEARBY_THRESHOLD_M} m de l'endroit cliqué. Pour un "
+                         f"suivi long-terme, il est recommandé de réutiliser un "
+                         f"point existant plutôt que d'en créer un nouveau.")
+
         ctk.CTkLabel(
-            banner, text="📍  Points existants à proximité",
+            banner, text=title_txt,
             font=ctk.CTkFont(size=13, weight="bold"),
             text_color=("#7a4a00", "#e8a23a"),
             anchor="w",
         ).grid(row=0, column=0, sticky="ew", padx=12, pady=(10, 2))
 
         ctk.CTkLabel(
-            banner,
-            text=(f"Un ou plusieurs points existent à moins de "
-                  f"{NEARBY_THRESHOLD_M} m de l'endroit cliqué. Pour un suivi "
-                  f"long-terme, il est recommandé de réutiliser un point "
-                  f"existant plutôt que d'en créer un nouveau."),
+            banner, text=intro_txt,
             font=ctk.CTkFont(size=11),
             text_color=("gray25", "gray75"),
             justify="left", anchor="w", wraplength=640,
