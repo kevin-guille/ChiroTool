@@ -26,9 +26,11 @@ import customtkinter as ctk
 from version import (
     AUTHOR_LINKEDIN, AUTHOR_NAME,
     EMPLOYER_LINKEDIN, EMPLOYER_NAME, EMPLOYER_URL,
-    GITHUB_ISSUES_URL, GITHUB_RELEASES_API, GITHUB_REPO_URL,
+    GITHUB_ISSUES_URL, GITHUB_RELEASES_API, GITHUB_RELEASES_PAGE,
+    GITHUB_REPO_URL,
     LICENSE_NAME, LICENSE_URL,
     PROTOCOL_NAME, PROTOCOL_URL,
+    is_newer,
     __build_date__, __version__,
 )
 
@@ -275,9 +277,9 @@ class AboutDialog(ctk.CTkToplevel):
     def _on_check_updates(self):
         """Vérifie sur GitHub Releases s'il existe une version plus récente.
 
-        Stub fonctionnel : le repo n'existe pas encore au moment où on écrit
-        ce code. Quand il sera publié, la méthode marchera telle quelle.
-        En attendant, retombe sur "impossible de vérifier" silencieusement.
+        Interroge la LISTE des releases (pour inclure les pre-releases) et
+        compare la plus récente avec ``__version__`` via une vraie comparaison
+        de version (``version.is_newer``), pas une simple égalité de chaînes.
         """
         self.update_btn.configure(state="disabled", text="⏳  Vérification…")
         self.update_status.configure(text="")
@@ -286,39 +288,54 @@ class AboutDialog(ctk.CTkToplevel):
             try:
                 import requests
                 r = requests.get(GITHUB_RELEASES_API, timeout=8,
+                                  params={"per_page": 20},
                                   headers={"Accept": "application/vnd.github+json"})
                 if r.status_code == 404:
                     self.after(0, lambda: self._show_update_result(
-                        "Le dépôt GitHub n'est pas encore public — "
-                        "vérification indisponible pour cette version de test.",
+                        "Dépôt ou releases introuvables (réseau / dépôt privé ?).",
                         is_error=False))
                     return
                 r.raise_for_status()
-                data = r.json()
-                latest_tag = data.get("tag_name") or ""
-                # Compare en ignorant le préfixe "v" éventuel
-                latest_clean = latest_tag.lstrip("v")
-                current_clean = __version__.lstrip("v")
-                if latest_clean and latest_clean != current_clean:
-                    url = data.get("html_url") or GITHUB_REPO_URL
-                    msg = (f"✨  Nouvelle version disponible : {latest_tag}\n"
-                           f"   (tu utilises {__version__})\n\n"
-                           "Ouvre la page de release pour télécharger.")
-                    if messagebox.askyesno("Mise à jour disponible",
-                                             msg + "\n\nOuvrir la page ?",
-                                             parent=self):
-                        self._safe_open(url)
+                releases = r.json() or []
+                # Ne garde que les releases publiées (pas les brouillons).
+                # Les pre-releases SONT prises en compte (phase de test).
+                candidates = [rel for rel in releases if not rel.get("draft")]
+                if not candidates:
                     self.after(0, lambda: self._show_update_result(
-                        f"✨ Version {latest_tag} disponible", is_error=False))
+                        "Aucune release publiée pour le moment.", is_error=False))
+                    return
+                # Release au tag de version le plus élevé.
+                def _key(rel):
+                    from version import parse_version
+                    return parse_version(rel.get("tag_name") or "")
+                latest = max(candidates, key=_key)
+                latest_tag = latest.get("tag_name") or ""
+                pre = "  (pre-release)" if latest.get("prerelease") else ""
+
+                if is_newer(latest_tag, __version__):
+                    url = latest.get("html_url") or GITHUB_RELEASES_PAGE
+                    self.after(0, lambda: self._prompt_update(
+                        latest_tag, pre, url))
                 else:
                     self.after(0, lambda: self._show_update_result(
-                        f"✓ Tu utilises la dernière version ({__version__})",
+                        f"✓ Tu es à jour (version {__version__} ; "
+                        f"dernière publiée : {latest_tag or '—'})",
                         is_error=False))
             except Exception as e:
                 self.after(0, lambda: self._show_update_result(
                     f"Vérification impossible : {e}", is_error=True))
 
         threading.Thread(target=_worker, daemon=True).start()
+
+    def _prompt_update(self, latest_tag: str, pre: str, url: str):
+        """Propose (sur le thread UI) d'ouvrir la page de la nouvelle version."""
+        msg = (f"✨  Nouvelle version disponible : {latest_tag}{pre}\n"
+               f"     (tu utilises {__version__})\n\n"
+               "Ouvrir la page de release pour télécharger ?")
+        if messagebox.askyesno("Mise à jour disponible", msg, parent=self):
+            self._safe_open(url)
+        self._show_update_result(
+            f"✨ Version {latest_tag} disponible", is_error=False)
 
     def _show_update_result(self, msg: str, *, is_error: bool):
         try:
