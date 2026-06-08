@@ -456,6 +456,138 @@ class VigieChiroClient:
         d = self._request("GET", f"/sites/{site_id}")
         return Site.from_api(d)
 
+    def get_site_raw(self, site_id: str) -> dict:
+        """Dict brut du site (localités complètes, _etag, observateur)."""
+        return self._request("GET", f"/sites/{site_id}")
+
+    # -- grille STOC + carrés (création / résolution) -----------------------
+
+    # Protocole Point Fixe (id observé en base ; vérifié au runtime via lookup).
+    _POINT_FIXE_PROTOCOLE_ID = "54bd090f1d41c8103bad6252"
+
+    def point_fixe_protocole_id(self) -> str:
+        """Id du protocole Point Fixe (lookup + cache, fallback constante)."""
+        cached = getattr(self, "_pf_proto_cache", None)
+        if cached:
+            return cached
+        pid = self._POINT_FIXE_PROTOCOLE_ID
+        try:
+            for p in self.list_protocoles():
+                if (p.get("type_site") == "POINT_FIXE"
+                        or "point fixe" in (p.get("titre") or "").lower()):
+                    pid = p.get("_id") or pid
+                    break
+        except ApiError:
+            pass
+        self._pf_proto_cache = pid
+        return pid
+
+    def resolve_grille(self, lat: float, lon: float, *,
+                       radius_m: float = 1500.0,
+                       max_radius_m: float = 8000.0) -> list[dict]:
+        """Cellules de la grille STOC proches d'un point (GET /grille_stoc/cercle).
+
+        Retourne une liste triée par distance ::
+
+            [{'_id', 'numero', 'lat', 'lon', 'distance_m'}, ...]
+
+        Le rayon est élargi progressivement tant que rien n'est trouvé.
+        Le centre de la grille est en GeoJSON standard [lon, lat].
+        """
+        import math
+
+        def _haversine(la1, lo1, la2, lo2):
+            R = 6371000.0
+            p1, p2 = math.radians(la1), math.radians(la2)
+            dp, dl = math.radians(la2 - la1), math.radians(lo2 - lo1)
+            a = (math.sin(dp / 2) ** 2
+                 + math.cos(p1) * math.cos(p2) * math.sin(dl / 2) ** 2)
+            return 2 * R * math.asin(math.sqrt(a))
+
+        r = radius_m
+        while r <= max_radius_m:
+            data = self._request("GET", "/grille_stoc/cercle",
+                                  params={"lng": lon, "lat": lat, "r": r})
+            items = (data.get("_items") or []) if isinstance(data, dict) else []
+            if items:
+                out = []
+                for it in items:
+                    c = (it.get("centre") or {}).get("coordinates")
+                    if not c or len(c) < 2:
+                        continue
+                    clon, clat = float(c[0]), float(c[1])
+                    out.append({
+                        "_id": it.get("_id"),
+                        "numero": it.get("numero"),
+                        "lat": clat, "lon": clon,
+                        "distance_m": _haversine(lat, lon, clat, clon),
+                    })
+                out.sort(key=lambda x: x["distance_m"])
+                if out:
+                    return out
+            r *= 2
+        return []
+
+    def find_pointfixe_site_by_grille(self, grille_id: str) -> dict | None:
+        """Site Point Fixe rattaché à cette cellule de grille, ou None.
+
+        Utilise les paramètres dédiés de /sites (``grille_stoc`` + ``protocole``).
+        """
+        params = {"grille_stoc": grille_id,
+                  "protocole": self.point_fixe_protocole_id()}
+        for site in self.iter_sites(params=params, page_size=10):
+            return site
+        return None
+
+    def resolve_carre(self, lat: float, lon: float) -> dict:
+        """Tout ce qu'il faut pour décider d'ajouter un point à un endroit.
+
+        Retourne ::
+
+            {'grille': {numero, _id, distance_m, ...} | None,
+             'site': <dict brut du site> | None,
+             'exists': bool,
+             'is_mine': bool,
+             'owner': <nom observateur ou ''>,
+             'points': [{nom, lat, lon, representatif}, ...]}
+
+        Lecture seule. Ne crée rien.
+        """
+        cells = self.resolve_grille(lat, lon)
+        grille = cells[0] if cells else None
+        result = {"grille": grille, "site": None, "exists": False,
+                  "is_mine": False, "owner": "", "points": []}
+        if not grille:
+            return result
+        site = self.find_pointfixe_site_by_grille(grille["_id"])
+        if not site:
+            return result
+        # Recharge le site complet (localités + etag + observateur détaillé)
+        full = self.get_site_raw(site.get("_id"))
+        result["site"] = full
+        result["exists"] = True
+        obs = full.get("observateur")
+        obs_id = obs.get("_id") if isinstance(obs, dict) else obs
+        result["owner"] = obs.get("pseudo") if isinstance(obs, dict) else ""
+        try:
+            result["is_mine"] = bool(obs_id) and obs_id == self.me().get("_id")
+        except ApiError:
+            result["is_mine"] = False
+        pts = []
+        for loc in full.get("localites") or []:
+            coord = None
+            for g in (loc.get("geometries") or {}).get("geometries", []):
+                if g.get("type") == "Point" and len(g.get("coordinates") or []) >= 2:
+                    c = g["coordinates"]   # Vigie-Chiro : [lat, lon] (non-standard)
+                    coord = (float(c[0]), float(c[1]))
+                    break
+            pts.append({"nom": loc.get("nom"),
+                        "lat": coord[0] if coord else None,
+                        "lon": coord[1] if coord else None,
+                        "representatif": loc.get("representatif")})
+        result["points"] = pts
+        return result
+
     # -- protocoles ---------------------------------------------------------
 
     def list_protocoles(self, mine_only: bool = False) -> list[dict]:
@@ -786,6 +918,25 @@ class VigieChiroClient:
         existing.append(new_loc)
         etag = site.get("_etag")
         return self.update_site_localites(site_id, existing, etag=etag)
+
+    def create_pointfixe_site(self, grille_id: str,
+                              *, commentaire: str | None = None) -> dict:
+        """POST /sites — crée le carré Point Fixe rattaché à cette cellule.
+
+        Le serveur génère automatiquement le titre (« Vigiechiro - Point
+        Fixe-<numero> ») et fixe l'observateur (= utilisateur courant). On
+        n'envoie donc que ``protocole`` + ``grille_stoc``.
+
+        ATTENTION : écriture dans la base nationale, irréversible côté
+        Observateur (suppression réservée aux administrateurs). L'appelant
+        DOIT avoir confirmé avec l'utilisateur, et vérifié que le carré
+        n'existe pas déjà (titre unique → un doublon serait refusé).
+        """
+        payload = {"protocole": self.point_fixe_protocole_id(),
+                   "grille_stoc": grille_id}
+        if commentaire:
+            payload["commentaire"] = commentaire
+        return self._request("POST", "/sites", json=payload, source="foreground")
 
     # -- WRITE : création / upload (v1c) -----------------------------------
 
@@ -1154,6 +1305,12 @@ def main() -> int:
     sub.add_parser("delete-token", help="efface le token du stockage sécurisé")
     sub.add_parser("storage", help="affiche le backend de stockage utilisé")
 
+    p_carre = sub.add_parser(
+        "resolve-carre",
+        help="résout le carré Point Fixe d'un point GPS (lecture seule)")
+    p_carre.add_argument("lat", type=float)
+    p_carre.add_argument("lon", type=float)
+
     args = ap.parse_args()
 
     # Commandes qui ne nécessitent pas de client
@@ -1204,6 +1361,22 @@ def main() -> int:
             s = client.get_site(args.id)
             import json as _json
             print(_json.dumps(s.raw, indent=2, ensure_ascii=False, default=str))
+            return 0
+
+        if args.cmd == "resolve-carre":
+            r = client.resolve_carre(args.lat, args.lon)
+            g = r["grille"]
+            if not g:
+                print("Aucune cellule de grille STOC à cet endroit.")
+                return 0
+            print(f"Carré n°{g['numero']}  (centre à {g['distance_m']:.0f} m du point)")
+            if r["exists"]:
+                print(f"  → existe déjà · propriétaire : {r['owner'] or '?'} "
+                      f"· à toi : {r['is_mine']}")
+                pts = ", ".join(p["nom"] for p in r["points"]) or "(aucun)"
+                print(f"  → {len(r['points'])} point(s) : {pts}")
+            else:
+                print("  → n'existe pas encore (créable)")
             return 0
 
         if args.cmd == "protocoles":

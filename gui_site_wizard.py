@@ -51,7 +51,8 @@ class AddPointWizard(ctk.CTkToplevel):
     """Wizard modal pour l'ajout d'un point."""
 
     def __init__(self, master, *, lat: float, lon: float,
-                 sites: list[dict], on_confirm):
+                 sites: list[dict], on_confirm,
+                 target_site: dict | None = None):
         super().__init__(master)
         self.title("Ajouter un point")
         self.geometry("560x480")
@@ -61,40 +62,54 @@ class AddPointWizard(ctk.CTkToplevel):
         self.lon = lon
         self.all_sites = sites
         self.on_confirm = on_confirm
+        self.target_site = target_site
 
-        # Filtrage : on ne garde que les sites dont au moins un point est
-        # à distance raisonnable du clic (= sites potentiellement sur le même
-        # carré STOC 2×2 km).
-        relevant: list[tuple[float, dict]] = []
-        for site in sites:
-            if not site.get("points"):
-                continue
-            min_d = min(
-                (haversine_m(lat, lon, pt["lat"], pt["lon"])
-                 for pt in site.get("points", [])),
-                default=float("inf"),
-            )
-            if min_d <= SITE_COVERAGE_THRESHOLD_M:
-                relevant.append((min_d, site))
-        relevant.sort(key=lambda x: x[0])
-        # Liste des sites pertinents (l'ancien `self.sites` est gardé pour compat)
-        self.sites = [s for _d, s in relevant]
-        self._min_distances = {s["id"]: d for d, s in relevant}
-
-        # Détection des points à proximité dans tous les sites pertinents
-        self.nearby_points: list[tuple[float, dict, dict]] = []
-        for site in self.sites:
-            for pt in site.get("points", []):
+        if target_site is not None:
+            # Mode "carré résolu par localisation" : on cible UN site précis
+            # (le carré de la cellule cliquée, même appartenant à un autre
+            # observateur, éventuellement vide). On bypass le filtrage.
+            self.sites = [target_site]
+            self._min_distances = {target_site["id"]: 0.0}
+            self.nearby_points = []
+            for pt in target_site.get("points", []) or []:
                 try:
                     d = haversine_m(lat, lon, pt["lat"], pt["lon"])
                 except Exception:
                     continue
                 if d <= NEARBY_THRESHOLD_M:
-                    self.nearby_points.append((d, site, pt))
-        self.nearby_points.sort(key=lambda x: x[0])
+                    self.nearby_points.append((d, target_site, pt))
+            self.nearby_points.sort(key=lambda x: x[0])
+            self._nearest_site_idx = 0
+        else:
+            # Filtrage : on ne garde que les sites dont au moins un point est
+            # à distance raisonnable du clic (= sites potentiellement sur le
+            # même carré STOC 2×2 km).
+            relevant: list[tuple[float, dict]] = []
+            for site in sites:
+                if not site.get("points"):
+                    continue
+                min_d = min(
+                    (haversine_m(lat, lon, pt["lat"], pt["lon"])
+                     for pt in site.get("points", [])),
+                    default=float("inf"),
+                )
+                if min_d <= SITE_COVERAGE_THRESHOLD_M:
+                    relevant.append((min_d, site))
+            relevant.sort(key=lambda x: x[0])
+            self.sites = [s for _d, s in relevant]
+            self._min_distances = {s["id"]: d for d, s in relevant}
 
-        # Pré-sélection : site le plus proche parmi les pertinents
-        self._nearest_site_idx = 0 if self.sites else None
+            self.nearby_points = []
+            for site in self.sites:
+                for pt in site.get("points", []):
+                    try:
+                        d = haversine_m(lat, lon, pt["lat"], pt["lon"])
+                    except Exception:
+                        continue
+                    if d <= NEARBY_THRESHOLD_M:
+                        self.nearby_points.append((d, site, pt))
+            self.nearby_points.sort(key=lambda x: x[0])
+            self._nearest_site_idx = 0 if self.sites else None
 
         self.transient(master)
         self.after(50, self.grab_set)

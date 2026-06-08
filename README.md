@@ -38,6 +38,10 @@ toute la chaîne dans une **seule application locale et portable**.
 - 🧹 **Nettoyage par seuils de confiance** (par groupe : chiros, orthos, micromam, oiseaux)
 - 📋 **Registre de suivi de campagne** multi-sites (SQLite, export CSV/xlsx)
 - 📊 **Graphes d'activité**, **carte des points** (OSM), ouverture des sons dans **ChiroSurf**
+- 🗺️ **Gestion des carrés depuis la carte** : au clic, résolution de la cellule de
+  grille STOC → **création du carré** s'il n'existe pas, ou ajout/réutilisation
+  d'un point sur un carré existant (même appartenant à un autre observateur — on
+  reste propriétaire de sa nuit)
 - ⚡ **Accélération Rust optionnelle** pour le TE×10 (fallback Python transparent)
 
 ![Interface ChiroTool](docs/captures/05-fenetre-principale.png)
@@ -77,6 +81,7 @@ python te10.py <session-ou-Data>                   # expansion temporelle
 python cleanup.py <session> --threshold-chiros 0.5 # nettoyage par seuils
 python pipeline.py <session> --advance --use-api   # pipeline complet (cloud)
 python registry.py scan <racine>                   # (re)peuple le registre
+python vigiechiro_api.py resolve-carre <lat> <lon> # carré STOC d'un point (lecture seule)
 ```
 
 ## Architecture

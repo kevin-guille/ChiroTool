@@ -1546,14 +1546,8 @@ class MapPanel(ctk.CTkFrame):
                 "Ouvrir les préférences pour en ajouter un ?"):
                 self.winfo_toplevel().event_generate("<<OpenPreferences>>")
             return
-        if not self._sites_cache:
-            from tkinter import messagebox
-            messagebox.showinfo(
-                "Sites non chargés",
-                "Charge d'abord tes sites (clic ⟳ Recharger sites) avant "
-                "d'ajouter un point."
-            )
-            return
+        # NB : on n'exige plus d'avoir déjà des sites à soi — le clic résout le
+        # carré via l'API (qu'il existe chez un autre observateur ou pas encore).
 
         self._add_point_mode = True
         self.add_point_btn.configure(
@@ -1635,17 +1629,127 @@ class MapPanel(ctk.CTkFrame):
             marker_color_outside="#961f17",
             text_color="#961f17",
         )
-        # Ouvrir le wizard modal
+        # Résolution asynchrone du carré (cellule grille STOC) AVANT d'ouvrir le
+        # wizard : trouve le carré quel qu'en soit le propriétaire, ou détecte
+        # qu'il faut le créer.
+        self.status_lbl.configure(
+            text="⏳ Résolution du carré (grille STOC)…",
+            text_color=("gray40", "gray70"),
+        )
+
+        def _worker():
+            res, err = None, None
+            try:
+                from vigiechiro_api import VigieChiroClient
+                client = VigieChiroClient(load_token())
+                res = client.resolve_carre(lat, lon)
+            except Exception as e:
+                err = str(e)
+            self.after(0, lambda: self._on_carre_resolved(lat, lon, res, err))
+
+        threading.Thread(target=_worker, daemon=True).start()
+
+    # -- Résolution / création de carré (nouveau flux v0.2) -----------------
+
+    def _build_target_site(self, raw_site: dict, points: list, numero) -> dict:
+        """Construit le dict 'site' attendu par AddPointWizard."""
+        return {
+            "id": raw_site.get("_id") or "",
+            "numero": str(numero).zfill(6) if numero else None,
+            "titre": raw_site.get("titre", ""),
+            "points": [
+                {"nom": p["nom"], "lat": p["lat"], "lon": p["lon"]}
+                for p in (points or []) if p.get("lat") is not None
+            ],
+        }
+
+    def _open_add_wizard(self, lat: float, lon: float, target: dict):
         from gui_site_wizard import AddPointWizard
         wiz = AddPointWizard(
             self.winfo_toplevel(),
             lat=lat, lon=lon,
             sites=self._sites_cache,
             on_confirm=self._on_add_point_confirmed,
+            target_site=target,
         )
         self.wait_window(wiz)
-        # Sortie du mode quelle que soit l'issue
         self._exit_add_point_mode()
+
+    def _on_carre_resolved(self, lat, lon, res, err):
+        from tkinter import messagebox
+        if err or res is None:
+            messagebox.showerror(
+                "Résolution impossible",
+                f"Impossible de déterminer le carré à cet endroit :\n{err}")
+            self._exit_add_point_mode()
+            return
+        grille = res.get("grille")
+        if not grille:
+            messagebox.showwarning(
+                "Hors grille STOC",
+                "Aucune cellule de la grille nationale STOC (2×2 km) à cet "
+                "endroit. Le protocole Point Fixe ne s'applique qu'au "
+                "territoire couvert par cette grille.")
+            self._exit_add_point_mode()
+            return
+        numero = grille.get("numero")
+
+        if res.get("exists"):
+            target = self._build_target_site(res["site"], res["points"], numero)
+            if not res.get("is_mine"):
+                owner = res.get("owner") or "un autre observateur"
+                messagebox.showinfo(
+                    "Carré déjà existant",
+                    f"Le carré n°{numero} existe déjà "
+                    f"(propriétaire : {owner}).\n\n"
+                    "Tu peux y ajouter ton propre point d'écoute, ou réutiliser "
+                    "un point existant s'il est au même endroit.\n\n"
+                    "→ Tu restes propriétaire de ta nuit d'enregistrement ; "
+                    "la paternité du carré n'est pas modifiée.")
+            self._open_add_wizard(lat, lon, target)
+            return
+
+        # Carré inexistant → proposer la création
+        if not messagebox.askyesno(
+                "Créer le carré ?",
+                f"Le carré n°{numero} n'existe pas encore sur Vigie-Chiro.\n\n"
+                "Le créer maintenant ? (tu en deviendras le propriétaire, et "
+                "tu pourras y placer tes points)\n\n"
+                "⚠️ Action définitive : un carré ne peut pas être supprimé par "
+                "un observateur (seul un administrateur le peut)."):
+            self._exit_add_point_mode()
+            return
+        self._create_carre_then_wizard(lat, lon, grille.get("_id"), numero)
+
+    def _create_carre_then_wizard(self, lat, lon, grille_id, numero):
+        self.status_lbl.configure(
+            text=f"⏳ Création du carré n°{numero}…",
+            text_color=("gray40", "gray70"))
+
+        def _worker():
+            new_site, err = None, None
+            try:
+                from vigiechiro_api import VigieChiroClient
+                new_site = VigieChiroClient(load_token()).create_pointfixe_site(grille_id)
+            except Exception as e:
+                err = str(e)
+            self.after(0, lambda: self._on_carre_created(lat, lon, new_site, numero, err))
+
+        threading.Thread(target=_worker, daemon=True).start()
+
+    def _on_carre_created(self, lat, lon, new_site, numero, err):
+        from tkinter import messagebox
+        if err or not new_site:
+            messagebox.showerror(
+                "Échec création du carré",
+                f"Le carré n°{numero} n'a pas pu être créé :\n{err}")
+            self._exit_add_point_mode()
+            return
+        self.status_lbl.configure(
+            text=f"✓ Carré n°{numero} créé",
+            text_color=("#2ea043", "#3fb950"))
+        target = self._build_target_site(new_site, [], numero)
+        self._open_add_wizard(lat, lon, target)
 
     def _on_add_point_confirmed(self, *, site_id: str, point_name: str,
                                   lat: float, lon: float,
