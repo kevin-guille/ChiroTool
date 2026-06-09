@@ -64,7 +64,11 @@ except ImportError:
 
 
 DEFAULT_BASE_URL = "https://vigiechiro.herokuapp.com/api/v1"
-USER_AGENT = "ChiroTool/0.1 (+https://github.com/local/chirotool)"
+try:
+    from version import GITHUB_REPO_URL as _REPO_URL, __version__ as _APP_VERSION
+except Exception:                       # exécution isolée du module
+    _APP_VERSION, _REPO_URL = "?", "https://github.com/kevin-guille/ChiroTool"
+USER_AGENT = f"ChiroTool/{_APP_VERSION} (+{_REPO_URL})"
 
 
 # ---------------------------------------------------------------------------
@@ -375,9 +379,14 @@ class VigieChiroClient:
 
     def me(self) -> dict:
         """
-        Retourne les informations de l'utilisateur courant.
+        Retourne les informations de l'utilisateur courant (mis en cache : le
+        profil ne change pas pendant la vie du client, et certains flux comme
+        resolve_carre l'appellent à répétition).
         Tente plusieurs chemins possibles (l'API n'expose pas toujours /moi).
         """
+        cached = getattr(self, "_me_cache", None)
+        if cached is not None:
+            return cached
         errs: list[str] = []
         for path in ("/moi", "/utilisateurs/moi", "/me", "/utilisateurs"):
             try:
@@ -389,8 +398,10 @@ class VigieChiroClient:
             if isinstance(data, dict) and data.get("_items"):
                 items = data["_items"]
                 if items:
+                    self._me_cache = items[0]
                     return items[0]
             if isinstance(data, dict) and "email" in data:
+                self._me_cache = data
                 return data
         raise ApiError(
             "aucune route 'moi' connue n'a répondu.\n"

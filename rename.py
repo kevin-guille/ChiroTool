@@ -70,7 +70,7 @@ from naming import (
 try:
     from version import __version__ as TOOL_VERSION
 except Exception:
-    TOOL_VERSION = "0.1-dev"
+    TOOL_VERSION = "?"          # version.py introuvable (improbable)
 
 
 # ---------------------------------------------------------------------------

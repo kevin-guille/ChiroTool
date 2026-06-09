@@ -52,7 +52,10 @@ from gui_wizard import open_wizard
 
 
 APP_TITLE = "ChiroTool"
-APP_VERSION = "0.1-dev"
+try:
+    from version import __version__ as APP_VERSION
+except Exception:                       # version.py absent (cas improbable)
+    APP_VERSION = "?"
 MIN_WIDTH = 1100
 MIN_HEIGHT = 700
 

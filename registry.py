@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import sqlite3
 import threading
@@ -26,6 +27,9 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Iterator
+
+# Numéro Tadarida en fin de titre de site (« Vigiechiro - Point Fixe-212097 »)
+_SITE_NUMBER_RE = re.compile(r"-(\d{5,6})\s*$")
 
 REGISTRY_FILENAME = "registry.db"
 # Sous-dossier interne au workspace : isole les fichiers techniques
@@ -1175,8 +1179,7 @@ class Registry:
                 numero = None
                 if isinstance(site_obj, dict):
                     titre = site_obj.get("titre") or ""
-                    import re
-                    m = re.search(r"-(\d{5,6})\s*$", titre)
+                    m = _SITE_NUMBER_RE.search(titre)
                     if m:
                         numero = m.group(1).zfill(6)
                     site_id_api = site_obj.get("_id")

@@ -1,6 +1,6 @@
 [package]
 name = "chirotool_fast"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 authors = ["ChiroTool contributors"]
 description = "Rust-accelerated hot paths for ChiroTool (TE×10, scan)"

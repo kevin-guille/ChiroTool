@@ -24,6 +24,11 @@ from pathlib import Path
 import markdown
 
 HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE.parent))            # accès à version.py
+try:
+    from version import __version__ as APP_VERSION
+except Exception:
+    APP_VERSION = "?"
 MD = HERE / "TUTORIEL.md"
 CAPTURES = HERE / "captures"
 OUT_HTML = HERE / "_tutoriel_render.html"
@@ -289,7 +294,7 @@ def build_html() -> str:
     <h1>ChiroTool</h1>
     <div class="sub">Le traitement de vos nuits chiroptères, automatisé de A à Z</div>
     <div class="proto">Outil libre pour le protocole Vigie-Chiro Point Fixe (MNHN)</div>
-    <div class="ver">Version 0.1 &middot; Tutoriel utilisateur</div>
+    <div class="ver">Version {APP_VERSION} &middot; Tutoriel utilisateur</div>
   </div>
   {body}
 </body>

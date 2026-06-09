@@ -1637,6 +1637,9 @@ class MapPanel(ctk.CTkFrame):
         # Résolution asynchrone du carré (cellule grille STOC) AVANT d'ouvrir le
         # wizard : trouve le carré quel qu'en soit le propriétaire, ou détecte
         # qu'il faut le créer.
+        if getattr(self, "_carre_resolving", False):
+            return          # une résolution est déjà en cours (anti double-clic)
+        self._carre_resolving = True
         self.status_lbl.configure(
             text="⏳ Résolution du carré (grille STOC)…",
             text_color=("gray40", "gray70"),
@@ -1650,6 +1653,8 @@ class MapPanel(ctk.CTkFrame):
                 res = client.resolve_carre(lat, lon)
             except Exception as e:
                 err = str(e)
+            finally:
+                self._carre_resolving = False
             self.after(0, lambda: self._on_carre_resolved(lat, lon, res, err))
 
         threading.Thread(target=_worker, daemon=True).start()

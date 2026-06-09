@@ -8,7 +8,7 @@
 
 ![Icône ChiroTool](captures/icon_256.png)
 
-**Version 0.1** · Tutoriel utilisateur
+**Version 0.2** · Tutoriel utilisateur
 
 </div>
 
@@ -493,7 +493,7 @@ ChiroTool couvre la grande majorité des cas, mais pas (encore) tout :
 - **Protocole & API** : [Vigie-Chiro / MNHN](https://www.vigienature.fr/fr/chauves-souris)
 - **Licence** : MIT (usage et contributions libres)
 
-> 🐙 Code source, bugs et contributions : *(lien GitHub à venir)*
+> 🐙 Code source, bugs et contributions : [github.com/kevin-guille/ChiroTool](https://github.com/kevin-guille/ChiroTool)
 
 ---
 

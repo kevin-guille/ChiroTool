@@ -7,8 +7,8 @@ Affiche :
   - Crédits : auteur, soutien Acer Campestre, protocole Vigie-Chiro/MNHN
   - Licence MIT
   - Liens : GitHub repo, issues, LinkedIn auteur
-  - Bouton « Vérifier les mises à jour » (stub pour l'instant — appelle
-    GitHub Releases API et propose la dernière version disponible)
+  - Bouton « Vérifier les mises à jour » (interroge GitHub Releases,
+    pre-releases incluses, et propose la dernière version disponible)
 
 Conçue pour être lisible (le futur utilisateur lambda doit comprendre d'un
 coup d'œil qui a fait quoi et où aller pour signaler un bug).
@@ -271,7 +271,7 @@ class AboutDialog(ctk.CTkToplevel):
             return None
 
     # =========================================================================
-    # Vérification des mises à jour (stub pour l'instant)
+    # Vérification des mises à jour (GitHub Releases)
     # =========================================================================
 
     def _on_check_updates(self):

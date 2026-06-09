@@ -13,7 +13,7 @@ Objectif de portabilité :
 
 Format d'une ligne (JSONL = une ligne = un objet JSON complet) :
   {"at": "2026-04-15T10:23:45",
-   "tool_version": "0.1",
+   "tool_version": "0.2",
    "session": "20250903_site212097_Z3_Pass2_enr07",
    "phase": "prep",          # prep | upload | wait | fetch | cleanup | suivi_write
    "action": "rename",
