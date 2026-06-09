@@ -120,7 +120,7 @@
     <h1>ChiroTool</h1>
     <div class="sub">Le traitement de vos nuits chiroptères, automatisé de A à Z</div>
     <div class="proto">Outil libre pour le protocole Vigie-Chiro Point Fixe (MNHN)</div>
-    <div class="ver">Version 0.1 &middot; Tutoriel utilisateur</div>
+    <div class="ver">Version 0.2 &middot; Tutoriel utilisateur</div>
   </div>
   <hr />
 <h2 id="sommaire">Sommaire</h2>
@@ -517,6 +517,27 @@ campagne</strong> (qui a fait quoi, où, combien de nuits restent).</p>
 <p>Le parc d'enregistreurs peut être <strong>exporté</strong> (📤) et <strong>importé</strong> (📥) entre
 postes, ou simplement déposé dans le dossier de travail commun pour un import
 automatique.</p>
+<h3 id="creer-un-carre-ou-rejoindre-celui-dun-autre-observateur">Créer un carré ou rejoindre celui d'un autre observateur</h3>
+<p>Depuis l'onglet <strong>Carte</strong>, cliquez sur <strong>« ➕ Ajouter un point »</strong> puis sur
+l'emplacement voulu. ChiroTool identifie automatiquement le <strong>carré</strong> (cellule
+de la grille nationale STOC 2×2 km) correspondant :</p>
+<ul>
+<li><strong>Le carré n'existe pas encore sur Vigie-Chiro ?</strong> ChiroTool propose de le
+  <strong>créer</strong> (vous en devenez le propriétaire). Plus besoin de passer par le
+  portail web.</li>
+<li><strong>Le carré existe déjà, même créé par un autre observateur ?</strong> Ses points
+  s'affichent sur la carte (🟢 les vôtres, 🟠 ceux des autres) et dans
+  l'assistant, triés du plus proche au plus loin. Vous pouvez <strong>réutiliser un
+  point existant</strong> (recommandé s'il est au même endroit, pour la continuité du
+  suivi) ou <strong>créer votre propre point</strong> sur ce carré.</li>
+</ul>
+<div class="callout tip">
+<p>💡 Rejoindre le carré d'un autre observateur ne change pas sa propriété :
+chacun reste <strong>propriétaire de ses nuits</strong> (participations). Les points déjà
+en place ne sont jamais modifiés ni écrasés.</p>
+<p>⚠ La création d'un carré est <strong>définitive</strong> (seul un administrateur
+Vigie-Chiro peut le supprimer) : vérifiez l'emplacement avant de confirmer.</p>
+</div>
 <hr />
 <h2 id="11-questions-frequentes-depannage">11 · Questions fréquentes &amp; dépannage</h2>
 <p><strong>« L'application affiche un avertissement Windows au lancement. »</strong>
@@ -549,10 +570,9 @@ diagnostiquer.</p>
 <ul>
 <li><strong>Fichiers compressés <code>.w4v</code> / <code>.wac</code></strong> : non décompressés (utilisez Kaleidoscope
   en amont).</li>
-<li><strong>Création d'un nouveau site (nouveau carré STOC)</strong> : non couverte — passez par
-  le portail web Vigie-Chiro. ChiroTool permet en revanche d'<strong>ajouter un point</strong>
-  à un site existant (via la carte).</li>
 <li><strong>Modifier une participation déjà créée</strong> (météo erronée…) : via le portail web.</li>
+<li><strong>Supprimer un carré créé par erreur</strong> : action réservée aux administrateurs
+  Vigie-Chiro (contactez l'équipe du programme).</li>
 </ul>
 <hr />
 <h2 id="13-credits-licence">13 · Crédits &amp; licence</h2>
@@ -567,7 +587,7 @@ diagnostiquer.</p>
 <li><strong>Licence</strong> : MIT (usage et contributions libres)</li>
 </ul>
 <div class="callout note">
-<p>🐙 Code source, bugs et contributions : <em>(lien GitHub à venir)</em></p>
+<p>🐙 Code source, bugs et contributions : <a href="https://github.com/kevin-guille/ChiroTool">github.com/kevin-guille/ChiroTool</a></p>
 </div>
 <div class="center-msg"><em>Vous avez des retours, des bugs, des idées ? N'hésitez pas à les remonter.</em> <em>ChiroTool grandit grâce aux utilisateurs de terrain.</em><br><strong>Bon traitement, et bonnes chauves-souris ! 🦇</strong></div>
 </body>

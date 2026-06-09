@@ -431,6 +431,28 @@ Le parc d'enregistreurs peut être **exporté** (📤) et **importé** (📥) en
 postes, ou simplement déposé dans le dossier de travail commun pour un import
 automatique.
 
+### Créer un carré ou rejoindre celui d'un autre observateur
+
+Depuis l'onglet **Carte**, cliquez sur **« ➕ Ajouter un point »** puis sur
+l'emplacement voulu. ChiroTool identifie automatiquement le **carré** (cellule
+de la grille nationale STOC 2×2 km) correspondant :
+
+- **Le carré n'existe pas encore sur Vigie-Chiro ?** ChiroTool propose de le
+  **créer** (vous en devenez le propriétaire). Plus besoin de passer par le
+  portail web.
+- **Le carré existe déjà, même créé par un autre observateur ?** Ses points
+  s'affichent sur la carte (🟢 les vôtres, 🟠 ceux des autres) et dans
+  l'assistant, triés du plus proche au plus loin. Vous pouvez **réutiliser un
+  point existant** (recommandé s'il est au même endroit, pour la continuité du
+  suivi) ou **créer votre propre point** sur ce carré.
+
+> 💡 Rejoindre le carré d'un autre observateur ne change pas sa propriété :
+> chacun reste **propriétaire de ses nuits** (participations). Les points déjà
+> en place ne sont jamais modifiés ni écrasés.
+
+> ⚠ La création d'un carré est **définitive** (seul un administrateur
+> Vigie-Chiro peut le supprimer) : vérifiez l'emplacement avant de confirmer.
+
 ---
 
 ## 11 · Questions fréquentes & dépannage
@@ -474,10 +496,9 @@ ChiroTool couvre la grande majorité des cas, mais pas (encore) tout :
 
 - **Fichiers compressés `.w4v` / `.wac`** : non décompressés (utilisez Kaleidoscope
   en amont).
-- **Création d'un nouveau site (nouveau carré STOC)** : non couverte — passez par
-  le portail web Vigie-Chiro. ChiroTool permet en revanche d'**ajouter un point**
-  à un site existant (via la carte).
 - **Modifier une participation déjà créée** (météo erronée…) : via le portail web.
+- **Supprimer un carré créé par erreur** : action réservée aux administrateurs
+  Vigie-Chiro (contactez l'équipe du programme).
 
 ---
 
