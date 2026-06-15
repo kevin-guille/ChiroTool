@@ -379,14 +379,16 @@ def run_phase_upload(session: Path, meta: SessionMeta, dry_run: bool,
                                  "note": f"devra chercher site n°{meta.n_site_tadarida} via API"})
             return out
         client = VigieChiroClient(token)
-        match = None
-        for s in client.list_sites(mine_only=True):
-            if s.numero == meta.n_site_tadarida:
-                match = s
-                break
+        # Résolution globale : le carré peut appartenir à un AUTRE observateur
+        # (modèle v0.2 — on dépose sa nuit sur le carré d'autrui). On ne se
+        # limite donc plus à mine_only.
+        match = client.find_site_by_numero(meta.n_site_tadarida)
         if match is None:
             return {"phase": "upload",
-                    "error": f"aucun site Vigie-Chiro ne correspond au n° {meta.n_site_tadarida}"}
+                    "error": (f"aucun carré Vigie-Chiro ne correspond au "
+                              f"n° {meta.n_site_tadarida} (ni dans vos sites, "
+                              f"ni chez un autre observateur). Créez-le via "
+                              f"l'onglet Carte si besoin.")}
         site_id = match.id
         m.set_meta(vigiechiro_site_id=site_id)
         m.save(session)

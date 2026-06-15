@@ -550,6 +550,44 @@ class VigieChiroClient:
             return site
         return None
 
+    def find_site_by_numero(self, numero: str) -> Site | None:
+        """Trouve un site Point Fixe par son numéro Tadarida (ex '690521'),
+        qu'il appartienne à l'utilisateur OU à un autre observateur.
+
+        Depuis la v0.2, un observateur peut déposer ses participations sur le
+        carré d'un autre observateur : la résolution ne peut donc PLUS se
+        limiter à ``mine_only``. Stratégie :
+          1. d'abord mes sites (rapide, cas courant) ;
+          2. sinon recherche texte globale ``/sites?q=<numero>``.
+        Retourne un ``Site`` ou ``None``.
+        """
+        target = str(numero).strip().zfill(6)
+
+        def _match(raw):
+            site = Site.from_api(raw)
+            if site.numero and site.numero.zfill(6) == target:
+                return site
+            return None
+
+        # 1. mes sites (rapide)
+        for s in self.iter_sites(mine_only=True):
+            hit = _match(s)
+            if hit:
+                return hit
+        # 2. recherche globale (tous observateurs)
+        try:
+            data = self._request("GET", "/sites",
+                                  params={"q": str(numero).strip(),
+                                          "max_results": 40})
+        except ApiError:
+            return None
+        items = (data.get("_items") or []) if isinstance(data, dict) else []
+        for raw in items:
+            hit = _match(raw)
+            if hit:
+                return hit
+        return None
+
     def resolve_carre(self, lat: float, lon: float) -> dict:
         """Tout ce qu'il faut pour décider d'ajouter un point à un endroit.
 
