@@ -58,3 +58,10 @@ docs/captures/*.heif
 
 # Logs
 *.log
+
+# Artefacts temporaires de génération du tutoriel PDF
+docs/_tutoriel_render.html
+docs/_preview*.png
+docs/_p1*.png
+docs/_chk.png
+docs/_v.png
