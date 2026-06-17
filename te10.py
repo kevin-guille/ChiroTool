@@ -42,6 +42,7 @@ import argparse
 import concurrent.futures as cf
 import re
 import sys
+import threading
 import wave
 from dataclasses import dataclass
 from datetime import datetime, timedelta
@@ -181,16 +182,52 @@ def process_folder(
     # Backend Rust si disponible
     if RUST_ENGINE and not force_python:
         try:
-            if progress is not None:
-                # Marqueur "phase démarrée" — pas d'updates granulaires en Rust
+            # Le moteur Rust est opaque (pas de hook par segment). Pour offrir une
+            # VRAIE progression (sinon l'UI semble figée puis saute à 100 % d'un
+            # coup), on procède en deux temps :
+            #  1. pré-scan léger des en-têtes WAV → nombre de segments attendus ;
+            #  2. un thread sonde le dossier de sortie pendant l'écriture Rust.
+            total_expected = 0
+            if progress is not None and not dry_run:
+                try:
+                    srcs = sorted(src_dir.glob("*.wav"))
+                    n_src = max(1, len(srcs))
+                    for i, s in enumerate(srcs):
+                        try:
+                            total_expected += len(
+                                plan_file(s, out_dir, factor, segment_s))
+                        except (wave.Error, OSError):
+                            pass
+                        if i % 25 == 0:
+                            progress(i, n_src, "Analyse des fichiers…")
+                except Exception:
+                    total_expected = 0
+
+            stop_evt = threading.Event()
+            if progress is not None and total_expected > 0 and not dry_run:
+                def _monitor(total=total_expected):
+                    while not stop_evt.wait(0.7):
+                        try:
+                            n = sum(1 for _ in out_dir.glob("*.wav"))
+                            progress(min(n, total), total, "TE×10")
+                        except Exception:
+                            pass
+                threading.Thread(target=_monitor, daemon=True).start()
+            elif progress is not None:
                 progress(0, 100, "TE×10 (Rust)")
-            stats = chirotool_fast.process_folder(
-                src=str(src_dir), dst=str(out_dir),
-                factor=factor, segment_s=segment_s,
-                jobs=jobs, dry_run=dry_run, overwrite=overwrite,
-            )
+
+            try:
+                stats = chirotool_fast.process_folder(
+                    src=str(src_dir), dst=str(out_dir),
+                    factor=factor, segment_s=segment_s,
+                    jobs=jobs, dry_run=dry_run, overwrite=overwrite,
+                )
+            finally:
+                stop_evt.set()
+
             if progress is not None:
-                progress(100, 100, "TE×10 (Rust)")
+                t = total_expected or 100
+                progress(t, t, "TE×10")
             # Normalise les clés pour matcher l'API Python existante
             return {
                 "src_dir": str(src_dir),
