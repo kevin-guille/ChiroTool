@@ -325,25 +325,83 @@ class RunDialog(ctk.CTkToplevel):
 # Helpers de haut niveau : enveloppent les phases du pipeline
 # ---------------------------------------------------------------------------
 
-def _capture_stdout(fn, log):
-    """Exécute fn(), redirige tout stdout vers log(line)."""
-    class _Tee:
-        def __init__(self): self.buf = ""
-        def write(self, s):
-            self.buf += s
-            while "\n" in self.buf:
-                line, self.buf = self.buf.split("\n", 1)
-                log(line)
-        def flush(self): pass
+class _StdoutRouter:
+    """Redirige sys.stdout vers le bon ``log`` selon le thread courant.
 
-    old = sys.stdout
-    sys.stdout = _Tee()
+    L'ancienne implémentation échangeait le ``sys.stdout`` global à chaque
+    appel : avec des phases concurrentes (upload d'une nuit + attente Tadarida
+    d'une autre, en batch), deux threads se marchaient dessus → un thread
+    remettait stdout à ``None`` pendant que l'autre lisait ``.buf`` →
+    ``AttributeError: 'NoneType' object has no attribute 'buf'``.
+
+    Ici un routeur UNIQUE est installé une fois ; chaque thread enregistre son
+    propre callback ``log``. Pas de swap concurrent, pas de sortie mal aiguillée.
+    """
+
+    def __init__(self, original):
+        self._original = original
+        self._logs: dict[int, object] = {}
+        self._bufs: dict[int, str] = {}
+        self._lock = threading.Lock()
+
+    def register(self, log):
+        with self._lock:
+            self._logs[threading.get_ident()] = log
+
+    def unregister(self):
+        tid = threading.get_ident()
+        with self._lock:
+            log = self._logs.pop(tid, None)
+            rest = self._bufs.pop(tid, "")
+        if rest and log is not None:
+            try:
+                log(rest)
+            except Exception:
+                pass
+
+    def write(self, s):
+        tid = threading.get_ident()
+        log = self._logs.get(tid)
+        if log is None:
+            # Thread sans capture active → sortie d'origine (None en exe windowed)
+            if self._original is not None:
+                try:
+                    self._original.write(s)
+                except Exception:
+                    pass
+            return
+        buf = self._bufs.get(tid, "") + s
+        lines = []
+        while "\n" in buf:
+            line, buf = buf.split("\n", 1)
+            lines.append(line)
+        self._bufs[tid] = buf
+        for line in lines:
+            try:
+                log(line)
+            except Exception:
+                pass
+
+    def flush(self):
+        pass
+
+
+_STDOUT_ROUTER: _StdoutRouter | None = None
+_STDOUT_ROUTER_LOCK = threading.Lock()
+
+
+def _capture_stdout(fn, log):
+    """Exécute fn(), redirige son stdout vers log(line) — thread-safe."""
+    global _STDOUT_ROUTER
+    with _STDOUT_ROUTER_LOCK:
+        if _STDOUT_ROUTER is None:
+            _STDOUT_ROUTER = _StdoutRouter(sys.stdout)
+            sys.stdout = _STDOUT_ROUTER
+    _STDOUT_ROUTER.register(log)
     try:
         return fn()
     finally:
-        if sys.stdout.buf:  # type: ignore[attr-defined]
-            log(sys.stdout.buf)  # type: ignore[attr-defined]
-        sys.stdout = old
+        _STDOUT_ROUTER.unregister()
 
 
 def run_prep(session_path: Path, meta, *, dry_run: bool = False, force: bool = False):
