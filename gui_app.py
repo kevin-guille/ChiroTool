@@ -1866,6 +1866,9 @@ class ChiroToolApp(ctk.CTk):
         ).grid(row=0, column=2, sticky="e")
 
 
+_FAULT_FH = None   # garde le fichier faulthandler ouvert (sinon GC → désactivé)
+
+
 def _install_crash_logger() -> Path | None:
     """Installe un fichier de log applicatif + capture les exceptions non gérées.
 
@@ -1921,6 +1924,23 @@ def _install_crash_logger() -> Path | None:
                 except Exception:
                     pass
             _th.excepthook = _thread_excepthook
+        except Exception:
+            pass
+
+        # faulthandler : capture les crashs NATIFS (segfault, abort Tcl/Tk
+        # « async handler deleted by the wrong thread », etc.) que excepthook
+        # ne voit PAS. Sur un hard-close silencieux, le fichier ci-dessous
+        # contiendra la pile de tous les threads → diagnostic définitif.
+        try:
+            import faulthandler
+            import datetime as _dt
+            global _FAULT_FH
+            _FAULT_FH = open(log_dir / "chirotool_crash.log", "a",
+                             encoding="utf-8", buffering=1)
+            _FAULT_FH.write(f"\n===== session {_dt.datetime.now().isoformat()} "
+                            f"=====\n")
+            _FAULT_FH.flush()
+            faulthandler.enable(file=_FAULT_FH, all_threads=True)
         except Exception:
             pass
 
