@@ -22,7 +22,7 @@ Ainsi un exe qui affiche `0.2-dev` comparé au tag `v0.2-dev` → « à jour ».
 
 from __future__ import annotations
 
-__version__ = "0.2.3"
+__version__ = "0.3.0"
 __build_date__ = "2026-06-17"
 
 # URLs utilisées dans la page À propos et la vérification de mises à jour.
