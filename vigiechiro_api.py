@@ -588,6 +588,36 @@ class VigieChiroClient:
                 return hit
         return None
 
+    def list_my_recent_points(self, limit: int = 15) -> list[dict]:
+        """Points (localités) de MES carrés, du plus récemment modifié au plus
+        ancien — pour pré-remplir vite les métadonnées d'une nuit sans retenir
+        le n° de carré ni le noter sur papier à la création.
+
+        Récence = ``_updated`` du site (ajouter/réutiliser un point le met à jour).
+        Retourne ``[{numero, site_id, point, lat, lon, updated}]`` (coords en
+        [lat, lon] comme stocké par Vigie-Chiro).
+        """
+        rows: list[dict] = []
+        for raw in self.iter_sites(mine_only=True):
+            site = Site.from_api(raw)
+            updated = raw.get("_updated") or ""
+            for loc in raw.get("localites") or []:
+                coord = None
+                for g in (loc.get("geometries") or {}).get("geometries", []):
+                    if g.get("type") == "Point" and len(g.get("coordinates") or []) >= 2:
+                        coord = g["coordinates"]
+                        break
+                rows.append({
+                    "numero": site.numero,
+                    "site_id": raw.get("_id"),
+                    "point": loc.get("nom"),
+                    "lat": coord[0] if coord else None,
+                    "lon": coord[1] if coord else None,
+                    "updated": updated,
+                })
+        rows.sort(key=lambda r: r["updated"] or "", reverse=True)
+        return rows[:limit]
+
     def resolve_carre(self, lat: float, lon: float) -> dict:
         """Tout ce qu'il faut pour décider d'ajouter un point à un endroit.
 
