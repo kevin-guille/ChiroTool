@@ -329,18 +329,43 @@ def _find_raw_wav_subdir(session_root: Path) -> Path | None:
     return None
 
 
+def find_summary_file(folder: Path) -> Path | None:
+    """Trouve le fichier Summary d'une session, par NOM puis par CONTENU.
+
+    Certains enregistreurs renomment le .txt avec le nom de projet paramétré
+    dans le boîtier (au lieu de ``<serie>_Summary.txt``). On cherche donc :
+      1. d'abord un nom canonique (``*_summary.txt`` ou ``summary.txt``) ;
+      2. sinon, tout autre ``.txt`` dont le contenu est un vrai tableau Summary
+         (en-tête ``DATE,TIME,LAT,…`` validé par ``parse_summary_txt``).
+    """
+    try:
+        txts = [c for c in folder.iterdir()
+                if c.is_file() and c.suffix.lower() == ".txt"]
+    except (OSError, PermissionError):
+        return None
+    for c in txts:                       # 1. nom canonique (rapide)
+        low = c.name.lower()
+        if low.endswith("_summary.txt") or low == "summary.txt":
+            return c
+    for c in txts:                       # 2. fallback par contenu
+        if parse_summary_txt(c) is not None:
+            return c
+    return None
+
+
 def _collect_annexes(folder: Path, state: SessionState) -> None:
     """Cherche Summary.txt, observations xlsx/csv et stats json dans `folder`."""
+    summ = find_summary_file(folder)
+    if summ is not None:
+        state.has_summary_txt = True
+        if state.summary is None:
+            state.summary = parse_summary_txt(summ)
     try:
         for child in folder.iterdir():
             if not child.is_file():
                 continue
             low = child.name.lower()
-            if low.endswith("_summary.txt") or low == "summary.txt":
-                state.has_summary_txt = True
-                if state.summary is None:
-                    state.summary = parse_summary_txt(child)
-            elif low.startswith("participation-") and (low.endswith(".xlsx") or low.endswith(".csv")):
+            if low.startswith("participation-") and (low.endswith(".xlsx") or low.endswith(".csv")):
                 if "observations" in low:
                     state.has_observations_xlsx = True
                     state.observations_paths.append(child)

@@ -256,29 +256,25 @@ def rename_session(
         # Si Summary.txt disponible, on en profite pour le parser une fois et
         # stocker le résultat dans extracted (évite de le re-parser plus tard)
         if "summary" not in m.extracted:
-            for p in [final_path, final_path / (wav_dir.name if wav_dir_kind.startswith("subdir") else "")]:
-                if p == final_path and wav_dir_kind.startswith("subdir"):
-                    continue  # cas déjà géré au suivant
-                try:
-                    for child in p.iterdir():
-                        if child.is_file() and child.name.lower().endswith("_summary.txt"):
-                            s = parse_summary_txt(child)
-                            if s:
-                                m.set_extracted("summary", {
-                                    "path": child.name,
-                                    "start_dt": s.start_dt.isoformat() if s.start_dt else None,
-                                    "end_dt": s.end_dt.isoformat() if s.end_dt else None,
-                                    "temp_start": s.temp_start,
-                                    "temp_end": s.temp_end,
-                                    "temp_min": s.temp_min,
-                                    "temp_max": s.temp_max,
-                                    "lat": s.lat,
-                                    "lon": s.lon,
-                                    "battery_end": s.battery_end,
-                                })
-                                break
-                except (OSError, PermissionError):
-                    pass
+            from chiro_core import find_summary_file
+            summ = find_summary_file(final_path)
+            if summ is None and wav_dir_kind.startswith("subdir"):
+                summ = find_summary_file(final_path / wav_dir.name)
+            if summ is not None:
+                s = parse_summary_txt(summ)
+                if s:
+                    m.set_extracted("summary", {
+                        "path": summ.name,
+                        "start_dt": s.start_dt.isoformat() if s.start_dt else None,
+                        "end_dt": s.end_dt.isoformat() if s.end_dt else None,
+                        "temp_start": s.temp_start,
+                        "temp_end": s.temp_end,
+                        "temp_min": s.temp_min,
+                        "temp_max": s.temp_max,
+                        "lat": s.lat,
+                        "lon": s.lon,
+                        "battery_end": s.battery_end,
+                    })
 
         m.record_action(
             "rename",
@@ -335,15 +331,16 @@ def try_auto_meta(session: Path) -> tuple[SessionMeta | None, list[str]]:
     else:
         msgs.append("aucune série détectable dans les WAV")
 
-    # Date début : Summary.txt ou 1er WAV
+    # Date début : Summary (nom OU contenu, racine OU sous-dossier) ou 1er WAV
     date_debut: datetime | None = None
-    for child in session.iterdir():
-        if child.is_file() and child.name.lower().endswith("_summary.txt"):
-            s = parse_summary_txt(child)
-            if s and s.start_dt:
-                date_debut = s.start_dt
-                msgs.append(f"date début détectée via Summary.txt : {date_debut:%Y-%m-%d}")
-                break
+    from chiro_core import find_summary_file
+    summ = find_summary_file(session) or (
+        find_summary_file(wav_dir) if wav_dir != session else None)
+    if summ is not None:
+        s = parse_summary_txt(summ)
+        if s and s.start_dt:
+            date_debut = s.start_dt
+            msgs.append(f"date début détectée via {summ.name} : {date_debut:%Y-%m-%d}")
     if date_debut is None and wav_names:
         # fallback : plus petit timestamp dans les noms
         from naming import extract_timestamp_from_name
@@ -357,22 +354,40 @@ def try_auto_meta(session: Path) -> tuple[SessionMeta | None, list[str]]:
             msgs.append(f"date début détectée via noms WAV : {date_debut:%Y-%m-%d}")
 
     # Lookup Suivi avec ce qu'on a
-    try:
-        suivi = Suivi(_default_path(year=date_debut.year if date_debut else None))
-    except Exception as e:
-        msgs.append(f"impossible de charger le Suivi : {e}")
-        return None, msgs
-
-    matches = suivi.find_row_for_session(
+    # Méta PARTIELLE à partir de ce qu'on a détecté, sans dépendre d'aucun
+    # fichier externe : date + série + nom de la campagne (dossier parent).
+    # On la renvoie toujours → le wizard pré-remplit ce qu'il peut et l'utilisateur
+    # complète le carré / point (liste API, points récents) au lieu de voir une
+    # erreur de fichier introuvable.
+    contrat_guess = session.parent.name if session.parent else None
+    partial = SessionMeta(
         date_debut=date_debut,
-        serial=dominant_serial,
+        n_serie=dominant_serial,
+        nom_contrat=contrat_guess,
     )
-    if not matches:
-        # Fallback moins strict : juste la série
-        matches = suivi.find_row_for_session(serial=dominant_serial) if dominant_serial else []
+    todo = "site/point à compléter (liste des carrés ou points récents)"
+
+    # Enrichissement OPTIONNEL via le Suivi xlsx local, UNIQUEMENT s'il existe.
+    # Son absence est le cas normal → aucun message d'erreur.
+    try:
+        suivi_path = _default_path(year=date_debut.year if date_debut else None)
+    except Exception:
+        suivi_path = None
+    if not suivi_path or not suivi_path.is_file():
+        msgs.append(todo)
+        return partial, msgs
+    try:
+        suivi = Suivi(suivi_path)
+    except Exception:
+        msgs.append(todo)
+        return partial, msgs
+
+    matches = suivi.find_row_for_session(date_debut=date_debut, serial=dominant_serial)
+    if not matches and dominant_serial:
+        matches = suivi.find_row_for_session(serial=dominant_serial)
         if matches:
             msgs.append(f"{len(matches)} ligne(s) Suivi pour cette série (date différente)")
-    else:
+    elif matches:
         msgs.append(f"{len(matches)} ligne(s) Suivi match (date + série)")
 
     if len(matches) == 1:
@@ -384,18 +399,15 @@ def try_auto_meta(session: Path) -> tuple[SessionMeta | None, list[str]]:
             n_passage=row.n_passage,
             n_enregistreur=row.n_enregistreur,
             n_serie=row.n_serie or dominant_serial,
-            nom_contrat=row.nom_contrat,
+            nom_contrat=row.nom_contrat or contrat_guess,
         )
         msgs.append(f"match unique → {row.summary()}")
         return meta, msgs
-    elif len(matches) > 1:
-        msgs.append("plusieurs matchs, ambiguïté → renseigner point + passage manuellement")
-        for r in matches[:5]:
-            msgs.append(f"  candidat : {r.summary()}")
-        return None, msgs
+    if len(matches) > 1:
+        msgs.append("plusieurs matchs Suivi → complète point + passage")
     else:
-        msgs.append("aucun match dans le Suivi")
-        return None, msgs
+        msgs.append(todo)
+    return partial, msgs
 
 
 # ---------------------------------------------------------------------------

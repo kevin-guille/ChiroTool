@@ -326,9 +326,15 @@ class SessionMetaWizard(ctk.CTkToplevel):
                     text=f"Auto-résolution échouée : {detail}")
                 return
             self._fill_from(auto)
-            self.err_lbl.configure(
-                text="✓ Champs re-remplis depuis l'auto-résolution",
-                text_color=("#2ea043", "#3fb950"))
+            if not auto.n_site_tadarida:
+                self.err_lbl.configure(
+                    text="✓ Série et date détectées — complète le n° de carré "
+                         "et le point (liste ou points récents).",
+                    text_color=("#bf8700", "#d29922"))
+            else:
+                self.err_lbl.configure(
+                    text="✓ Champs re-remplis depuis l'auto-résolution",
+                    text_color=("#2ea043", "#3fb950"))
         except Exception as e:
             self.err_lbl.configure(
                 text=f"Re-deviner : erreur ({e})")
