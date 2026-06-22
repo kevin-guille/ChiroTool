@@ -128,6 +128,51 @@ def nominatim_search(query: str, *, limit: int = 7, timeout: float = 8.0) -> lis
     return data
 
 
+_reverse_cache: dict[tuple, str] = {}
+
+
+def reverse_commune(lat: float, lon: float, *, timeout: float = 8.0) -> str | None:
+    """Commune (ville/village) depuis des coordonnées via Nominatim reverse.
+
+    Mêmes règles d'usage (1 req/s, User-Agent, cache). Retourne None si
+    introuvable ou en cas d'erreur réseau (jamais d'exception propagée).
+    """
+    import time
+    import requests
+    key = (round(float(lat), 4), round(float(lon), 4))
+    if key in _reverse_cache:
+        return _reverse_cache[key]
+    with _nominatim_lock:
+        elapsed = time.monotonic() - _nominatim_last_call[0]
+        if elapsed < NOMINATIM_MIN_INTERVAL_S:
+            time.sleep(NOMINATIM_MIN_INTERVAL_S - elapsed)
+        try:
+            r = requests.get(
+                "https://nominatim.openstreetmap.org/reverse",
+                params={"lat": lat, "lon": lon, "format": "jsonv2",
+                         "zoom": 10, "addressdetails": 1, "accept-language": "fr"},
+                headers={"User-Agent": NOMINATIM_UA},
+                timeout=timeout,
+            )
+            _nominatim_last_call[0] = time.monotonic()
+            r.raise_for_status()
+            data = r.json()
+        except Exception:
+            _nominatim_last_call[0] = time.monotonic()
+            return None
+    addr = (data or {}).get("address") or {}
+    commune = (addr.get("city") or addr.get("town") or addr.get("village")
+               or addr.get("municipality") or addr.get("hamlet"))
+    if commune:
+        if len(_reverse_cache) >= _nominatim_cache_max:
+            try:
+                _reverse_cache.pop(next(iter(_reverse_cache)))
+            except StopIteration:
+                pass
+        _reverse_cache[key] = commune
+    return commune
+
+
 class MapPanel(ctk.CTkFrame):
     """Panneau carte intégrable dans la GUI."""
 

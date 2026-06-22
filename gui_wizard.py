@@ -18,6 +18,7 @@ Validation via naming.validate_meta() avant OK.
 
 from __future__ import annotations
 
+import threading
 from datetime import datetime
 from pathlib import Path
 from tkinter import messagebox
@@ -63,6 +64,7 @@ class SessionMetaWizard(ctk.CTkToplevel):
             self._fill_from(prefill)
 
         self.protocol("WM_DELETE_WINDOW", self._on_cancel)
+        self._load_recent_points_async()
 
     # -- UI -----------------------------------------------------------------
 
@@ -90,7 +92,31 @@ class SessionMetaWizard(ctk.CTkToplevel):
         self._known_contrats = self._collect_known_contrats()
         self._known_sites = self._collect_known_sites()
 
-        row = 0
+        # --- Points récents (compte Vigie-Chiro) : remplit carré + point en 1 clic ---
+        # Remplace l'ancienne dépendance au Suivi xlsx : plus besoin de noter le
+        # n° de carré sur un papier à la création du point.
+        self._recent_points: list[dict] = []
+        self._recent_label_map: dict[str, dict] = {}
+        rp = ctk.CTkFrame(form, fg_color=("#eef5ff", "#16263d"), corner_radius=8)
+        rp.grid(row=0, column=0, columnspan=2, sticky="ew", padx=2, pady=(0, 10))
+        rp.grid_columnconfigure(0, weight=1)
+        ctk.CTkLabel(
+            rp, text="⭐  Points récents (ton compte Vigie-Chiro)",
+            font=ctk.CTkFont(size=12, weight="bold"), anchor="w",
+        ).grid(row=0, column=0, sticky="ew", padx=10, pady=(8, 0))
+        self._recent_menu = ctk.CTkOptionMenu(
+            rp, values=["Chargement…"], command=self._on_pick_recent_point,
+            dynamic_resizing=False)
+        self._recent_menu.set("Chargement…")
+        self._recent_menu.grid(row=1, column=0, sticky="ew", padx=10, pady=(2, 2))
+        ctk.CTkLabel(
+            rp, text="Sélectionne un point → remplit le carré et le point "
+                     "automatiquement (commune résolue en arrière-plan).",
+            font=ctk.CTkFont(size=10), text_color=("gray40", "gray70"),
+            anchor="w", justify="left", wraplength=520,
+        ).grid(row=2, column=0, sticky="ew", padx=10, pady=(0, 8))
+
+        row = 1   # le formulaire commence après le bandeau « Points récents »
         # --- Contrat ---
         self._add_field_label(form, row, "Contrat",
                                help="Nom du projet / client / campagne")
@@ -338,6 +364,103 @@ class SessionMetaWizard(ctk.CTkToplevel):
         except Exception as e:
             self.err_lbl.configure(
                 text=f"Re-deviner : erreur ({e})")
+
+    # -- Points récents (compte Vigie-Chiro) --------------------------------
+
+    def _safe_widget(self, w) -> bool:
+        try:
+            return bool(w) and w.winfo_exists()
+        except Exception:
+            return False
+
+    def _load_recent_points_async(self):
+        """Charge en arrière-plan les points récents du compte (+ communes)."""
+        try:
+            from credentials import load_token
+            token = load_token()
+        except Exception:
+            token = None
+        if not token:
+            self._set_recent_menu(["(token API requis — voir Préférences)"])
+            return
+
+        def _worker():
+            try:
+                from vigiechiro_api import VigieChiroClient
+                pts = VigieChiroClient(token).list_my_recent_points(limit=15)
+            except Exception:
+                pts = None
+            self.after(0, lambda: self._on_recent_loaded(pts))
+            if pts:                       # communes en tâche de fond (1 req/s)
+                try:
+                    from gui_map import reverse_commune
+                except Exception:
+                    return
+                for p in pts:
+                    if p.get("lat") is None:
+                        continue
+                    com = reverse_commune(p["lat"], p["lon"])
+                    if com:
+                        p["commune"] = com
+                        self.after(0, self._refresh_recent_labels)
+
+        threading.Thread(target=_worker, daemon=True).start()
+
+    def _label_for_recent(self, p: dict) -> str:
+        base = f"{p.get('numero') or '?'} · {p.get('point') or '?'}"
+        if p.get("commune"):
+            base += f" · {p['commune']}"
+        upd = (p.get("updated") or "")[:10]
+        return f"{base}   ({upd})" if upd else base
+
+    def _set_recent_menu(self, values):
+        if not self._safe_widget(self._recent_menu):
+            return
+        try:
+            self._recent_menu.configure(values=values)
+            self._recent_menu.set(values[0])
+        except Exception:
+            pass
+
+    def _on_recent_loaded(self, pts):
+        if not pts:
+            self._set_recent_menu(["(aucun point — crée-en un sur la carte)"])
+            return
+        self._recent_points = pts
+        self._refresh_recent_labels()
+
+    def _refresh_recent_labels(self):
+        if not self._safe_widget(self._recent_menu):
+            return
+        self._recent_label_map = {}
+        values = ["— choisir un point récent —"]
+        for p in self._recent_points:
+            label = self._label_for_recent(p)
+            self._recent_label_map[label] = p
+            values.append(label)
+        try:
+            cur = self._recent_menu.get()
+            self._recent_menu.configure(values=values)
+            if cur not in values:
+                self._recent_menu.set(values[0])
+        except Exception:
+            pass
+
+    def _on_pick_recent_point(self, label: str):
+        p = self._recent_label_map.get(label)
+        if not p:
+            return
+        if p.get("numero"):
+            self.site_var.set(str(p["numero"]))
+        if p.get("point"):
+            self.point_var.set(str(p["point"]))
+        try:
+            self.err_lbl.configure(
+                text=f"✓ Carré {p.get('numero')} · point {p.get('point')} "
+                     f"sélectionné — renseigne le passage.",
+                text_color=("#2ea043", "#3fb950"))
+        except Exception:
+            pass
 
     def _build_enr_choices(self) -> list[str]:
         """Construit la liste des options du dropdown enregistreur.
