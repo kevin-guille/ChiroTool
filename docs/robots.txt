@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://kevin-guille.github.io/ChiroTool/sitemap.xml
