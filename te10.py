@@ -40,6 +40,8 @@ from __future__ import annotations
 
 import argparse
 import concurrent.futures as cf
+import logging
+import os
 import re
 import sys
 import threading
@@ -47,6 +49,8 @@ import wave
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
+
+log = logging.getLogger("te10")
 
 # PyInstaller --windowed : sys.stdout peut être None (pas de console).
 # On guard pour éviter AttributeError au démarrage du .exe.
@@ -63,7 +67,15 @@ if sys.stdout is not None and getattr(sys.stdout, "encoding", None):
 # -- Backend Rust (optionnel) ------------------------------------------------
 # Si le module chirotool_fast est installé (maturin develop / wheel), on
 # l'utilise automatiquement. Sinon, fallback sur la version Python pure.
+# Kill-switch de diagnostic : poser la variable d'environnement
+# CHIROTOOL_NO_RUST=1 force le backend Python pur (utile pour isoler un crash
+# natif de l'extension : si la préparation ne plante plus avec cette variable,
+# le coupable est l'extension Rust et non un bug Python).
+_NO_RUST = os.environ.get("CHIROTOOL_NO_RUST", "").strip().lower() in (
+    "1", "true", "yes", "on")
 try:
+    if _NO_RUST:
+        raise ImportError("CHIROTOOL_NO_RUST")
     import chirotool_fast
     RUST_ENGINE = True
     RUST_VERSION = getattr(chirotool_fast, "__version__", "?")
@@ -179,6 +191,10 @@ def process_folder(
     pour Rust on n'appelle progress qu'au début et à la fin. Le backend
     Python alimente progress à chaque segment écrit.
     """
+    backend_name = "rust" if (RUST_ENGINE and not force_python) else "python"
+    log.info("process_folder backend=%s src=%s out=%s jobs=%s",
+             backend_name, src_dir, out_dir, jobs)
+
     # Backend Rust si disponible
     if RUST_ENGINE and not force_python:
         try:
@@ -217,11 +233,16 @@ def process_folder(
                 progress(0, 100, "TE×10 (Rust)")
 
             try:
+                log.info("RUST process_folder START (%d segments attendus) — "
+                         "si aucune ligne 'DONE' ne suit, le crash est NATIF "
+                         "(extension Rust)", total_expected)
                 stats = chirotool_fast.process_folder(
                     src=str(src_dir), dst=str(out_dir),
                     factor=factor, segment_s=segment_s,
                     jobs=jobs, dry_run=dry_run, overwrite=overwrite,
                 )
+                log.info("RUST process_folder DONE written=%s errors=%s",
+                         stats.get("written"), stats.get("errors"))
             finally:
                 stop_evt.set()
 
@@ -245,6 +266,7 @@ def process_folder(
             }
         except Exception as e:
             # En cas d'erreur Rust → on tombe sur Python (ceinture + bretelles)
+            log.warning("extension Rust a échoué (%s), fallback Python", e)
             print(f"⚠  extension Rust a échoué ({e}), fallback Python", file=sys.stderr)
 
     # Backend Python
