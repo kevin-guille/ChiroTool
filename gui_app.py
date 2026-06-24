@@ -642,6 +642,27 @@ class ChiroToolApp(ctk.CTk):
         log("")
         log(f"✓ Phase 2 terminée — {n_done[0]}/{total} sessions finalisées")
 
+    @staticmethod
+    def _meta_is_complete(meta) -> bool:
+        """Vrai si la meta a tous les champs requis pour le renommage.
+
+        try_auto_meta renvoie une meta PARTIELLE (date + série + contrat) quand
+        le carré/point ne sont pas déductibles (cas normal sans Suivi). Dans ce
+        cas il FAUT passer par le wizard (simple-clic) ou signaler « à compléter »
+        (batch) — surtout pas lancer un renommage qui échouera sur
+        « n_site_tadarida manquant ».
+        """
+        if meta is None:
+            return False
+        return all([
+            meta.date_debut is not None,
+            bool(meta.n_site_tadarida),
+            bool(meta.n_point_fixe),
+            meta.n_passage is not None,
+            meta.n_enregistreur is not None,
+            bool(meta.n_serie),
+        ])
+
     def _resolve_meta_for_batch(self, s):
         """Résout la meta pour une session dans un contexte batch.
 
@@ -675,13 +696,18 @@ class ChiroToolApp(ctk.CTk):
                     return meta
         except Exception:
             pass
-        # 2. Auto-résolution heuristique
+        # 2. Auto-résolution heuristique — uniquement si elle est COMPLÈTE.
+        # Une meta partielle (carré/point manquants) ne peut pas être renommée
+        # en batch (pas de wizard dans un thread) → on renvoie None pour que le
+        # batch saute proprement la session avec un message explicite.
         try:
             from rename import try_auto_meta
             auto, _msgs = try_auto_meta(s.path)
-            return auto
+            if self._meta_is_complete(auto):
+                return auto
         except Exception:
-            return None
+            pass
+        return None
 
     def _run_phase_for(self, s, phase: str, log, progress):
         """Exécute une phase pour une session donnée dans un contexte batch.
@@ -695,8 +721,10 @@ class ChiroToolApp(ctk.CTk):
             from pipeline import run_phase_prep
             meta = self._resolve_meta_for_batch(s)
             if meta is None:
-                log(f"  ⚠ {s.name} : meta introuvable (saisie manuelle requise), skip")
-                return {"skipped": "meta indisponible"}
+                log(f"  ⚠ {s.name} : métadonnées incomplètes (carré/point) — "
+                    f"prépare cette nuit en simple-clic pour les saisir, puis "
+                    f"relance le batch. Session ignorée.")
+                return {"skipped": "métadonnées incomplètes (saisie wizard requise)"}
             return _capture_stdout(
                 lambda: run_phase_prep(s.path, meta, dry_run=False,
                                          force=False, progress=progress),
@@ -1359,10 +1387,12 @@ class ChiroToolApp(ctk.CTk):
             except (TypeError, ValueError):
                 pass
 
-        # 2. Auto-résolution
+        # 2. Auto-résolution — on ne court-circuite le wizard QUE si la meta est
+        # complète. Sinon (carré/point non déductibles, fréquent sans Suivi) on
+        # conserve la meta partielle pour pré-remplir le wizard à l'étape 3.
         from rename import try_auto_meta
         auto_meta, msgs = try_auto_meta(s.path)
-        if auto_meta is not None:
+        if self._meta_is_complete(auto_meta):
             return auto_meta
 
         # 3. Échec auto → proposer le wizard
@@ -1374,9 +1404,10 @@ class ChiroToolApp(ctk.CTk):
             f"Ouvrir le formulaire de saisie manuelle ?"):
             return None
 
-        # Pré-remplissage avec ce qui peut être déduit des WAV
+        # Pré-remplissage : on part de la meta partielle déjà résolue (série,
+        # date, contrat) puis on complète au besoin depuis les noms de WAV.
         from naming import SessionMeta, extract_serial_from_name, extract_timestamp_from_name
-        prefill = SessionMeta()
+        prefill = auto_meta if auto_meta is not None else SessionMeta()
         # Série dominante
         serials = {}
         dts = []
