@@ -465,6 +465,79 @@ class TestMateriels:
         assert m2.is_empty() is False
 
 
+# =========================================================================
+# rename : auto-cicatrisation des doublons de casse (régression v0.3.1)
+# =========================================================================
+
+class TestRenameAutoHeal:
+    """Garde-fou contre la régression « Terminé avec erreurs » :
+
+    un run de prep interrompu peut laisser, pour un même timestamp, la source
+    (casse minuscule) ET sa cible canonique déjà renommée, byte-identiques.
+    Le re-run NE DOIT PAS bloquer toute la session : la source redondante est
+    mise en quarantaine, la cible conservée. Un vrai conflit (contenu
+    différent) doit en revanche TOUJOURS bloquer (zéro écrasement).
+    """
+
+    def _meta(self):
+        from naming import SessionMeta
+        return SessionMeta(
+            date_debut=datetime(2025, 9, 3), n_site_tadarida="212097",
+            n_point_fixe="Z3", n_passage=2, n_enregistreur=7,
+            n_serie="SMU03126", nom_contrat="T",
+        )
+
+    def _wav(self, path: Path, frames: int = 100):
+        import wave
+        with wave.open(str(path), "wb") as w:
+            w.setnchannels(1)
+            w.setsampwidth(2)
+            w.setframerate(384000)
+            w.writeframes(b"\x01\x02" * frames)
+
+    def test_identical_existing_target_is_quarantined(self, tmp_path):
+        import shutil
+
+        from naming import compute_new_wav_name
+        from rename import rename_session
+        meta = self._meta()
+        sess = tmp_path / "rawsess"
+        sess.mkdir()
+        # 1 fichier brut qui se renomme proprement
+        self._wav(sess / "SMU03126_20250903_210000.wav")
+        # 1 fichier brut (casse minuscule) dont la cible canonique existe DÉJÀ,
+        # identique → doublon résiduel à cicatriser
+        src_dup = sess / "smu03126_20250903_210523.wav"
+        self._wav(src_dup)
+        canon = compute_new_wav_name(meta, src_dup.name)
+        assert canon is not None
+        shutil.copy(src_dup, sess / canon)   # cible identique pré-existante
+
+        res = rename_session(sess, meta, dry_run=False, rename_folder=False)
+
+        assert not res.get("errors"), f"ne doit pas bloquer : {res.get('errors')}"
+        assert res.get("quarantined", 0) == 1
+        assert (sess / "_doublons_casse").is_dir()
+        assert not src_dup.exists(), "la source redondante doit être déplacée"
+        assert (sess / canon).is_file(), "la cible canonique doit être conservée"
+
+    def test_different_existing_target_blocks(self, tmp_path):
+        from naming import compute_new_wav_name
+        from rename import rename_session
+        meta = self._meta()
+        sess = tmp_path / "rawsess2"
+        sess.mkdir()
+        src = sess / "smu03126_20250903_210523.wav"
+        self._wav(src, frames=100)
+        canon = compute_new_wav_name(meta, src.name)
+        self._wav(sess / canon, frames=50)   # cible DIFFÉRENTE → vrai conflit
+
+        res = rename_session(sess, meta, dry_run=False, rename_folder=False)
+
+        assert res.get("errors"), "un conflit réel (contenu différent) doit bloquer"
+        assert src.exists(), "la source ne doit pas être touchée en cas de conflit"
+
+
 if __name__ == "__main__":
     # Permet de lancer directement : python tests/test_core.py
     import sys
