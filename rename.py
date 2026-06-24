@@ -183,23 +183,63 @@ def rename_session(
         )
         return out
 
-    # Cible déjà existante sur disque (ex : relance après crash partiel).
-    # Bloquant également : on veut éviter d'écraser.
-    existing_collisions: list[str] = []
-    for _, dst in plan:
-        if dst.exists():
-            existing_collisions.append(dst.name)
-    if existing_collisions:
+    # Cible déjà existante sur disque (ex : relance après un run partiel
+    # interrompu). On distingue deux cas :
+    #   • cible IDENTIQUE à la source (même taille + même contenu) → doublon
+    #     résiduel d'un renommage précédent non finalisé (typiquement casse
+    #     mixte 2mu/2MU sur un système Windows insensible à la casse). La
+    #     source est redondante : on l'exclut du plan et on la met en
+    #     quarantaine (auto-cicatrisation), au lieu de bloquer toute la session.
+    #   • cible DIFFÉRENTE → vrai conflit : on bloque (jamais d'écrasement).
+    import filecmp
+    real_conflicts: list[str] = []
+    healed_dupes: list[tuple[Path, Path]] = []
+    kept_plan: list[tuple[Path, Path]] = []
+    for src, dst in plan:
+        if not dst.exists():
+            kept_plan.append((src, dst))
+            continue
+        try:
+            identical = (src.stat().st_size == dst.stat().st_size
+                         and filecmp.cmp(str(src), str(dst), shallow=False))
+        except OSError:
+            identical = False
+        if identical:
+            healed_dupes.append((src, dst))   # source redondante → quarantaine
+        else:
+            real_conflicts.append(dst.name)
+    if real_conflicts:
         out["errors"].append(
-            f"{len(existing_collisions)} fichier(s) cible existe(nt) déjà sur disque : "
-            f"{', '.join(existing_collisions[:3])}"
-            f"{'…' if len(existing_collisions) > 3 else ''}. "
-            "Supprime-les ou relance avec précaution."
+            f"{len(real_conflicts)} fichier(s) cible existe(nt) déjà avec un "
+            f"contenu DIFFÉRENT : {', '.join(real_conflicts[:3])}"
+            f"{'…' if len(real_conflicts) > 3 else ''}. "
+            "Aucun renommage effectué (risque d'écrasement)."
         )
         return out
+    plan = kept_plan
+    out["planned"] = [(str(s), str(d)) for s, d in plan]
+    out["n_planned"] = len(plan)
+    out["healed_duplicates"] = [dst.name for _, dst in healed_dupes]
+    if healed_dupes:
+        out["warnings"].append(
+            f"{len(healed_dupes)} doublon(s) résiduel(s) identique(s) d'un run "
+            f"précédent interrompu : source redondante mise en quarantaine "
+            f"(_doublons_casse/), cible canonique conservée."
+        )
 
     # --- 6. exécution
     if not dry_run:
+        # Quarantaine des doublons résiduels identiques (auto-cicatrisation)
+        if healed_dupes:
+            quarantine = wav_dir / "_doublons_casse"
+            quarantine.mkdir(exist_ok=True)
+            for src, _dst in healed_dupes:
+                try:
+                    src.rename(quarantine / src.name)
+                    out["quarantined"] = out.get("quarantined", 0) + 1
+                except OSError as e:
+                    out["warnings"].append(
+                        f"doublon non déplacé {src.name} : {e}")
         for src, dst in plan:
             # Double-check : si dst a été créé entre le plan et l'exec
             # (par un autre process), ne pas écraser.
