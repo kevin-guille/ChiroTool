@@ -231,6 +231,88 @@ class ChiroToolApp(ctk.CTk):
         # 2 modales superposées sur un poste qui a un registre pré-existant).
         self.after(200, self._maybe_show_onboarding)
 
+        # Vérification de mise à jour NON BLOQUANTE : planifiée après l'affichage
+        # de la fenêtre, exécutée dans un thread daemon avec timeout réseau court
+        # → aucun impact sur le temps de lancement. Throttle 1×/jour + réglage on/off.
+        self.after(3000, self._auto_update_check)
+
+    def _auto_update_check(self):
+        """Lance (si activé) une vérification de mise à jour en arrière-plan.
+
+        Garde-fous : réglage ``auto_update_check``, throttle 1×/jour, thread
+        daemon avec timeout réseau court. N'interrompt jamais l'UI ; en cas de
+        nouvelle version, propose seulement une boîte de dialogue.
+        """
+        try:
+            if not getattr(self.settings, "auto_update_check", True):
+                return
+            import datetime as _dt
+            if getattr(self.settings, "last_update_check", None) == _dt.date.today().isoformat():
+                return
+        except Exception:
+            return
+
+        import threading
+
+        def _worker():
+            try:
+                from version import (__version__, fetch_latest_release,
+                                      is_newer)
+                info = fetch_latest_release(timeout=6.0)
+                # Mémorise la date du check réussi (throttle) — best effort.
+                if info is not None:
+                    try:
+                        import datetime as _dt
+                        from gui_config import save_settings
+                        self.settings.last_update_check = _dt.date.today().isoformat()
+                        save_settings(self.settings)
+                    except Exception:
+                        pass
+                if not info or not is_newer(info["tag"], __version__):
+                    return
+                if getattr(self.settings, "update_skip_version", None) == info["tag"]:
+                    return
+                self.after(0, lambda: self._prompt_auto_update(info))
+            except Exception:
+                pass
+
+        threading.Thread(target=_worker, daemon=True).start()
+
+    def _prompt_auto_update(self, info: dict):
+        """Propose la mise à jour (thread UI). Oui = page de téléchargement,
+        Non = plus tard, Annuler = ignorer cette version (ne plus proposer)."""
+        try:
+            if not self.winfo_exists():
+                return
+        except Exception:
+            return
+        from version import GITHUB_RELEASES_PAGE, __version__
+        tag = info.get("tag") or "?"
+        url = info.get("url") or GITHUB_RELEASES_PAGE
+        pre = "  (pre-release)" if info.get("prerelease") else ""
+        resp = messagebox.askyesnocancel(
+            "Mise à jour disponible",
+            f"✨ Une nouvelle version de ChiroTool est disponible : {tag}{pre}\n"
+            f"(tu utilises la version {__version__}).\n\n"
+            f"  • Oui — ouvrir la page de téléchargement\n"
+            f"  • Non — plus tard\n"
+            f"  • Annuler — ignorer cette version\n",
+            parent=self,
+        )
+        if resp is True:
+            import webbrowser
+            try:
+                webbrowser.open(url)
+            except Exception:
+                pass
+        elif resp is None:   # « Annuler » → ignorer cette version
+            try:
+                from gui_config import save_settings
+                self.settings.update_skip_version = tag
+                save_settings(self.settings)
+            except Exception:
+                pass
+
     def _maybe_show_onboarding(self):
         """Affiche le wizard d'accueil au 1er lancement. No-op si déjà fait."""
         try:

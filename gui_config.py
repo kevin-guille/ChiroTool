@@ -66,6 +66,12 @@ class Settings:
     # via la détection automatique au scan workspace. Évite de re-proposer
     # à chaque scan ou changement d'onglet.
     materiels_seen_files: list[str] = field(default_factory=list)
+    # Vérification automatique des mises à jour au démarrage (non bloquante).
+    auto_update_check: bool = True
+    # Tag de version que l'utilisateur a choisi d'« ignorer » (ne plus proposer).
+    update_skip_version: str | None = None
+    # Date ISO (YYYY-MM-DD) du dernier check auto réussi → throttle 1×/jour.
+    last_update_check: str | None = None
 
 
 def _settings_file() -> Path:

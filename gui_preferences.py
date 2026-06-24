@@ -111,9 +111,26 @@ class PreferencesDialog(ctk.CTkToplevel):
                       font=ctk.CTkFont(size=10),
                       text_color=("gray50", "gray60")).pack(side="left", padx=8)
 
-        ctk.CTkLabel(tab, text="Stockage des préférences",
+        # --- Mises à jour
+        ctk.CTkLabel(tab, text="Mises à jour",
                       font=ctk.CTkFont(size=14, weight="bold"),
                       anchor="w").grid(row=2, column=0, sticky="ew",
+                                        padx=16, pady=(16, 4))
+        self.autoupd_var = ctk.BooleanVar(
+            value=getattr(self.settings, "auto_update_check", True))
+        ctk.CTkSwitch(
+            tab, text="Vérifier les mises à jour au démarrage",
+            variable=self.autoupd_var, command=self._on_autoupd_toggle,
+        ).grid(row=3, column=0, sticky="w", padx=16, pady=(0, 2))
+        ctk.CTkLabel(
+            tab, text="Vérification en arrière-plan (sans ralentir le lancement). "
+                      "Au plus une fois par jour.",
+            font=ctk.CTkFont(size=10), text_color=("gray50", "gray60"),
+            anchor="w").grid(row=4, column=0, sticky="ew", padx=16, pady=(0, 8))
+
+        ctk.CTkLabel(tab, text="Stockage des préférences",
+                      font=ctk.CTkFont(size=14, weight="bold"),
+                      anchor="w").grid(row=5, column=0, sticky="ew",
                                         padx=16, pady=(16, 4))
 
         from gui_config import storage_info
@@ -128,7 +145,19 @@ class PreferencesDialog(ctk.CTkToplevel):
                       font=ctk.CTkFont(size=11),
                       text_color=("gray30", "gray70"),
                       justify="left", anchor="w", wraplength=560).grid(
-            row=3, column=0, sticky="ew", padx=16, pady=(0, 16))
+            row=6, column=0, sticky="ew", padx=16, pady=(0, 16))
+
+    def _on_autoupd_toggle(self):
+        """Persiste immédiatement le réglage de vérification auto des MAJ."""
+        from gui_config import save_settings
+        self.settings.auto_update_check = bool(self.autoupd_var.get())
+        # Réactiver le check annule aussi une éventuelle version « ignorée ».
+        if self.settings.auto_update_check:
+            self.settings.update_skip_version = None
+        try:
+            save_settings(self.settings)
+        except Exception:
+            pass
 
     # -- Onglet API ---------------------------------------------------------
 
