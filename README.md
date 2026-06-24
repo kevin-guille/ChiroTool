@@ -8,6 +8,8 @@
 
 Outil libre pour le protocole **Vigie-Chiro Point Fixe** (MNHN).
 
+[![Dernière version](https://img.shields.io/github/v/release/kevin-guille/ChiroTool?label=version&color=1f6feb)](https://github.com/kevin-guille/ChiroTool/releases)
+[![Téléchargements](https://img.shields.io/github/downloads/kevin-guille/ChiroTool/total.svg?label=t%C3%A9l%C3%A9chargements&color=2ea043)](https://github.com/kevin-guille/ChiroTool/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-1f6feb.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.11%2B-3776ab.svg)](https://www.python.org/)
 [![Plateforme](https://img.shields.io/badge/Windows-portable-0d419d.svg)](#installation)
