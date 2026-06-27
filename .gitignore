@@ -4,6 +4,8 @@
 build/
 dist/
 *.spec.bak
+# genere par ChiroTool.spec au build (resource VERSIONINFO)
+build_version_info.txt
 
 # Python
 __pycache__/
@@ -46,7 +48,10 @@ desktop.ini
 
 # Build distribuable
 *.exe
+# On ignore les specs auto-générées parasites, mais on VERSIONNE la recette
+# de build officielle (ChiroTool.spec) — nécessaire pour un build reproductible.
 *.spec
+!ChiroTool.spec
 
 # Publication : outils d'anonymisation des captures
 # (contiennent des fragments de noms de clients réels — NE PAS publier)
