@@ -282,6 +282,12 @@ def run_phase_prep(session: Path, meta: SessionMeta, dry_run: bool,
         except Exception as e:
             te_status = "error"
             te_notes = f"verify crash: {e}"
+        # Ceinture + bretelles : si le backend a signalé des erreurs d'écriture
+        # ou de planification (fichier verrouillé, disque plein…), on refuse le
+        # "ok" même si la vérif globale passe → l'étape reste reprenable.
+        if te_r.get("errors", 0) > 0 and te_status == "ok":
+            te_status = "error"
+            te_notes = f"{te_r['errors']} erreur(s) TE×10 signalée(s) par le backend"
         m.record_action(
             "te10", status=te_status, notes=te_notes,
             params={"factor": 10, "segment_s": 5.0},

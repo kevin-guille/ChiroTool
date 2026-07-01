@@ -751,6 +751,58 @@ class TestActivityCascade:
         assert o["passages"] == [1, None]             # None en fin
 
 
+# =========================================================================
+# te10 : robustesse backend Python (statuts, erreurs, pas d'avortement)
+# =========================================================================
+
+class TestTe10Robustness:
+    def _wav(self, path, frames=100, sr=384000):
+        import wave
+        with wave.open(str(path), "wb") as w:
+            w.setnchannels(1)
+            w.setsampwidth(2)
+            w.setframerate(sr)
+            w.writeframes(b"\x01\x02" * frames)
+
+    def test_write_segment_states(self, tmp_path):
+        from te10 import write_segment, plan_file
+        src = tmp_path / "s_20250101_000000.wav"
+        self._wav(src)
+        out = tmp_path / "out"
+        plans = plan_file(src, out, 10, 5.0)
+        assert plans
+        st, _ = write_segment(plans[0])
+        assert st == "written"
+        assert plans[0].dst.is_file()
+        st2, _ = write_segment(plans[0])   # existe déjà
+        assert st2 == "skipped"
+
+    def test_write_segment_error_never_raises(self, tmp_path):
+        """Une source illisible renvoie 'error' — jamais d'exception (sinon tout
+        le lot avorterait)."""
+        from te10 import write_segment, SegmentPlan
+        bad = tmp_path / "bad.wav"
+        bad.write_text("pas un wav")
+        plan = SegmentPlan(src=bad, dst=tmp_path / "out" / "x_000.wav",
+                           start_frame=0, n_frames=10, sr_te=38400)
+        st, msg = write_segment(plan)      # ne doit pas lever
+        assert st == "error"
+        assert not plan.dst.exists()
+
+    def test_process_folder_counts_errors_not_skipped(self, tmp_path):
+        """Backend Python : un WAV corrompu est compté en 'errors' (pas 'skipped')
+        et n'avorte PAS la session ; le WAV valide est bien produit."""
+        from te10 import process_folder
+        src = tmp_path / "src"
+        src.mkdir()
+        self._wav(src / "a_20250101_000000.wav")           # valide
+        (src / "b_20250101_000100.wav").write_text("corrompu")  # illisible
+        stats = process_folder(src, tmp_path / "out", jobs=1, force_python=True)
+        assert stats["written"] >= 1        # le valide est traité malgré l'autre
+        assert stats["errors"] >= 1         # le corrompu compté en erreur
+        assert stats["engine"] == "python"
+
+
 if __name__ == "__main__":
     # Permet de lancer directement : python tests/test_core.py
     import sys

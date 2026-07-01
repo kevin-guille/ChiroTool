@@ -139,34 +139,42 @@ def plan_file(src: Path, out_dir: Path, factor: int, segment_s: float) -> list[S
     return plans
 
 
-def write_segment(plan: SegmentPlan, overwrite: bool = False) -> tuple[bool, str]:
+def write_segment(plan: SegmentPlan, overwrite: bool = False) -> tuple[str, str]:
+    """Écrit un segment. Retourne ``(status, message)`` avec
+    ``status`` ∈ {"written", "skipped", "error"}.
+
+    NE LÈVE JAMAIS : toute erreur d'E/S (fichier verrouillé par l'antivirus,
+    disque plein, permission, source illisible…) est capturée et renvoyée comme
+    ``"error"`` — au lieu de faire échouer tout le lot. La lecture de la SOURCE
+    est incluse dans le bloc protégé (un WAV source verrouillé ne doit pas tuer
+    la session).
+    """
     if plan.dst.exists() and not overwrite:
-        return False, f"SKIP (existe déjà) : {plan.dst.name}"
-    plan.dst.parent.mkdir(parents=True, exist_ok=True)
+        return "skipped", f"SKIP (existe déjà) : {plan.dst.name}"
 
-    with wave.open(str(plan.src), "rb") as wr:
-        nch = wr.getnchannels()
-        sw = wr.getsampwidth()
-        wr.setpos(plan.start_frame)
-        frames = wr.readframes(plan.n_frames)
-
-    # Écriture atomique : fichier temporaire puis renommage
+    # Écriture atomique : fichier temporaire puis renommage.
     tmp = plan.dst.with_suffix(plan.dst.suffix + ".tmp")
     try:
+        plan.dst.parent.mkdir(parents=True, exist_ok=True)
+        with wave.open(str(plan.src), "rb") as wr:
+            nch = wr.getnchannels()
+            sw = wr.getsampwidth()
+            wr.setpos(plan.start_frame)
+            frames = wr.readframes(plan.n_frames)
         with wave.open(str(tmp), "wb") as ww:
             ww.setnchannels(nch)
             ww.setsampwidth(sw)
             ww.setframerate(plan.sr_te)
             ww.writeframes(frames)
         tmp.replace(plan.dst)
-    except Exception as e:
+    except (OSError, wave.Error) as e:
         if tmp.exists():
             try:
                 tmp.unlink()
             except OSError:
                 pass
-        return False, f"ERREUR : {plan.dst.name} ({e})"
-    return True, f"OK : {plan.dst.name} ({plan.n_frames/plan.sr_te:.2f}s TE)"
+        return "error", f"ERREUR : {plan.dst.name} ({e})"
+    return "written", f"OK : {plan.dst.name} ({plan.n_frames/plan.sr_te:.2f}s TE)"
 
 
 def process_folder(
@@ -274,13 +282,18 @@ def process_folder(
     if not sources:
         return {"error": f"Aucun WAV trouvé dans {src_dir}"}
 
-    # Plan complet
+    # Plan complet. Un WAV source illisible/verrouillé (wave.Error OU OSError —
+    # ex. verrou antivirus, permission) ne doit PAS faire avorter toute la
+    # session : on le signale, on le compte comme erreur, et on continue.
     all_plans: list[SegmentPlan] = []
+    plan_errors = 0
     for src in sources:
         try:
             all_plans.extend(plan_file(src, out_dir, factor, segment_s))
-        except wave.Error as e:
-            print(f"⚠  fichier illisible (ignoré) : {src.name}  ({e})", file=sys.stderr)
+        except (wave.Error, OSError) as e:
+            plan_errors += 1
+            log.warning("te10: source non planifiable %s (%s)", src.name, e)
+            print(f"⚠  source illisible (ignorée) : {src.name}  ({e})", file=sys.stderr)
 
     stats = {
         "src_dir": str(src_dir),
@@ -292,7 +305,7 @@ def process_folder(
         "dry_run": dry_run,
         "written": 0,
         "skipped": 0,
-        "errors": 0,
+        "errors": plan_errors,   # inclut les sources non planifiables
         "engine": "python",
     }
 
@@ -302,6 +315,7 @@ def process_folder(
     total = len(all_plans)
     done = [0]   # mutable closure-friendly counter
     label = "TE×10"
+    _key = {"written": "written", "skipped": "skipped", "error": "errors"}
 
     def _tick():
         done[0] += 1
@@ -311,23 +325,23 @@ def process_folder(
             except Exception:
                 pass
 
+    def _tally(status: str, msg: str):
+        stats[_key[status]] += 1
+        if status == "error":
+            log.warning("te10: %s", msg)
+            print(f"⚠  {msg}", file=sys.stderr)
+
     if jobs > 1:
         with cf.ThreadPoolExecutor(max_workers=jobs) as ex:
             futures = [ex.submit(write_segment, p, overwrite) for p in all_plans]
             for fut in cf.as_completed(futures):
-                ok, _msg = fut.result()
-                if ok:
-                    stats["written"] += 1
-                else:
-                    stats["skipped"] += 1
+                status, msg = fut.result()
+                _tally(status, msg)
                 _tick()
     else:
         for p in all_plans:
-            ok, _msg = write_segment(p, overwrite)
-            if ok:
-                stats["written"] += 1
-            else:
-                stats["skipped"] += 1
+            status, msg = write_segment(p, overwrite)
+            _tally(status, msg)
             _tick()
 
     return stats

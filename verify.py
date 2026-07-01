@@ -235,17 +235,29 @@ def verify_te10(session: Path, expected_factor: int = 10,
         else:
             r.add(True, f"SR échantillonnés ≤ 60 kHz ({sr_values})")
 
-    # Check 4 : segments ≥ sources (raws)
+    # Check 4 : couverture PAR SOURCE. Un simple total global masquerait
+    # l'absence complète des segments d'un WAV court (le surplus de segments des
+    # WAV longs compenserait le compte). On vérifie donc que CHAQUE WAV brut a au
+    # moins son 1er segment dérivé, nommé "<stem_source>_000.wav" (le segment
+    # d'offset 0 conserve le timestamp de la source ; cf te10.plan_file).
     wav_dir = session if _dir_has_wavs(session) else _find_raw_wav_subdir(session)
     if wav_dir and wav_dir != data_k:
-        n_raws = sum(1 for p in wav_dir.iterdir()
-                     if p.is_file() and p.suffix.lower() == ".wav")
+        raws = [p for p in wav_dir.iterdir()
+                if p.is_file() and p.suffix.lower() == ".wav"]
+        n_raws = len(raws)
         r.stats["n_raws"] = n_raws
-        if n_raws and len(segments) < n_raws:
-            r.add(False, f"moins de segments ({len(segments)}) que de raws ({n_raws})")
+        seg_names = {p.name for p in segments}
+        missing = [p.name for p in raws
+                   if f"{p.stem}_000.wav" not in seg_names]
+        r.stats["sources_sans_segment"] = len(missing)
+        if missing:
+            sample = ", ".join(missing[:3]) + ("…" if len(missing) > 3 else "")
+            r.add(False,
+                  f"{len(missing)}/{n_raws} source(s) sans segment TE×10 : {sample}")
             r.verdict = "FAIL"
         elif n_raws:
-            r.add(True, f"segments ≥ raws ({len(segments)} ≥ {n_raws})")
+            r.add(True,
+                  f"couverture par source OK ({n_raws} raws → chacun a ≥1 segment)")
 
     return r
 
