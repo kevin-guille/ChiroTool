@@ -596,6 +596,80 @@ class TestSynthesis:
         assert res["total_contacts"] == 0
 
 
+# =========================================================================
+# validation : filtrage pur + menu taxons dynamique
+# =========================================================================
+
+class TestValidationFilters:
+    CI = {"nom du fichier": 0, "tadarida_taxon": 1,
+          "tadarida_probabilite": 2, "observateur_taxon": 3}
+
+    def _rows(self):
+        # [fichier, tadarida, proba, observateur]
+        return [
+            ["f1.wav", "Pippip", 0.9, None],
+            ["f2.wav", "Pippip", 0.3, None],
+            ["f3.wav", "Nycnoc", 0.8, None],
+            ["f4.wav", "barbar", 0.2, "barbar"],   # patrimonial + validé
+            ["f5.wav", "noise", 0.95, None],
+        ]
+
+    def test_proba_filter(self):
+        from gui_validation import row_passes_filters as rp
+        r = ["f", "Pippip", 0.3, None]
+        assert rp(r, self.CI, proba_min=0.0) is True
+        assert rp(r, self.CI, proba_min=0.5) is False
+
+    def test_taxon_filter(self):
+        from gui_validation import row_passes_filters as rp
+        r = ["f", "Pippip", 0.9, None]
+        assert rp(r, self.CI, taxon_filter="Pippip") is True
+        assert rp(r, self.CI, taxon_filter="Nycnoc") is False
+        assert rp(r, self.CI, taxon_filter="Tous") is True
+
+    def test_hide_cleaned(self):
+        from gui_validation import row_passes_filters as rp
+        r = ["f", "Pippip", 0.9, None]
+        assert rp(r, self.CI, hide_cleaned=True, wav_present=True) is True
+        assert rp(r, self.CI, hide_cleaned=True, wav_present=False) is False
+        assert rp(r, self.CI, hide_cleaned=False, wav_present=False) is True
+
+    def test_only_unvalidated(self):
+        from gui_validation import row_passes_filters as rp
+        assert rp(["f", "Pippip", 0.9, "Pippip"], self.CI,
+                  only_unvalidated=True) is False
+        assert rp(["f", "Pippip", 0.9, None], self.CI,
+                  only_unvalidated=True) is True
+
+    def test_only_patrimonial(self):
+        from gui_validation import row_passes_filters as rp, PATRIMONIAL_CODES
+        assert rp(["f", "barbar", 0.9, None], self.CI, only_patrimonial=True,
+                  patrimonial_codes=PATRIMONIAL_CODES) is True
+        assert rp(["f", "Pippip", 0.9, None], self.CI, only_patrimonial=True,
+                  patrimonial_codes=PATRIMONIAL_CODES) is False
+
+    def test_eligible_taxons_all(self):
+        from gui_validation import eligible_taxons
+        t = eligible_taxons(self._rows(), self.CI, proba_min=0.0)
+        assert set(t) == {"Pippip", "Nycnoc", "barbar", "noise"}
+
+    def test_eligible_taxons_reflects_proba(self):
+        from gui_validation import eligible_taxons
+        # proba ≥ 0.5 : barbar (0.2) et Pippip/f2 (0.3) sortent ; Pippip reste (f1=0.9)
+        t = eligible_taxons(self._rows(), self.CI, proba_min=0.5)
+        assert set(t) == {"Pippip", "Nycnoc", "noise"}
+        assert "barbar" not in t
+
+    def test_eligible_taxons_reflects_hide_cleaned(self):
+        from gui_validation import eligible_taxons
+        # f3 (Nycnoc) supprimé au nettoyage → disparaît de la liste
+        wav_present = [True, True, False, True, True]
+        t = eligible_taxons(self._rows(), self.CI, hide_cleaned=True,
+                            wav_present=wav_present)
+        assert "Nycnoc" not in t
+        assert "Pippip" in t
+
+
 if __name__ == "__main__":
     # Permet de lancer directement : python tests/test_core.py
     import sys

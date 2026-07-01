@@ -54,6 +54,77 @@ PATRIMONIAL_CODES = {
 CONFIDENCE_VALUES = ("POSSIBLE", "PROBABLE", "SUR")
 
 
+# ---------------------------------------------------------------------------
+# Logique de filtrage PURE (sans GUI) — testable unitairement
+# ---------------------------------------------------------------------------
+
+def row_passes_filters(row: list, col_idx: dict, *, taxon_filter: str = "Tous",
+                       proba_min: float = 0.0, hide_cleaned: bool = False,
+                       wav_present: bool = True, only_unvalidated: bool = False,
+                       only_patrimonial: bool = False,
+                       patrimonial_codes=frozenset()) -> bool:
+    """La ligne d'observations passe-t-elle les filtres actifs ?
+
+    Fonction PURE (aucune dépendance GUI) → testable. ``wav_present`` indique si
+    le WAV existe encore (pour l'option « masquer les sons supprimés »).
+    """
+    ci = col_idx
+
+    def _get(key):
+        j = ci.get(key)
+        return row[j] if (j is not None and j < len(row)) else None
+
+    tad = _get("tadarida_taxon")
+    proba = _get("tadarida_probabilite")
+    obs = _get("observateur_taxon")
+
+    if hide_cleaned and not wav_present:
+        return False
+    if taxon_filter and taxon_filter != "Tous" and str(tad) != taxon_filter:
+        return False
+    if proba is not None:
+        try:
+            if float(proba) < float(proba_min):
+                return False
+        except (TypeError, ValueError):
+            pass
+    if only_unvalidated and obs:
+        return False
+    if only_patrimonial and (str(tad) or "").lower() not in patrimonial_codes:
+        return False
+    return True
+
+
+def eligible_taxons(rows: list, col_idx: dict, *, proba_min: float = 0.0,
+                    hide_cleaned: bool = False, wav_present: list | None = None,
+                    only_unvalidated: bool = False, only_patrimonial: bool = False,
+                    patrimonial_codes=frozenset()) -> list[str]:
+    """Liste triée des taxons Tadarida présents parmi les lignes qui passent les
+    filtres AUTRES que le taxon (pour peupler dynamiquement le menu). Pur/testable.
+
+    ``wav_present`` : liste de bool par ligne (None → toutes présentes).
+    """
+    ci = col_idx
+    if "tadarida_taxon" not in ci:
+        return []
+    taxons: set[str] = set()
+    for i, r in enumerate(rows):
+        wp = True if wav_present is None else (
+            wav_present[i] if i < len(wav_present) else True)
+        if not row_passes_filters(
+            r, ci, taxon_filter="Tous", proba_min=proba_min,
+            hide_cleaned=hide_cleaned, wav_present=wp,
+            only_unvalidated=only_unvalidated, only_patrimonial=only_patrimonial,
+            patrimonial_codes=patrimonial_codes,
+        ):
+            continue
+        j = ci["tadarida_taxon"]
+        t = r[j] if j < len(r) else None
+        if t:
+            taxons.add(str(t))
+    return sorted(taxons, key=str.lower)
+
+
 class ValidationView(ctk.CTkToplevel):
     """Fenêtre de validation d'une nuit."""
 
@@ -150,14 +221,14 @@ class ValidationView(ctk.CTkToplevel):
         ctk.CTkCheckBox(
             filters, text="Non validés seulement",
             variable=self.only_unvalidated_var,
-            command=self._apply_filters,
+            command=self._on_filters_changed,
         ).grid(row=0, column=5, padx=(0, 12), pady=8)
 
         self.only_patrimonial_var = ctk.BooleanVar(value=False)
         ctk.CTkCheckBox(
             filters, text="Patrimoniaux",
             variable=self.only_patrimonial_var,
-            command=self._apply_filters,
+            command=self._on_filters_changed,
         ).grid(row=0, column=6, padx=(0, 12), pady=8)
 
         ctk.CTkButton(
@@ -389,18 +460,8 @@ class ValidationView(ctk.CTkToplevel):
             if wanted in lower:
                 self.col_idx[wanted] = lower.index(wanted)
 
-        # Peupler le menu taxons
-        taxons = set()
-        for r in self.rows:
-            if "tadarida_taxon" in self.col_idx:
-                t = r[self.col_idx["tadarida_taxon"]]
-                if t:
-                    taxons.add(str(t))
-        taxons_list = ["Tous"] + sorted(taxons, key=str.lower)
-        self.taxon_menu.configure(values=taxons_list)
-
         self._compute_wav_presence()
-        self._apply_filters()
+        self._on_filters_changed()   # peuple le menu taxons (filtré) + rafraîchit
         self.header_info.configure(text=f"{len(self.rows)} contacts chargés")
 
     def _compute_wav_presence(self):
@@ -444,7 +505,7 @@ class ValidationView(ctk.CTkToplevel):
 
     def _on_proba_change(self, v):
         self.proba_lbl.configure(text=f"{float(v):.2f}")
-        self._apply_filters()
+        self._on_filters_changed()
 
     def _reset_filters(self):
         self.taxon_filter_var.set("Tous")
@@ -453,42 +514,51 @@ class ValidationView(ctk.CTkToplevel):
         self.only_unvalidated_var.set(False)
         self.only_patrimonial_var.set(False)
         self.hide_cleaned_var.set(False)
+        self._on_filters_changed()
+
+    def _filter_kwargs(self) -> dict:
+        """Paramètres de filtrage courants (lus des widgets) pour les fonctions
+        pures de filtrage."""
+        return dict(
+            proba_min=float(self.proba_slider.get()),
+            hide_cleaned=self.hide_cleaned_var.get(),
+            only_unvalidated=self.only_unvalidated_var.get(),
+            only_patrimonial=self.only_patrimonial_var.get(),
+            patrimonial_codes=PATRIMONIAL_CODES,
+        )
+
+    def _passes_filters(self, i: int, r: list, *, ignore_taxon: bool = False) -> bool:
+        wp = self._wav_present[i] if i < len(self._wav_present) else True
+        return row_passes_filters(
+            r, self.col_idx, wav_present=wp,
+            taxon_filter="Tous" if ignore_taxon else self.taxon_filter_var.get(),
+            **self._filter_kwargs(),
+        )
+
+    def _rebuild_taxon_menu(self):
+        """Recalcule les taxons proposés : uniquement ceux présents parmi les
+        lignes qui passent les AUTRES filtres (proba, masquage nettoyage, non
+        validés, patrimoniaux). La liste reflète l'état courant des filtres."""
+        taxons = eligible_taxons(
+            self.rows, self.col_idx, wav_present=self._wav_present,
+            **self._filter_kwargs(),
+        )
+        self.taxon_menu.configure(values=["Tous"] + taxons)
+        # Conserve la sélection si toujours valide, sinon repli sur "Tous".
+        cur = self.taxon_filter_var.get()
+        if cur != "Tous" and cur not in taxons:
+            self.taxon_filter_var.set("Tous")
+
+    def _on_filters_changed(self):
+        """Un filtre AUTRE que le taxon a changé : recalcule la liste des taxons
+        proposés puis ré-applique les filtres."""
+        self._rebuild_taxon_menu()
         self._apply_filters()
 
     def _apply_filters(self):
-        taxon_filter = self.taxon_filter_var.get()
-        proba_min = float(self.proba_slider.get())
-        only_unval = self.only_unvalidated_var.get()
-        only_patr = self.only_patrimonial_var.get()
-        hide_cleaned = self.hide_cleaned_var.get()
-
-        self.filtered_indexes.clear()
-        ci = self.col_idx
-
-        for i, r in enumerate(self.rows):
-            if (hide_cleaned and i < len(self._wav_present)
-                    and not self._wav_present[i]):
-                continue
-            tad = r[ci["tadarida_taxon"]] if "tadarida_taxon" in ci else None
-            proba = r[ci["tadarida_probabilite"]] if "tadarida_probabilite" in ci else None
-            obs = r[ci["observateur_taxon"]] if "observateur_taxon" in ci else None
-
-            if taxon_filter != "Tous" and str(tad) != taxon_filter:
-                continue
-            if proba is not None:
-                try:
-                    if float(proba) < proba_min:
-                        continue
-                except (TypeError, ValueError):
-                    pass
-            if only_unval and obs:
-                continue
-            if only_patr:
-                tad_lower = (str(tad) or "").lower()
-                if tad_lower not in PATRIMONIAL_CODES:
-                    continue
-            self.filtered_indexes.append(i)
-
+        self.filtered_indexes = [
+            i for i, r in enumerate(self.rows) if self._passes_filters(i, r)
+        ]
         self._refresh_table()
 
     def _refresh_table(self):
