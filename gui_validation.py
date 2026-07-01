@@ -826,6 +826,12 @@ class ValidationView(ctk.CTkToplevel):
         stem = filename_stem.strip()
         if stem.lower().endswith(".wav"):
             stem = stem[:-4]
+        # Le nom provient du xlsx d'observations (contenu non maîtrisé) : on ne
+        # garde que le dernier composant pour empêcher tout path traversal
+        # (../, chemin absolu) lors de la construction du chemin WAV.
+        stem = Path(stem).name
+        if not stem:
+            return None
 
         for subdir in ("Data_k", "Data"):
             d = self.session_path / subdir

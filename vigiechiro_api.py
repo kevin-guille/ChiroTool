@@ -276,6 +276,14 @@ class VigieChiroClient:
 
         self.token = token
         self.base_url = base_url.rstrip("/")
+        # Le token sert d'identifiant HTTP Basic : refuser un base_url en clair
+        # (http://) hors localhost, sinon le token partirait non chiffré.
+        _low = self.base_url.lower()
+        if _low.startswith("http://") and not (
+            "localhost" in _low or "127.0.0.1" in _low):
+            raise ValueError(
+                "base_url non sécurisée : le token Vigie-Chiro voyagerait en "
+                "clair. Utilise https:// (http:// n'est toléré que sur localhost).")
         self.timeout = timeout
         self.source = source
 

@@ -891,6 +891,65 @@ class TestCleanupCaseInsensitive:
         assert (dk / "b_20250101_210100_000.wav").exists()
 
 
+# =========================================================================
+# securite : stockage token (fallback) + base_url https
+# =========================================================================
+
+class TestCredentialsFallback:
+    TOKEN = "ABCD1234ABCD1234ABCD1234ABCD1234"
+
+    def test_fallback_roundtrip_and_not_plaintext(self, tmp_path, monkeypatch):
+        import os as _os
+
+        import credentials as cr
+        monkeypatch.setattr(cr, "_try_keyring", lambda: None)   # force le fichier
+        monkeypatch.setattr(cr, "_fallback_dir", lambda: tmp_path)
+
+        assert cr.save_token(self.TOKEN) == "file"
+        assert cr.load_token() == self.TOKEN
+
+        content = (tmp_path / "credentials.json").read_text(encoding="utf-8")
+        if _os.name == "nt":
+            # Sous Windows, DPAPI doit avoir chiffré : pas de token en clair.
+            assert self.TOKEN not in content
+            assert "token_dpapi" in content
+
+        assert cr.delete_token() is True
+        assert cr.load_token() is None
+
+    def test_legacy_plaintext_still_readable(self, tmp_path, monkeypatch):
+        """Compat : un ancien credentials.json en clair reste lisible."""
+        import json
+
+        import credentials as cr
+        monkeypatch.setattr(cr, "_try_keyring", lambda: None)
+        monkeypatch.setattr(cr, "_fallback_dir", lambda: tmp_path)
+        (tmp_path / "credentials.json").write_text(
+            json.dumps({"token": self.TOKEN}), encoding="utf-8")
+        assert cr.load_token() == self.TOKEN
+
+
+class TestApiBaseUrlSecurity:
+    TOKEN = "A" * 32
+
+    def test_rejects_http_non_localhost(self):
+        from vigiechiro_api import VigieChiroClient
+        with pytest.raises(ValueError):
+            VigieChiroClient(self.TOKEN,
+                             base_url="http://vigiechiro.example.com/api/v1")
+
+    def test_allows_http_localhost(self):
+        from vigiechiro_api import VigieChiroClient
+        c = VigieChiroClient(self.TOKEN, base_url="http://localhost:8080/api/v1")
+        assert c.base_url.startswith("http://localhost")
+
+    def test_allows_https(self):
+        from vigiechiro_api import VigieChiroClient
+        c = VigieChiroClient(self.TOKEN,
+                             base_url="https://vigiechiro.example.com/api/v1")
+        assert c.base_url.startswith("https://")
+
+
 if __name__ == "__main__":
     # Permet de lancer directement : python tests/test_core.py
     import sys
