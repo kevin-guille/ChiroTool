@@ -203,9 +203,18 @@ def decide_contact(
 # ---------------------------------------------------------------------------
 
 def _norm_stem(name: str) -> str:
-    """Normalise un nom pour comparaison : sans extension, casse respectée."""
+    """Normalise un nom pour comparaison WAV↔xlsx : sans extension ET en
+    minuscules.
+
+    Windows est insensible à la casse : une divergence de casse entre le nom
+    dans le xlsx (ex. série firmware `2mu…`) et le nom sur disque (`2MU…`) ne
+    doit PAS faire tomber un WAV porteur d'un contact conservé dans les
+    « silent_files » (donc supprimé si silent_policy='delete'). Cohérent avec
+    la normalisation de gui_validation.
+    """
     p = Path(str(name))
-    return p.stem if p.suffix else p.name
+    stem = p.stem if p.suffix else p.name
+    return stem.lower()
 
 
 def _to_float(v) -> float | None:
@@ -340,12 +349,15 @@ def cleanup_session(
         if effective_proba is not None:
             prob_dist[group].append(effective_proba)
 
-        stem = _norm_stem(filename) if filename else ""
-        contacts_by_file[stem].append({
-            "group": group, "decision": decision, "reason": reason,
-            "taxon": taxon, "proba": effective_proba,
-            "validated_by_human": bool(val_taxon or obs_taxon),
-        })
+        # Un contact sans nom de fichier ne peut être rattaché à aucun WAV : on
+        # l'annote quand même dans le xlsx, mais on ne l'ajoute pas à
+        # contacts_by_file (sinon il créerait une clé "" parasite).
+        if filename:
+            contacts_by_file[_norm_stem(filename)].append({
+                "group": group, "decision": decision, "reason": reason,
+                "taxon": taxon, "proba": effective_proba,
+                "validated_by_human": bool(val_taxon or obs_taxon),
+            })
         enriched_rows.append(row + [group, decision, reason])
 
     # --- décision par fichier (OR : au moins 1 "kept" → on garde)
@@ -362,7 +374,7 @@ def cleanup_session(
     kept_files: list[Path] = []
 
     for w in wavs:
-        stem = w.stem
+        stem = _norm_stem(w.name)   # même normalisation (casse) que les clés xlsx
         if stem in contacts_by_file:
             if stem in file_kept:
                 kept_files.append(w)

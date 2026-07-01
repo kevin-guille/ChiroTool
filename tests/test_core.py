@@ -841,6 +841,56 @@ class TestParticipationWindow:
         assert _participation_window(None) == (None, None)
 
 
+# =========================================================================
+# cleanup : appariement WAV<->xlsx insensible a la casse (regression)
+# =========================================================================
+
+class TestCleanupCaseInsensitive:
+    def _wav(self, path, frames=50):
+        import wave
+        with wave.open(str(path), "wb") as w:
+            w.setnchannels(1)
+            w.setsampwidth(2)
+            w.setframerate(38400)
+            w.writeframes(b"\x01\x02" * frames)
+
+    def test_norm_stem_lowercases(self):
+        from cleanup import _norm_stem
+        assert _norm_stem("2MU08078_X.wav") == _norm_stem("2mu08078_x")
+
+    def test_case_divergent_wav_kept(self, tmp_path):
+        """Un WAV dont la casse diffère entre le xlsx et le disque, mais porteur
+        d'un contact 'kept', NE DOIT PAS être supprimé (avant : il tombait dans
+        silent_files → supprimé avec silent_policy='delete'). 3 WAV pour que le
+        divergent soit minoritaire (le garde-fou mass-delete ne le protège pas)."""
+        from cleanup import cleanup_session
+        session = tmp_path / "sess"
+        dk = session / "Data_k"
+        dk.mkdir(parents=True)
+        self._wav(dk / "a_20250101_210000_000.wav")
+        self._wav(dk / "b_20250101_210100_000.wav")
+        self._wav(dk / "2MU_20250101_210200_000.wav")     # disque : MAJUSCULES
+        csv_path = session / "participation-test-observations.csv"
+        csv_path.write_text(
+            "nom du fichier,tadarida_taxon,tadarida_probabilite\n"
+            "a_20250101_210000_000.wav,Pippip,0.9\n"
+            "b_20250101_210100_000.wav,Pippip,0.9\n"
+            "2mu_20250101_210200_000.wav,Pippip,0.9\n",   # xlsx : minuscules
+            encoding="utf-8",
+        )
+        res = cleanup_session(
+            session,
+            thresholds={"chiros": 0.5, "orthos": 0.5,
+                        "micromam": 0.5, "oiseaux": 0.5},
+            disabled=set(), silent_policy="delete", dry_run=False,
+        )
+        assert not res.get("errors"), res.get("errors")
+        # Les 3 WAV portent un contact kept → aucun ne doit être supprimé.
+        assert (dk / "2MU_20250101_210200_000.wav").exists()
+        assert (dk / "a_20250101_210000_000.wav").exists()
+        assert (dk / "b_20250101_210100_000.wav").exists()
+
+
 if __name__ == "__main__":
     # Permet de lancer directement : python tests/test_core.py
     import sys
