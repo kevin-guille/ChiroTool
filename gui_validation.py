@@ -79,6 +79,7 @@ class ValidationView(ctk.CTkToplevel):
         self.headers: list[str] = []
         self.rows: list[list] = []
         self.filtered_indexes: list[int] = []
+        self._wav_present: list[bool] = []   # par ligne : le WAV existe-t-il encore ?
         self._dirty = False
 
         # Mapping index colonne -> clé logique
@@ -167,6 +168,18 @@ class ValidationView(ctk.CTkToplevel):
             command=self._reset_filters,
         ).grid(row=0, column=7, padx=(0, 10), pady=8)
 
+        # 2e ligne de filtres : masquer les contacts dont le WAV a été supprimé
+        # au nettoyage. Activée seulement si un nettoyage a manifestement eu lieu
+        # (voir _compute_wav_presence).
+        self.hide_cleaned_var = ctk.BooleanVar(value=False)
+        self.hide_cleaned_chk = ctk.CTkCheckBox(
+            filters, text="Masquer les sons supprimés au nettoyage",
+            variable=self.hide_cleaned_var, command=self._apply_filters,
+        )
+        self.hide_cleaned_chk.grid(row=1, column=0, columnspan=6,
+                                    padx=(10, 12), pady=(0, 8), sticky="w")
+        self.hide_cleaned_chk.configure(state="disabled")
+
         # --- Tableau (ttk.Treeview) ---
         table_frame = ctk.CTkFrame(self)
         table_frame.grid(row=2, column=0, sticky="nsew", padx=12, pady=4)
@@ -176,7 +189,7 @@ class ValidationView(ctk.CTkToplevel):
         columns = ("heure", "duree", "freq", "tad_taxon", "tad_proba",
                    "obs_taxon", "obs_conf", "groupe")
         self.tree = ttk.Treeview(
-            table_frame, columns=columns, show="headings", selectmode="browse",
+            table_frame, columns=columns, show="headings", selectmode="extended",
         )
         self.tree.heading("heure", text="Heure")
         self.tree.heading("duree", text="Durée (s)")
@@ -386,8 +399,46 @@ class ValidationView(ctk.CTkToplevel):
         taxons_list = ["Tous"] + sorted(taxons, key=str.lower)
         self.taxon_menu.configure(values=taxons_list)
 
+        self._compute_wav_presence()
         self._apply_filters()
         self.header_info.configure(text=f"{len(self.rows)} contacts chargés")
+
+    def _compute_wav_presence(self):
+        """Détermine, par ligne, si le WAV correspondant existe encore sur disque.
+
+        Un « son supprimé au nettoyage » = WAV absent de Data_k/ (ou Data/).
+        La case « Masquer les sons supprimés » n'est activée QUE si un nettoyage a
+        manifestement eu lieu (certains WAV présents, d'autres absents) — évite de
+        tout masquer avant nettoyage, ou si le dossier a été entièrement effacé.
+        """
+        self._wav_present = [True] * len(self.rows)
+        present_stems = set()
+        for sub in ("Data_k", "Data"):
+            d = self.session_path / sub
+            if d.is_dir():
+                for p in d.glob("*.wav"):
+                    present_stems.add(p.stem.lower())
+
+        n_present = n_absent = 0
+        fi = self.col_idx.get("nom du fichier", 0)
+        if present_stems:
+            for i, r in enumerate(self.rows):
+                name = str(r[fi] or "").strip()
+                if name.lower().endswith(".wav"):
+                    name = name[:-4]
+                ok = bool(name) and name.lower() in present_stems
+                self._wav_present[i] = ok
+                n_present += ok
+                n_absent += (not ok)
+
+        try:
+            if present_stems and n_present > 0 and n_absent > 0:
+                self.hide_cleaned_chk.configure(state="normal")
+            else:
+                self.hide_cleaned_var.set(False)
+                self.hide_cleaned_chk.configure(state="disabled")
+        except Exception:
+            pass
 
     # -- Filtres ------------------------------------------------------------
 
@@ -401,6 +452,7 @@ class ValidationView(ctk.CTkToplevel):
         self.proba_lbl.configure(text="0.00")
         self.only_unvalidated_var.set(False)
         self.only_patrimonial_var.set(False)
+        self.hide_cleaned_var.set(False)
         self._apply_filters()
 
     def _apply_filters(self):
@@ -408,11 +460,15 @@ class ValidationView(ctk.CTkToplevel):
         proba_min = float(self.proba_slider.get())
         only_unval = self.only_unvalidated_var.get()
         only_patr = self.only_patrimonial_var.get()
+        hide_cleaned = self.hide_cleaned_var.get()
 
         self.filtered_indexes.clear()
         ci = self.col_idx
 
         for i, r in enumerate(self.rows):
+            if (hide_cleaned and i < len(self._wav_present)
+                    and not self._wav_present[i]):
+                continue
             tad = r[ci["tadarida_taxon"]] if "tadarida_taxon" in ci else None
             proba = r[ci["tadarida_probabilite"]] if "tadarida_probabilite" in ci else None
             obs = r[ci["observateur_taxon"]] if "observateur_taxon" in ci else None
@@ -537,6 +593,15 @@ class ValidationView(ctk.CTkToplevel):
         if not sel:
             self.sel_info_lbl.configure(text="(aucune ligne sélectionnée)")
             return
+        if len(sel) > 1:
+            # Multi-sélection : on n'écrase PAS les champs d'édition (l'utilisateur
+            # saisit UN taxon à appliquer à tout le lot) ; O/P/S reprend le taxon
+            # Tadarida propre à chaque ligne.
+            self.sel_info_lbl.configure(
+                text=f"{len(sel)} lignes sélectionnées  ·  saisis un taxon puis "
+                     f"« Appliquer », ou O/P/S (reprend le Tadarida de chaque ligne)"
+            )
+            return
         idx = int(sel[0])
         r = self.rows[idx]
         ci = self.col_idx
@@ -552,62 +617,83 @@ class ValidationView(ctk.CTkToplevel):
         self.edit_taxon_var.set(str(obs) if obs else "")
         self.edit_conf_var.set(str(obs_conf).upper() if obs_conf else "")
 
+    def _apply_to_row(self, idx: int, taxon: str, conf: str):
+        """Applique (taxon observateur, confiance) à une ligne + MAJ visuelle."""
+        r = self.rows[idx]
+        ci = self.col_idx
+        if "observateur_taxon" in ci:
+            r[ci["observateur_taxon"]] = taxon or None
+        if "observateur_probabilite" in ci:
+            r[ci["observateur_probabilite"]] = conf or None
+        self._dirty = True
+        iid = str(idx)
+        if self.tree.exists(iid):
+            tad = r[ci["tadarida_taxon"]] if "tadarida_taxon" in ci else ""
+            tad_lower = (str(tad) or "").lower()
+            tags = []
+            if taxon:
+                tags.append("validated")
+            if tad_lower in PATRIMONIAL_CODES:
+                tags.append("patrimonial")
+            if classify_taxon(str(tad)) == "noise":
+                tags.append("noise")
+            current = list(self.tree.item(iid, "values"))
+            current[5] = taxon
+            current[6] = conf
+            self.tree.item(iid, values=current, tags=tags)
+
     def _apply_edit_and_next(self):
         self._apply_edit()
-        self._move_selection(1)
+        self._move_to_next_after_selection()
 
     def _apply_edit(self):
+        """Applique le taxon + la confiance saisis à TOUTES les lignes
+        sélectionnées (mono ou multi-sélection)."""
         sel = self.tree.selection()
         if not sel:
             return
-        idx = int(sel[0])
-        r = self.rows[idx]
-        ci = self.col_idx
         new_taxon = self.edit_taxon_var.get().strip()
         new_conf = self.edit_conf_var.get().strip().upper()
-
-        if "observateur_taxon" in ci:
-            r[ci["observateur_taxon"]] = new_taxon or None
-        if "observateur_probabilite" in ci:
-            r[ci["observateur_probabilite"]] = new_conf or None
-
-        self._dirty = True
-        # Mise à jour visuelle de la ligne sans tout reconstruire
-        tad = r[ci["tadarida_taxon"]] if "tadarida_taxon" in ci else ""
-        tad_lower = (str(tad) or "").lower()
-        tags = []
-        if new_taxon:
-            tags.append("validated")
-        if tad_lower in PATRIMONIAL_CODES:
-            tags.append("patrimonial")
-        if classify_taxon(str(tad)) == "noise":
-            tags.append("noise")
-        current = list(self.tree.item(str(idx), "values"))
-        current[5] = new_taxon
-        current[6] = new_conf
-        self.tree.item(str(idx), values=current, tags=tags)
+        for iid in sel:
+            self._apply_to_row(int(iid), new_taxon, new_conf)
         self._refresh_stats()
 
     def _quick_validate(self, confidence: str):
-        """Valide le contact courant avec taxon = tadarida + confiance donnée."""
+        """Valide les lignes sélectionnées : chacune reçoit SON taxon Tadarida
+        avec la confiance donnée (O/P/S). Mono ou multi-sélection."""
         sel = self.tree.selection()
         if not sel:
             return
-        idx = int(sel[0])
-        r = self.rows[idx]
         ci = self.col_idx
-        tad = r[ci["tadarida_taxon"]] if "tadarida_taxon" in ci else ""
-        self.edit_taxon_var.set(str(tad) if tad else "")
-        self.edit_conf_var.set(confidence)
-        self._apply_edit_and_next()
+        for iid in sel:
+            idx = int(iid)
+            tad = self.rows[idx][ci["tadarida_taxon"]] if "tadarida_taxon" in ci else ""
+            self._apply_to_row(idx, str(tad) if tad else "", confidence)
+        self._refresh_stats()
+        self._move_to_next_after_selection()
 
     def _clear_validation(self):
+        """Efface la validation observateur des lignes sélectionnées."""
         sel = self.tree.selection()
         if not sel:
             return
-        self.edit_taxon_var.set("")
-        self.edit_conf_var.set("")
-        self._apply_edit()
+        for iid in sel:
+            self._apply_to_row(int(iid), "", "")
+        self._refresh_stats()
+
+    def _move_to_next_after_selection(self):
+        """Sélectionne la ligne juste après la DERNIÈRE ligne sélectionnée
+        (poursuite du flux de validation après un lot)."""
+        children = self.tree.get_children()
+        if not children:
+            return
+        sel = self.tree.selection()
+        positions = [children.index(i) for i in sel if i in children]
+        pos = max(positions) if positions else -1
+        target = children[min(len(children) - 1, pos + 1)]
+        self.tree.selection_set(target)
+        self.tree.focus(target)
+        self.tree.see(target)
 
     def _move_selection(self, delta: int):
         sel = self.tree.selection()
