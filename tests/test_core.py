@@ -978,6 +978,33 @@ class TestNominatimUserAgent:
         assert __version__ in gui_map.NOMINATIM_UA
 
 
+# =========================================================================
+# carte : points sur carres d'autres observateurs (sites externes)
+# =========================================================================
+
+class TestMapExternalSites:
+    def test_points_from_raw_latlon_order(self):
+        import gui_map
+        raw = {"localites": [
+            {"nom": "Z1", "geometries": {"geometries": [
+                {"type": "Point", "coordinates": [45.5, 4.2]}]}},   # [lat, lon]
+            {"nom": "Z2", "geometries": {"geometries": [
+                {"type": "LineString", "coordinates": [[1, 2], [3, 4]]}]}},
+        ]}
+        pts = gui_map._points_from_raw(raw)
+        assert pts == [{"nom": "Z1", "lat": 45.5, "lon": 4.2}]
+
+    def test_external_site_ids_persist(self, tmp_path, monkeypatch):
+        import gui_map
+        monkeypatch.setattr(gui_map, "_external_sites_path",
+                            lambda: tmp_path / "external_sites.json")
+        assert gui_map._load_external_site_ids() == []
+        gui_map._remember_external_site_id("abc123")
+        gui_map._remember_external_site_id("abc123")   # idempotent
+        gui_map._remember_external_site_id("def456")
+        assert gui_map._load_external_site_ids() == ["abc123", "def456"]
+
+
 if __name__ == "__main__":
     # Permet de lancer directement : python tests/test_core.py
     import sys

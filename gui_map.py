@@ -82,6 +82,58 @@ try:
 except Exception:
     NOMINATIM_UA = "ChiroTool (+https://github.com/kevin-guille/ChiroTool)"
 NOMINATIM_MIN_INTERVAL_S = 1.05  # petit buffer de sécurité au-dessus de 1 s
+
+
+def _points_from_raw(raw: dict) -> list[dict]:
+    """Extrait les points [{nom, lat, lon}] d'un site brut de l'API.
+
+    ATTENTION : Vigie-Chiro stocke [lat, lon] (ordre NON-STANDARD GeoJSON qui
+    attendrait [lon, lat]). Validé par recoupement avec le portail. Ne pas
+    « corriger » (cf vigiechiro_api.py côté écriture).
+    """
+    pts: list[dict] = []
+    for loc in raw.get("localites") or []:
+        for g in (loc.get("geometries") or {}).get("geometries", []):
+            if g.get("type") != "Point":
+                continue
+            coords = g.get("coordinates") or []
+            if len(coords) >= 2:
+                pts.append({
+                    "nom": loc.get("nom", "?"),
+                    "lat": float(coords[0]),
+                    "lon": float(coords[1]),
+                })
+    return pts
+
+
+def _external_sites_path():
+    """Fichier mémorisant les carrés d'AUTRES observateurs où l'utilisateur a
+    ajouté un point (l'API /moi/sites ne les liste pas → il faut les re-fetch
+    par id pour qu'ils restent visibles sur la carte)."""
+    from gui_config import config_dir
+    return config_dir() / "external_sites.json"
+
+
+def _load_external_site_ids() -> list[str]:
+    try:
+        import json
+        p = _external_sites_path()
+        if p.is_file():
+            return [str(x) for x in json.loads(p.read_text(encoding="utf-8")) if x]
+    except Exception:
+        pass
+    return []
+
+
+def _remember_external_site_id(site_id: str) -> None:
+    try:
+        import json
+        ids = _load_external_site_ids()
+        if site_id and site_id not in ids:
+            ids.append(site_id)
+            _external_sites_path().write_text(json.dumps(ids), encoding="utf-8")
+    except Exception:
+        pass
 _nominatim_lock = threading.Lock()
 _nominatim_last_call = [0.0]  # [ts] — mutable closure-friendly
 _nominatim_cache: dict[tuple, list[dict]] = {}  # (query_normalized, limit) → results
@@ -419,34 +471,16 @@ class MapPanel(ctk.CTkFrame):
             from vigiechiro_api import VigieChiroClient
             client = VigieChiroClient(token)
             out = []
+            import re
             for raw in client.iter_sites(mine_only=True):
-                pts = []
-                for loc in raw.get("localites") or []:
-                    for g in (loc.get("geometries") or {}).get("geometries", []):
-                        if g.get("type") != "Point":
-                            continue
-                        coords = g.get("coordinates") or []
-                        if len(coords) >= 2:
-                            # ATTENTION : Vigie-Chiro stocke [lat, lon] (ordre
-                            # NON-STANDARD GeoJSON, qui attendrait [lon, lat]).
-                            # Validé par recoupement avec les coordonnées
-                            # affichées dans le portail web. Ne pas "corriger".
-                            # Cf. vigiechiro_api.py:688 pour la doc côté écriture.
-                            pts.append({
-                                "nom": loc.get("nom", "?"),
-                                "lat": float(coords[0]),
-                                "lon": float(coords[1]),
-                            })
                 titre = raw.get("titre") or ""
-                # Extraction du numéro Tadarida depuis le titre
-                import re
-                m = re.search(r"-(\d{5,6})\s*$", titre)
-                numero = m.group(1).zfill(6) if m else None
+                m = re.search(r"-(\d{5,6})\s*$", titre)   # n° Tadarida depuis le titre
                 out.append({
                     "id": raw.get("_id") or "",
-                    "numero": numero,
+                    "numero": m.group(1).zfill(6) if m else None,
                     "titre": titre,
-                    "points": pts,
+                    "points": _points_from_raw(raw),
+                    "is_mine": True,
                 })
 
             # Récupère aussi les participations de l'utilisateur pour nourrir
@@ -471,6 +505,27 @@ class MapPanel(ctk.CTkFrame):
                 # Fetch participations non critique : la carte marche
                 # sans (on tombera sur le fallback registre local).
                 pass
+
+            # Carrés EXTERNES : appartenant à d'autres observateurs, sur lesquels
+            # l'utilisateur a ajouté un point. /moi/sites ne les liste pas, on
+            # les re-fetch par id pour qu'ils restent visibles (marqués is_mine=False).
+            own_ids = {s["id"] for s in out}
+            for ext_id in _load_external_site_ids():
+                if not ext_id or ext_id in own_ids:
+                    continue
+                try:
+                    raw = client.get_site_raw(ext_id)
+                except Exception:
+                    continue
+                titre = raw.get("titre") or ""
+                m = re.search(r"-(\d{5,6})\s*$", titre)
+                out.append({
+                    "id": raw.get("_id") or ext_id,
+                    "numero": m.group(1).zfill(6) if m else None,
+                    "titre": titre,
+                    "points": _points_from_raw(raw),
+                    "is_mine": False,
+                })
             return out
         except Exception as e:
             # Fallback silencieux si l'API échoue
@@ -590,16 +645,25 @@ class MapPanel(ctk.CTkFrame):
             "in_progress": ("#f2a93b", "#a0651c", "#6a400c"),   # orange
             "idle":        ("#1f6feb", "#0d419d", "#0d419d"),   # bleu (défaut)
         }
+        # Carré appartenant à un AUTRE observateur (point ajouté par l'utilisateur) :
+        # violet, pour le distinguer de ses propres carrés.
+        external_c = ("#8957e5", "#5a2ca0", "#3d1e6d")
         for lat, lon, site, pt in singletons:
+            is_mine = site.get("is_mine", True)
             if hide_labels:
                 title = ""  # pas de texte : rendu beaucoup plus rapide
             else:
                 title = f"{pt['nom']}"
                 if site.get("numero"):
                     title = f"#{site['numero']} · {pt['nom']}"
-            state = self._state_for_site(site)
-            circle_c, outside_c, text_c = state_colors.get(
-                state, state_colors["idle"])
+                if not is_mine:
+                    title += "  (autre obs.)"
+            if not is_mine:
+                circle_c, outside_c, text_c = external_c
+            else:
+                state = self._state_for_site(site)
+                circle_c, outside_c, text_c = state_colors.get(
+                    state, state_colors["idle"])
             marker = self.map.set_marker(
                 lat, lon,
                 text=title,
@@ -1861,6 +1925,12 @@ class MapPanel(ctk.CTkFrame):
           frustré qui pensait que rien ne s'était passé.
         """
         if not reused:
+            # Si le carré n'est pas l'un des miens (ajout d'un point sur le carré
+            # d'un autre observateur), on le mémorise pour qu'il soit re-fetché et
+            # reste visible sur la carte (sinon /moi/sites ne le renverrait pas).
+            own_ids = {s.get("id") for s in self._sites_cache}
+            if site_id and site_id not in own_ids:
+                _remember_external_site_id(site_id)
             self._sites_loaded = False
             self.load_sites_async()
             self.status_lbl.configure(
