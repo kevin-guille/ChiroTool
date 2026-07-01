@@ -122,6 +122,30 @@ def _find_existing_participation(client, *, site_id: str, point: str,
     return None
 
 
+def _participation_window(date_debut, date_fin=None):
+    """Calcule ``(date_debut, date_fin)`` pour la création d'une participation.
+
+    - ``date_fin`` fourni (wizard GUI) → inchangé.
+    - sinon, on modélise une nuit : si ``date_debut`` est à MINUIT (on ne
+      connaît que la date : match Suivi / --date CLI), on le décale à ~20:00 ;
+      ``date_fin`` = 06:00, reporté au lendemain si nécessaire. Évite une
+      participation de 6 h démarrant à minuit dans la base nationale.
+
+    Fonction PURE → testable (voir tests/test_core.py :: TestParticipationWindow).
+    """
+    from datetime import timedelta
+    if date_debut is None:
+        return None, date_fin
+    if date_fin is not None:
+        return date_debut, date_fin
+    if date_debut.hour == 0 and date_debut.minute == 0:
+        date_debut = date_debut.replace(hour=20)
+    date_fin = date_debut.replace(hour=6, minute=0)
+    if date_fin <= date_debut:
+        date_fin = date_fin + timedelta(days=1)
+    return date_debut, date_fin
+
+
 def resolve_meta(
     session: Path,
     cli_args: argparse.Namespace,
@@ -411,12 +435,10 @@ def run_phase_upload(session: Path, meta: SessionMeta, dry_run: bool,
         # Payload enrichi (wizard GUI) ou défauts
         pp = participation_payload or {}
         date_debut = pp.get("date_debut") or meta.date_debut
-        date_fin = pp.get("date_fin")
-        if date_fin is None:
-            date_fin = meta.date_debut.replace(hour=6, minute=0) if meta.date_debut else None
-            if date_fin and meta.date_debut and date_fin <= meta.date_debut:
-                from datetime import timedelta
-                date_fin = meta.date_debut + timedelta(days=1)
+        # Fenêtre temporelle (helper pur testable). Le dédoublonnage matche par
+        # JOUR calendaire (cf _find_existing_participation), donc décaler l'heure
+        # dans la même journée ne casse pas la détection de doublon.
+        date_debut, date_fin = _participation_window(date_debut, pp.get("date_fin"))
 
         client = VigieChiroClient(token)
 
@@ -709,11 +731,20 @@ def run_phase_wait(session: Path, token: str | None, poll_interval: int = 60,
 
     etat = client.wait_for_completion(part_id, poll_interval=poll_interval,
                                        max_wait=MAX_WAIT, on_poll=_report)
+    done = etat in ("TERMINE", "FINI")
     log_to_campaign(session, phase="wait", action="wait_for_completion",
-                    status="ok" if etat in ("TERMINE", "FINI") else "warning",
+                    status="ok" if done else "warning",
                     stats={"final_state": etat},
                     tool_version=TOOL_VERSION)
-    return {"phase": "wait", "final_state": etat}
+    out = {"phase": "wait", "final_state": etat}
+    if not done:
+        # État non terminal : ERROR/ERREUR (échec Tadarida) ou délai dépassé
+        # (EN_COURS). On NE poursuit PAS vers fetch/cleanup — éviter d'analyser
+        # ou de nettoyer sur un xlsx absent/incomplet (un échec PARTIEL passe
+        # sous le garde-fou mass-delete >80 %). L'utilisateur relancera plus tard.
+        out["error"] = (f"analyse Tadarida non terminée (état={etat}) — "
+                        f"fetch/cleanup non lancés")
+    return out
 
 
 def run_phase_fetch(session: Path, token: str | None, force: bool = False,

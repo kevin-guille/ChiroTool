@@ -803,6 +803,44 @@ class TestTe10Robustness:
         assert stats["engine"] == "python"
 
 
+# =========================================================================
+# pipeline : fenetre temporelle de participation (bug date_fin a minuit)
+# =========================================================================
+
+class TestParticipationWindow:
+    def test_midnight_becomes_night(self):
+        from pipeline import _participation_window
+        d0, d1 = _participation_window(datetime(2026, 6, 23))   # minuit
+        assert d0 == datetime(2026, 6, 23, 20, 0)     # décalé à 20:00
+        assert d1 == datetime(2026, 6, 24, 6, 0)      # fin le lendemain 06:00
+        assert d1 > d0
+
+    def test_evening_start_ends_next_morning(self):
+        from pipeline import _participation_window
+        dd = datetime(2026, 6, 23, 21, 30)
+        d0, d1 = _participation_window(dd)
+        assert d0 == dd
+        assert d1 == datetime(2026, 6, 24, 6, 0)
+
+    def test_explicit_date_fin_untouched(self):
+        from pipeline import _participation_window
+        dd = datetime(2026, 6, 23)
+        df = datetime(2026, 6, 24, 5, 0)
+        assert _participation_window(dd, df) == (dd, df)
+
+    def test_early_morning_same_day_end(self):
+        from pipeline import _participation_window
+        dd = datetime(2026, 6, 23, 2, 0)
+        d0, d1 = _participation_window(dd)
+        assert d0 == dd
+        assert d1 == datetime(2026, 6, 23, 6, 0)      # 06:00 le jour même > 02:00
+        assert d1 > d0
+
+    def test_none_date_debut(self):
+        from pipeline import _participation_window
+        assert _participation_window(None) == (None, None)
+
+
 if __name__ == "__main__":
     # Permet de lancer directement : python tests/test_core.py
     import sys
