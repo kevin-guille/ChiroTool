@@ -29,8 +29,10 @@ et les séries observées dans les WAV, via suivi.py)
 from __future__ import annotations
 
 import argparse
+import os
 import shutil
 import sys
+import time
 import warnings
 from datetime import datetime
 from pathlib import Path
@@ -76,6 +78,31 @@ except Exception:
 # ---------------------------------------------------------------------------
 # Cœur : renommage d'une session
 # ---------------------------------------------------------------------------
+
+def _av_safe_pace() -> tuple[int, float] | None:
+    """Mode « compatible antivirus » (opt-in) : renvoie ``(taille_lot, pause_s)``
+    pour lisser le renommage en rafale, ou ``None`` si désactivé.
+
+    Piloté par la variable d'environnement ``CHIROTOOL_AV_SAFE`` :
+      - absente / "0" / "" → ``None`` (défaut : vitesse maximale, app inchangée) ;
+      - "1" / "true" → défaut (lot de 40, pause 0,25 s) ;
+      - "<lot>:<pause_ms>" → réglage fin (ex. "25:400").
+
+    Sans la variable, AUCUN effet → l'app reste identique et rapide sur tous les
+    postes. Sert à tester sur un poste dont l'antivirus tue l'app pendant le
+    renommage massif (heuristique rançongiciel).
+    """
+    raw = os.environ.get("CHIROTOOL_AV_SAFE", "").strip().lower()
+    if raw in ("", "0", "false", "no", "off"):
+        return None
+    if ":" in raw:
+        try:
+            batch_s, pause_ms = raw.split(":", 1)
+            return (max(1, int(batch_s)), max(0.0, int(pause_ms) / 1000.0))
+        except ValueError:
+            pass
+    return (40, 0.25)
+
 
 def rename_session(
     session: Path,
@@ -229,6 +256,12 @@ def rename_session(
 
     # --- 6. exécution
     if not dry_run:
+        # Mode « compatible antivirus » (opt-in via CHIROTOOL_AV_SAFE) : lisse le
+        # renommage en petits lots + micro-pauses pour rester sous le seuil
+        # comportemental des antivirus. None par défaut → vitesse maximale.
+        pace = _av_safe_pace()
+        if pace:
+            out["av_safe_mode"] = {"batch": pace[0], "pause_s": pace[1]}
         # Quarantaine des doublons résiduels identiques (auto-cicatrisation)
         if healed_dupes:
             quarantine = wav_dir / "_doublons_casse"
@@ -240,6 +273,7 @@ def rename_session(
                 except OSError as e:
                     out["warnings"].append(
                         f"doublon non déplacé {src.name} : {e}")
+        _paced = 0
         for src, dst in plan:
             # Double-check : si dst a été créé entre le plan et l'exec
             # (par un autre process), ne pas écraser.
@@ -251,6 +285,11 @@ def rename_session(
                 # Renommage atomique (sur même volume → os.rename sous le capot)
                 src.rename(dst)
                 out["executed"] += 1
+                if pace:
+                    _paced += 1
+                    if _paced >= pace[0]:
+                        _paced = 0
+                        time.sleep(pace[1])
             except OSError as e:
                 out["errors"].append(f"échec renommage {src.name} → {dst.name} : {e}")
 
