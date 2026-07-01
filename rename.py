@@ -79,29 +79,63 @@ except Exception:
 # Cœur : renommage d'une session
 # ---------------------------------------------------------------------------
 
+AV_SAFE_MARKER = "chirotool_avsafe.cfg"
+
+
+def _av_safe_marker_present() -> bool:
+    """True si un fichier marqueur ``chirotool_avsafe.cfg`` est posé à côté de
+    l'exe (ou dans le dossier courant). Permet d'activer le mode compatible
+    antivirus sur un poste verrouillé sans .bat ni variable d'environnement :
+    il suffit de déposer ce fichier vide à côté de ChiroTool.exe."""
+    roots = []
+    try:
+        if getattr(sys, "frozen", False):
+            roots.append(Path(sys.executable).parent)
+        else:
+            roots.append(Path(__file__).resolve().parent)
+    except Exception:
+        pass
+    try:
+        roots.append(Path.cwd())
+    except Exception:
+        pass
+    for r in roots:
+        try:
+            if (r / AV_SAFE_MARKER).exists():
+                return True
+        except Exception:
+            pass
+    return False
+
+
 def _av_safe_pace() -> tuple[int, float] | None:
     """Mode « compatible antivirus » (opt-in) : renvoie ``(taille_lot, pause_s)``
     pour lisser le renommage en rafale, ou ``None`` si désactivé.
 
-    Piloté par la variable d'environnement ``CHIROTOOL_AV_SAFE`` :
-      - absente / "0" / "" → ``None`` (défaut : vitesse maximale, app inchangée) ;
-      - "1" / "true" → défaut (lot de 40, pause 0,25 s) ;
-      - "<lot>:<pause_ms>" → réglage fin (ex. "25:400").
+    Activation (dans l'ordre) :
+      - variable d'environnement ``CHIROTOOL_AV_SAFE`` :
+          "1"/"true" → défaut (lot 40, pause 0,25 s) ; "<lot>:<pause_ms>" → réglage
+          fin (ex. "25:400") ; "0"/"off" → force désactivé (prioritaire) ;
+      - sinon, fichier marqueur ``chirotool_avsafe.cfg`` à côté de l'exe → défaut.
 
-    Sans la variable, AUCUN effet → l'app reste identique et rapide sur tous les
-    postes. Sert à tester sur un poste dont l'antivirus tue l'app pendant le
-    renommage massif (heuristique rançongiciel).
+    Sans rien, AUCUN effet → l'app reste identique et rapide sur tous les postes.
+    Sert aux postes dont l'antivirus tue l'app pendant le renommage massif.
     """
     raw = os.environ.get("CHIROTOOL_AV_SAFE", "").strip().lower()
-    if raw in ("", "0", "false", "no", "off"):
-        return None
+    if raw in ("0", "false", "no", "off"):
+        return None                       # désactivation explicite (prioritaire)
+    if raw in ("1", "true", "yes", "on"):
+        return (40, 0.25)
     if ":" in raw:
         try:
             batch_s, pause_ms = raw.split(":", 1)
             return (max(1, int(batch_s)), max(0.0, int(pause_ms) / 1000.0))
         except ValueError:
-            pass
-    return (40, 0.25)
+            return (40, 0.25)
+    # Variable non posée → on regarde le fichier marqueur.
+    if _av_safe_marker_present():
+        return (40, 0.25)
+    return None
 
 
 def rename_session(
