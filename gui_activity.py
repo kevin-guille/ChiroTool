@@ -27,6 +27,7 @@ import customtkinter as ctk
 
 from activity_graph import (
     aggregate_multi_xlsx,
+    cascade_options,
     list_nights,
     list_passages,
     list_points,
@@ -341,46 +342,56 @@ class ActivityPanel(ctk.CTkFrame):
     # Filtres : checkboxes nuits + taxons
     # =========================================================================
 
-    def _refresh_filters_ui(self):
-        """Repopule les 5 filtres avec les sélections actuelles.
+    def _cascade(self) -> dict:
+        """Options disponibles EN CASCADE selon les sélections amont courantes.
+        Une sélection vide (falsy) = pas de contrainte pour cette dimension."""
+        return cascade_options(
+            self._aggregated,
+            sel_sites=(self._sel_sites or None),
+            sel_points=(self._sel_points or None),
+            sel_passages=(self._sel_passages or None),
+        )
 
-        N'INITIALISE PAS les sélections (c'est le job de _on_loaded). Si
-        l'utilisateur a cliqué "Aucun", la box reste vide.
-        """
-        # --- Sites
-        sites = list_sites(self._aggregated)
+    def _refresh_filters_ui(self):
+        """Repopule les 5 filtres. N'INITIALISE PAS les sélections (job de
+        _on_loaded) mais PURGE les sélections aval devenues indisponibles."""
+        self._render_sites()
+        self._render_points()
+        self._render_passages()
+        self._render_nights()
+        self._render_taxons()
+
+    def _render_sites(self):
         self._render_checkbox_box(
-            self.sites_box, sites, self._sel_sites,
+            self.sites_box, list_sites(self._aggregated), self._sel_sites,
             on_toggle=self._on_site_toggle,
             select_all_cb=lambda v: self._set_filter_all("sites", v),
             label_fn=lambda s: f"#{s}",
         )
 
-        # --- Points (filtré par sites sélectionnés pour l'affichage)
-        if self._sel_sites:
-            points = sorted({
-                p for s in self._sel_sites
-                for p in list_points(self._aggregated, s)
-            })
-        else:
-            points = list_points(self._aggregated)
+    def _render_points(self):
+        # Points limités aux sites sélectionnés ; purge des points orphelins.
+        pts = self._cascade()["points"]
+        self._sel_points &= set(pts)
         self._render_checkbox_box(
-            self.points_box, points, self._sel_points,
+            self.points_box, pts, self._sel_points,
             on_toggle=self._on_point_toggle,
             select_all_cb=lambda v: self._set_filter_all("points", v),
         )
 
-        # --- Passages
-        passages = list_passages(self._aggregated)
+    def _render_passages(self):
+        pas = self._cascade()["passages"]
+        self._sel_passages &= set(pas)
         self._render_checkbox_box(
-            self.passages_box, passages, self._sel_passages,
+            self.passages_box, pas, self._sel_passages,
             on_toggle=self._on_passage_toggle,
             select_all_cb=lambda v: self._set_filter_all("passages", v),
             label_fn=lambda p: "(inconnu)" if p is None else f"Pass{p}",
         )
 
-        # --- Nuits
-        nights = list_nights(self._aggregated)
+    def _render_nights(self):
+        nights = self._cascade()["nights"]
+        self._sel_nights &= set(nights)
         self._render_checkbox_box(
             self.nights_box, list(reversed(nights)), self._sel_nights,
             on_toggle=self._on_night_toggle,
@@ -388,7 +399,10 @@ class ActivityPanel(ctk.CTkFrame):
             mono=True,
         )
 
-        # --- Taxons (avec compteur respectant les autres filtres)
+    def _render_taxons(self):
+        # Taxons avec compteur respectant les autres filtres (sites/points/
+        # passages/nuits). On NE purge PAS la sélection (un taxon réapparaît si
+        # on élargit les filtres).
         for w in self.taxons_box.winfo_children():
             w.destroy()
         taxons_all = list_taxons(self._filtered_aggregated(skip_taxon=True),
@@ -489,9 +503,12 @@ class ActivityPanel(ctk.CTkFrame):
             self._sel_sites.add(site)
         else:
             self._sel_sites.discard(site)
-        # Quand on change de site, les points possibles changent →
-        # on re-render le panneau filtres pour rafraîchir la liste Points.
-        self._refresh_filters_ui()
+        # Cascade : sites → points → passages → nuits → taxons (on ne re-rend
+        # que l'aval pour éviter de reconstruire la liste Sites elle-même).
+        self._render_points()
+        self._render_passages()
+        self._render_nights()
+        self._render_taxons()
         self._redraw()
 
     def _on_point_toggle(self, point: str, var: ctk.BooleanVar):
@@ -499,6 +516,9 @@ class ActivityPanel(ctk.CTkFrame):
             self._sel_points.add(point)
         else:
             self._sel_points.discard(point)
+        self._render_passages()
+        self._render_nights()
+        self._render_taxons()
         self._redraw()
 
     def _on_passage_toggle(self, passage: int, var: ctk.BooleanVar):
@@ -506,6 +526,8 @@ class ActivityPanel(ctk.CTkFrame):
             self._sel_passages.add(passage)
         else:
             self._sel_passages.discard(passage)
+        self._render_nights()
+        self._render_taxons()
         self._redraw()
 
     def _on_group_toggle(self):
@@ -558,6 +580,7 @@ class ActivityPanel(ctk.CTkFrame):
             self._sel_nights.add(night)
         else:
             self._sel_nights.discard(night)
+        self._render_taxons()   # les compteurs de taxons dépendent des nuits
         self._redraw()
 
     def _on_taxon_toggle(self, taxon: str, var: ctk.BooleanVar):

@@ -670,6 +670,61 @@ class TestValidationFilters:
         assert "Pippip" in t
 
 
+# =========================================================================
+# activity_graph : cascade des filtres (site → point → passage → nuit)
+# =========================================================================
+
+class TestActivityCascade:
+    def _agg(self):
+        # clé = (site, point, passage, night, taxon) -> bins
+        return {
+            ("212097", "Z1", 1, "2026-06-01", "Pippip"): [1],
+            ("212097", "Z2", 1, "2026-06-01", "Nycnoc"): [1],
+            ("212097", "Z1", 2, "2026-06-02", "Pippip"): [1],
+            ("999999", "A1", 1, "2026-05-01", "Barbar"): [1],
+        }
+
+    def test_no_selection_all_options(self):
+        from activity_graph import cascade_options
+        o = cascade_options(self._agg())
+        assert o["sites"] == ["212097", "999999"]
+        assert set(o["points"]) == {"Z1", "Z2", "A1"}
+        assert o["passages"] == [1, 2]
+        assert o["nights"] == ["2026-05-01", "2026-06-01", "2026-06-02"]
+
+    def test_cascade_by_site(self):
+        from activity_graph import cascade_options
+        o = cascade_options(self._agg(), sel_sites={"212097"})
+        assert set(o["points"]) == {"Z1", "Z2"}     # A1 exclu (autre site)
+        assert o["passages"] == [1, 2]
+        assert o["nights"] == ["2026-06-01", "2026-06-02"]  # 2026-05-01 exclu
+
+    def test_cascade_by_site_and_point(self):
+        from activity_graph import cascade_options
+        o = cascade_options(self._agg(), sel_sites={"212097"}, sel_points={"Z1"})
+        # passages/nuits limités à Z1 du site 212097
+        assert o["passages"] == [1, 2]
+        assert o["nights"] == ["2026-06-01", "2026-06-02"]
+
+    def test_cascade_full_chain(self):
+        from activity_graph import cascade_options
+        o = cascade_options(self._agg(), sel_sites={"212097"},
+                            sel_points={"Z1"}, sel_passages={1})
+        # Z1 + passage 1 => uniquement la nuit du 2026-06-01
+        assert o["nights"] == ["2026-06-01"]
+
+    def test_placeholder_ordering(self):
+        from activity_graph import cascade_options
+        agg = {
+            ("212097", "Z1", 1, "2026-06-01", "Pippip"): [1],
+            ("?", "?", None, "2026-06-01", "noise"): [1],
+        }
+        o = cascade_options(agg)
+        assert o["sites"] == ["212097", "?"]          # "?" repoussé en fin
+        assert o["points"] == ["Z1", "?"]
+        assert o["passages"] == [1, None]             # None en fin
+
+
 if __name__ == "__main__":
     # Permet de lancer directement : python tests/test_core.py
     import sys

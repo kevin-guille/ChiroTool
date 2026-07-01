@@ -336,3 +336,53 @@ def list_passages(aggregated: dict) -> list[int | None]:
     if None in passages:
         real.append(None)  # type: ignore[arg-type]
     return real
+
+
+def _sorted_with_placeholders(items) -> list:
+    """Trie en repoussant les placeholders ("?" / None) en fin de liste."""
+    real = sorted(x for x in items if x not in (None, "?"))
+    if "?" in items:
+        real.append("?")
+    if None in items:
+        real.append(None)
+    return real
+
+
+def cascade_options(aggregated: dict, *, sel_sites=None, sel_points=None,
+                    sel_passages=None) -> dict:
+    """Options disponibles pour chaque dimension, EN CASCADE.
+
+    Chaque dimension aval n'inclut que les valeurs compatibles avec les
+    sélections amont fournies (``None`` = pas de contrainte sur cette dimension) :
+      - ``sites``    : tous les sites présents ;
+      - ``points``   : uniquement dans les sites sélectionnés ;
+      - ``passages`` : uniquement dans (sites + points) sélectionnés ;
+      - ``nights``   : uniquement dans (sites + points + passages) sélectionnés.
+
+    Retourne ``{"sites", "points", "passages", "nights"}`` (listes triées,
+    placeholders "?"/None en fin). Fonction PURE → testable.
+    """
+    sites, points, passages, nights = set(), set(), set(), set()
+    for key in aggregated.keys():
+        if len(key) < 5:
+            continue
+        s, p, pa, ni, _tx = key
+        if s:
+            sites.add(s)
+        if sel_sites is not None and s not in sel_sites:
+            continue
+        if p:
+            points.add(p)
+        if sel_points is not None and p not in sel_points:
+            continue
+        passages.add(pa)
+        if sel_passages is not None and pa not in sel_passages:
+            continue
+        if ni:
+            nights.add(ni)
+    return {
+        "sites": _sorted_with_placeholders(sites),
+        "points": _sorted_with_placeholders(points),
+        "passages": _sorted_with_placeholders(passages),
+        "nights": sorted(nights),
+    }
