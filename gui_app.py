@@ -196,6 +196,11 @@ class ChiroToolApp(ctk.CTk):
         super().__init__()
 
         self.settings = load_settings()
+        # Mode compatible antivirus : reflété dans la variable d'env que
+        # rename._av_safe_pace lit au moment du renommage. Additif (on ne retire
+        # pas un éventuel CHIROTOOL_AV_SAFE posé par un lanceur externe).
+        if getattr(self.settings, "av_safe_mode", False):
+            os.environ["CHIROTOOL_AV_SAFE"] = "1"
         ctk.set_appearance_mode(self.settings.appearance)
         ctk.set_default_color_theme("blue")
 

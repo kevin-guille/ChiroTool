@@ -950,6 +950,22 @@ class TestApiBaseUrlSecurity:
         assert c.base_url.startswith("https://")
 
 
+# =========================================================================
+# rename : mode compatible antivirus (_av_safe_pace via variable d'env)
+# =========================================================================
+
+class TestAvSafePace:
+    def test_env_activation(self, monkeypatch):
+        import rename
+        # Valeurs explicites via env : prioritaires (independant du marqueur).
+        monkeypatch.setenv("CHIROTOOL_AV_SAFE", "1")
+        assert rename._av_safe_pace() == (40, 0.25)
+        monkeypatch.setenv("CHIROTOOL_AV_SAFE", "25:400")
+        assert rename._av_safe_pace() == (25, 0.4)
+        monkeypatch.setenv("CHIROTOOL_AV_SAFE", "0")   # desactivation explicite
+        assert rename._av_safe_pace() is None
+
+
 if __name__ == "__main__":
     # Permet de lancer directement : python tests/test_core.py
     import sys

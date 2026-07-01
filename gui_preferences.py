@@ -128,9 +128,29 @@ class PreferencesDialog(ctk.CTkToplevel):
             font=ctk.CTkFont(size=10), text_color=("gray50", "gray60"),
             anchor="w").grid(row=4, column=0, sticky="ew", padx=16, pady=(0, 8))
 
-        ctk.CTkLabel(tab, text="Stockage des préférences",
+        # --- Traitement
+        ctk.CTkLabel(tab, text="Traitement",
                       font=ctk.CTkFont(size=14, weight="bold"),
                       anchor="w").grid(row=5, column=0, sticky="ew",
+                                        padx=16, pady=(16, 4))
+        self.avsafe_var = ctk.BooleanVar(
+            value=getattr(self.settings, "av_safe_mode", False))
+        ctk.CTkSwitch(
+            tab, text="Mode compatible antivirus (préparation ralentie)",
+            variable=self.avsafe_var, command=self._on_avsafe_toggle,
+        ).grid(row=6, column=0, sticky="w", padx=16, pady=(0, 2))
+        ctk.CTkLabel(
+            tab, text="Lisse le renommage (petits lots + pauses) pour éviter que "
+                      "l'antivirus ne ferme l'application pendant la préparation. "
+                      "À n'activer que si tu rencontres ce souci — la préparation "
+                      "devient plus lente.",
+            font=ctk.CTkFont(size=10), text_color=("gray50", "gray60"),
+            anchor="w", justify="left", wraplength=560).grid(
+            row=7, column=0, sticky="ew", padx=16, pady=(0, 8))
+
+        ctk.CTkLabel(tab, text="Stockage des préférences",
+                      font=ctk.CTkFont(size=14, weight="bold"),
+                      anchor="w").grid(row=8, column=0, sticky="ew",
                                         padx=16, pady=(16, 4))
 
         from gui_config import storage_info
@@ -145,7 +165,25 @@ class PreferencesDialog(ctk.CTkToplevel):
                       font=ctk.CTkFont(size=11),
                       text_color=("gray30", "gray70"),
                       justify="left", anchor="w", wraplength=560).grid(
-            row=6, column=0, sticky="ew", padx=16, pady=(0, 16))
+            row=9, column=0, sticky="ew", padx=16, pady=(0, 16))
+
+    def _on_avsafe_toggle(self):
+        """Persiste le mode compatible antivirus et l'applique immédiatement via
+        la variable d'env lue par rename._av_safe_pace (pas de couplage direct)."""
+        import os
+        from gui_config import save_settings
+        on = bool(self.avsafe_var.get())
+        self.settings.av_safe_mode = on
+        if on:
+            os.environ["CHIROTOOL_AV_SAFE"] = "1"
+        else:
+            # On retire notre override : le marqueur/variable éventuels
+            # reprennent leur comportement propre.
+            os.environ.pop("CHIROTOOL_AV_SAFE", None)
+        try:
+            save_settings(self.settings)
+        except Exception:
+            pass
 
     def _on_autoupd_toggle(self):
         """Persiste immédiatement le réglage de vérification auto des MAJ."""

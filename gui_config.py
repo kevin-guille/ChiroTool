@@ -72,6 +72,9 @@ class Settings:
     update_skip_version: str | None = None
     # Date ISO (YYYY-MM-DD) du dernier check auto réussi → throttle 1×/jour.
     last_update_check: str | None = None
+    # Mode « compatible antivirus » : lisse le renommage (plus lent) pour éviter
+    # que l'antivirus ne ferme l'app pendant la préparation. Défaut off.
+    av_safe_mode: bool = False
 
 
 def _settings_file() -> Path:
