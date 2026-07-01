@@ -354,10 +354,20 @@ class ValidationView(ctk.CTkToplevel):
         self.stats_lbl.grid(row=0, column=0, sticky="w")
 
         ctk.CTkButton(
+            footer, text="🔄 Rafraîchir", width=110, height=32,
+            fg_color=("gray85", "gray25"),
+            text_color=("gray15", "gray90"),
+            hover_color=("gray75", "gray35"),
+            command=self._on_filters_changed,
+        ).grid(row=0, column=1, padx=(6, 6))
+
+        self.save_btn = ctk.CTkButton(
             footer, text="Enregistrer", width=130, height=32,
             font=ctk.CTkFont(weight="bold"),
             command=self._save,
-        ).grid(row=0, column=1, padx=(6, 6))
+        )
+        self.save_btn.grid(row=0, column=2, padx=(6, 6))
+        self._save_btn_fg = self.save_btn.cget("fg_color")   # couleur par défaut
 
         ctk.CTkButton(
             footer, text="Fermer", width=100, height=32,
@@ -365,7 +375,7 @@ class ValidationView(ctk.CTkToplevel):
             text_color=("gray15", "gray90"),
             hover_color=("gray75", "gray35"),
             command=self._on_close,
-        ).grid(row=0, column=2)
+        ).grid(row=0, column=3)
 
         # --- Raccourcis clavier ---
         # CRITIQUE : les binds niveau Toplevel captureraient la frappe aussi
@@ -687,6 +697,18 @@ class ValidationView(ctk.CTkToplevel):
         self.edit_taxon_var.set(str(obs) if obs else "")
         self.edit_conf_var.set(str(obs_conf).upper() if obs_conf else "")
 
+    def _mark_dirty(self):
+        """Signale des modifications non enregistrées (titre ●, bouton coloré,
+        header). Réinitialisé après _save. Évite le « ✓ enregistré » trompeur qui
+        persistait après de nouvelles éditions."""
+        self._dirty = True
+        try:
+            self.title(f"● Validation — {self.session_path.name}")
+            self.save_btn.configure(text="● Enregistrer", fg_color="#c9700f")
+            self.header_info.configure(text="modifications non enregistrées")
+        except Exception:
+            pass
+
     def _apply_to_row(self, idx: int, taxon: str, conf: str):
         """Applique (taxon observateur, confiance) à une ligne + MAJ visuelle."""
         r = self.rows[idx]
@@ -695,7 +717,7 @@ class ValidationView(ctk.CTkToplevel):
             r[ci["observateur_taxon"]] = taxon or None
         if "observateur_probabilite" in ci:
             r[ci["observateur_probabilite"]] = conf or None
-        self._dirty = True
+        self._mark_dirty()
         iid = str(idx)
         if self.tree.exists(iid):
             tad = r[ci["tadarida_taxon"]] if "tadarida_taxon" in ci else ""
@@ -880,6 +902,11 @@ class ValidationView(ctk.CTkToplevel):
             return
 
         self._dirty = False
+        try:
+            self.title(f"Validation — {self.session_path.name}")
+            self.save_btn.configure(text="Enregistrer", fg_color=self._save_btn_fg)
+        except Exception:
+            pass
         self.header_info.configure(text=f"✓ enregistré : {out_path.name}")
 
     def _on_close(self):

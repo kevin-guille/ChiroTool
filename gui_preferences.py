@@ -5,7 +5,7 @@ Onglets :
   - Général       : thème, ouverture auto
   - API           : token Vigie-Chiro (save/delete via keyring) + test de validité
   - Nettoyage     : 4 sliders seuils + politique silencieux / taxon inconnu
-  - Outils        : chemin ChiroSurf (v2)
+  - Outils        : chemin ChiroSurf (ouverture directe depuis la validation)
 """
 
 from __future__ import annotations
@@ -1089,7 +1089,8 @@ class PreferencesDialog(ctk.CTkToplevel):
 
         ctk.CTkLabel(tab, text=(
             "Logiciel portable recommandé pour la validation acoustique.\n"
-            "Fonctionnalité prévue en v2 : clic sur un contact → ouverture directe."),
+            "Dans « Valider la nuit… », double-clic (ou touche Espace) sur un "
+            "contact → ouverture directe du WAV dans ChiroSurf."),
                       font=ctk.CTkFont(size=11),
                       text_color=("gray30", "gray70"),
                       wraplength=640, justify="left", anchor="w").grid(

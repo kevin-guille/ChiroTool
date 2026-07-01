@@ -834,6 +834,25 @@ class ActivityPanel(ctk.CTkFrame):
     # Rendu canvas
     # =========================================================================
 
+    def _empty_reason(self) -> str:
+        """Message contextuel quand le graphe est vide : nomme la 1re dimension
+        de filtre vide (au lieu du générique « nuit et taxon » trompeur quand
+        c'est en fait Points/Sites qui a été vidé via « Aucun »)."""
+        if not self._aggregated:
+            return "Aucune donnée d'observation trouvée dans l'espace de travail."
+        for sel, label in (
+            (self._sel_sites, "site"),
+            (self._sel_points, "point"),
+            (self._sel_passages, "passage"),
+            (self._sel_nights, "nuit"),
+            (self._sel_taxons, "taxon"),
+        ):
+            if not sel:
+                return (f"Aucun {label} sélectionné.\n"
+                        f"Coche au moins un {label} dans la colonne de gauche.")
+        return ("Aucun contact pour cette combinaison de filtres.\n"
+                "Élargis la sélection (colonne de gauche).")
+
     def _redraw(self):
         c = self.canvas
         c.delete("all")
@@ -880,12 +899,11 @@ class ActivityPanel(ctk.CTkFrame):
         if gx1 - gx0 < 60 or gy1 - gy0 < 40:
             return  # trop petit pour dessiner
 
-        # Si rien à dessiner : message centré
+        # Si rien à dessiner : message centré CONTEXTUEL (nomme la dimension vide)
         if not per_taxon or all(sum(bins) == 0 for bins in per_taxon.values()):
             c.create_text(
                 (gx0 + gx1) // 2, (gy0 + gy1) // 2,
-                text="Sélectionne au moins une nuit et un taxon\n"
-                     "pour afficher la courbe d'activité.",
+                text=self._empty_reason(),
                 fill=self._gray(),
                 font=("Segoe UI", 11),
                 justify="center",

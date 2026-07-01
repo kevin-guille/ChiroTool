@@ -569,6 +569,9 @@ class ChiroToolApp(ctk.CTk):
             "Confirmer le batch",
             f"Lancer la phase « {phase} » sur {len(sessions)} session(s) "
             f"en série (l'une après l'autre) ?\n\n"
+            f"Les sessions qui ne sont pas prêtes pour cette phase (ou déjà "
+            f"faites) seront automatiquement ignorées — le détail apparaît "
+            f"dans le journal du modal.\n\n"
             f"Tu pourras suivre la progression dans le modal qui s'ouvre.",
         ):
             return
