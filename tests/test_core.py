@@ -966,6 +966,18 @@ class TestAvSafePace:
         assert rename._av_safe_pace() is None
 
 
+# =========================================================================
+# coherence : User-Agent Nominatim derive de version.py
+# =========================================================================
+
+class TestNominatimUserAgent:
+    def test_ua_reflects_version(self):
+        import gui_map
+        from version import __version__
+        assert gui_map.NOMINATIM_UA.startswith("ChiroTool/")
+        assert __version__ in gui_map.NOMINATIM_UA
+
+
 if __name__ == "__main__":
     # Permet de lancer directement : python tests/test_core.py
     import sys

@@ -76,7 +76,11 @@ CLUSTER_GRID_PIXELS = 70
 # Politique Nominatim : 1 req/s max, User-Agent identifiant l'app avec contact.
 # Sans ça, IP potentiellement bannie (app distribuée à plusieurs BE = risque).
 # Cf. https://operations.osmfoundation.org/policies/nominatim/
-NOMINATIM_UA = "ChiroTool/1.0 (+https://github.com/kevin-guille/ChiroTool)"
+try:
+    from version import __version__ as _APP_VERSION, GITHUB_REPO_URL as _REPO_URL
+    NOMINATIM_UA = f"ChiroTool/{_APP_VERSION} (+{_REPO_URL})"
+except Exception:
+    NOMINATIM_UA = "ChiroTool (+https://github.com/kevin-guille/ChiroTool)"
 NOMINATIM_MIN_INTERVAL_S = 1.05  # petit buffer de sécurité au-dessus de 1 s
 _nominatim_lock = threading.Lock()
 _nominatim_last_call = [0.0]  # [ts] — mutable closure-friendly

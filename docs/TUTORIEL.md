@@ -8,7 +8,7 @@
 
 ![Icône ChiroTool](captures/icon_256.png)
 
-**Version 0.2** · Tutoriel utilisateur
+**Version 0.4** · Tutoriel utilisateur
 
 </div>
 
@@ -360,7 +360,21 @@ patrimoniales, identifications douteuses…).
      **ChiroSurf** (à condition d'avoir indiqué le chemin de ChiroSurf dans
      Préférences → Outils externes).
 4. Vos validations sont sauvegardées dans un nouveau tableur suffixé de vos
-   initiales (ex : `…_KG.xlsx`).
+   initiales (ex : `…_KG.xlsx`). Un bandeau **« ● modifications non
+   enregistrées »** (titre + bouton *Enregistrer* orangé) vous rappelle de
+   sauvegarder ; il disparaît après enregistrement.
+
+> ⚡ **Validation en lot** : sélectionnez **plusieurs lignes** (Ctrl+clic, ou
+> Maj+clic pour une plage), puis appliquez une espèce d'un coup (champ *Taxon* +
+> « Appliquer ») ou validez tout le lot avec `O`/`P`/`S` (chaque ligne reçoit
+> alors son propre taxon Tadarida). Idéal pour valider rapidement une nuit
+> entière d'une même espèce.
+
+> 🧹 **Masquer les sons supprimés au nettoyage** : si vous validez *après* avoir
+> nettoyé, cochez cette case (elle s'active automatiquement) pour n'afficher que
+> les contacts dont le WAV existe encore. La **liste des taxons** se met aussi à
+> jour selon les filtres actifs (proba, masquage) : seuls les taxons encore
+> présents sont proposés.
 
 > 💡 Si vous nettoyez **après** avoir validé, vos décisions humaines sont
 > respectées : un faux « noise » que vous avez corrigé en *Pipistrelle* sera
@@ -469,6 +483,19 @@ API Vigie-Chiro).
 Certains enregistreurs produisent occasionnellement des fichiers mal nommés ou en
 double. Vérifiez le dossier `Data/` et retirez les fichiers manifestement
 corrompus, puis relancez.
+
+**« L'application se ferme toute seule pendant la préparation. »**
+Certains antivirus d'entreprise (Trend Micro, etc.) coupent l'application quand
+elle crée beaucoup de fichiers d'un coup (renommage/expansion), qu'ils prennent
+à tort pour un rançongiciel. Deux solutions :
+- **Placez votre dossier de travail hors du Bureau / Documents / Images** (ces
+  dossiers sont « protégés » par défaut) — par exemple `C:\ChiroData\`.
+- Activez **Préférences → Général → Mode compatible antivirus** : le renommage
+  est alors *lissé* (plus lent, mais passe souvent sous le radar de l'antivirus).
+- En dernier recours, demandez à votre service informatique d'**autoriser
+  `ChiroTool.exe`** dans l'antivirus.
+Aucune donnée n'est perdue : relancer la préparation reprend là où elle s'était
+arrêtée.
 
 **« L'upload s'est interrompu (PC éteint, coupure réseau). »**
 Aucun problème : la nuit s'affiche en orange ⏳ « à reprendre ». Re-cliquez
