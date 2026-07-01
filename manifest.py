@@ -182,10 +182,17 @@ class Manifest:
             "cleanup": "cleaned",
         }
         key = flag_map.get(action_type)
-        if key and self.flags.get(key):
-            return True
-        # fallback : regarde dans les actions
-        return self.last_action(action_type) is not None
+        if key is not None:
+            # Le flag est la SOURCE DE VÉRITÉ : il n'est posé que sur une action
+            # réussie (status="ok"). Un upload/rename/… PARTIEL ou en ERREUR
+            # laisse le flag à False → l'étape reste « à reprendre ».
+            # NE PAS retomber sur last_action : une action "partial"/"error" est
+            # consignée dans self.actions et rendrait l'étape faussement « faite »
+            # (bug de reprise d'upload : WAV manquants jamais renvoyés).
+            return bool(self.flags.get(key))
+        # Types sans flag dédié : on ne considère fait qu'une action RÉUSSIE.
+        a = self.last_action(action_type)
+        return a is not None and a.status == "ok"
 
     def set_meta(self, **kwargs) -> None:
         """Met à jour les métadonnées validées (merge non destructif)."""

@@ -264,6 +264,32 @@ class TestManifest:
         # L'implémentation gère ça via flags (qui ne passe à True que sur "ok")
         assert m.flags.get("renamed", False) is False
 
+    def test_partial_upload_not_done(self, tmp_path):
+        """Régression reprise d'upload : une action 'partial' NE DOIT PAS marquer
+        l'étape comme faite (sinon le 2e clic court-circuite l'upload et les WAV
+        manquants ne repartent jamais)."""
+        from manifest import Manifest
+        session = tmp_path / "sess_partial"
+        session.mkdir()
+        m = Manifest.load_or_create(session)
+        m.record_action("upload", status="partial", tool_version="test")
+        assert m.flags.get("uploaded", False) is False
+        assert m.is_done("upload") is False            # le bug corrigé
+        # une fois l'upload complet réussi → l'étape est faite
+        m.record_action("upload", status="ok", tool_version="test")
+        assert m.is_done("upload") is True
+
+    def test_is_done_unknown_type_needs_ok(self, tmp_path):
+        """Type sans flag dédié : seule une action 'ok' compte comme faite."""
+        from manifest import Manifest
+        session = tmp_path / "sess_unknown"
+        session.mkdir()
+        m = Manifest.load_or_create(session)
+        m.record_action("customstep", status="partial", tool_version="test")
+        assert m.is_done("customstep") is False
+        m.record_action("customstep", status="ok", tool_version="test")
+        assert m.is_done("customstep") is True
+
 
 # =========================================================================
 # taxons + cleanup intégration (règle OR WAV)
