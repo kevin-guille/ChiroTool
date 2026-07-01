@@ -1005,6 +1005,37 @@ class TestMapExternalSites:
         assert gui_map._load_external_site_ids() == ["abc123", "def456"]
 
 
+# =========================================================================
+# version : selection de la release (liste + /latest, anti-cache-obsolete)
+# =========================================================================
+
+class TestBestRelease:
+    def test_latest_beats_stale_list(self):
+        """Cas reel : la LISTE est servie en cache obsolete (max = 0.3.1) mais
+        /releases/latest est a jour (0.4.0). Le combine doit renvoyer 0.4.0."""
+        from version import _best_release
+        candidates = [
+            {"tag_name": "v0.3.1", "prerelease": False, "html_url": "u/031"},
+            {"tag_name": "V0.3.0", "prerelease": False, "html_url": "u/030"},
+            {"tag_name": "v0.4.0", "prerelease": False, "html_url": "u/040"},  # /latest
+        ]
+        best = _best_release(candidates)
+        assert best["tag"] == "v0.4.0"
+        assert best["prerelease"] is False
+
+    def test_ignores_drafts(self):
+        from version import _best_release
+        candidates = [
+            {"tag_name": "v0.4.0", "draft": True, "html_url": "u/040"},   # brouillon
+            {"tag_name": "v0.3.1", "prerelease": False, "html_url": "u/031"},
+        ]
+        assert _best_release(candidates)["tag"] == "v0.3.1"
+
+    def test_empty(self):
+        from version import _best_release
+        assert _best_release([]) is None
+
+
 if __name__ == "__main__":
     # Permet de lancer directement : python tests/test_core.py
     import sys

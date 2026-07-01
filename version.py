@@ -91,30 +91,53 @@ def is_newer(remote: str, local: str) -> bool:
 
 
 def fetch_latest_release(timeout: float = 6.0, per_page: int = 20) -> dict | None:
-    """Interroge GitHub Releases (liste) et renvoie la release publiée au tag de
-    version le plus élevé, sous la forme ``{"tag", "prerelease", "url"}``.
+    """Renvoie la release publiée au tag de version le plus élevé, sous la forme
+    ``{"tag", "prerelease", "url"}``.
 
-    - Interroge la LISTE (pas ``/latest``) pour inclure les pre-releases.
-    - Ignore les brouillons (``draft``).
-    - **Ne lève jamais** : renvoie ``None`` sur toute erreur (réseau, HTTP,
-      dépôt privé…). Conçu pour une vérification automatique silencieuse.
+    Combine DEUX sources et garde la plus récente :
+    - la LISTE ``/releases`` (inclut les pre-releases pendant la phase de test) ;
+    - ``/releases/latest`` (release stable canonique).
+    Raison : l'endpoint LISTE est parfois servi en **cache obsolète** par GitHub
+    (une release toute neuve n'y apparaît pas immédiatement) alors que
+    ``/latest`` est à jour — les combiner rend la détection fiable et immédiate.
+
+    Ignore les brouillons. **Ne lève jamais** : renvoie ``None`` sur toute erreur.
     """
     try:
         import requests
+        headers = {"Accept": "application/vnd.github+json"}
+        candidates: list[dict] = []
+
         r = requests.get(GITHUB_RELEASES_API, timeout=timeout,
-                         params={"per_page": per_page},
-                         headers={"Accept": "application/vnd.github+json"})
-        if r.status_code != 200:
-            return None
-        candidates = [rel for rel in (r.json() or []) if not rel.get("draft")]
-        if not candidates:
-            return None
-        latest = max(candidates,
-                     key=lambda rel: parse_version(rel.get("tag_name") or ""))
-        return {
-            "tag": latest.get("tag_name") or "",
-            "prerelease": bool(latest.get("prerelease")),
-            "url": latest.get("html_url") or GITHUB_RELEASES_PAGE,
-        }
+                         params={"per_page": per_page}, headers=headers)
+        if r.status_code == 200:
+            candidates += [rel for rel in (r.json() or []) if not rel.get("draft")]
+
+        # /releases/latest : à jour même quand la liste est en cache obsolète.
+        try:
+            rl = requests.get(GITHUB_RELEASES_API + "/latest",
+                              timeout=timeout, headers=headers)
+            if rl.status_code == 200:
+                candidates.append(rl.json())
+        except Exception:
+            pass
+
+        return _best_release(candidates)
     except Exception:
         return None
+
+
+def _best_release(candidates: list) -> dict | None:
+    """Sélectionne la release publiée au tag le plus élevé parmi ``candidates``
+    (dicts API GitHub, éventuellement en double). Ignore les brouillons.
+    Fonction PURE → testable. Renvoie ``{"tag","prerelease","url"}`` ou None."""
+    published = [c for c in candidates if c and not c.get("draft")]
+    if not published:
+        return None
+    latest = max(published,
+                 key=lambda rel: parse_version(rel.get("tag_name") or ""))
+    return {
+        "tag": latest.get("tag_name") or "",
+        "prerelease": bool(latest.get("prerelease")),
+        "url": latest.get("html_url") or GITHUB_RELEASES_PAGE,
+    }

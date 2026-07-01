@@ -300,6 +300,17 @@ class AboutDialog(ctk.CTkToplevel):
                 # Ne garde que les releases publiées (pas les brouillons).
                 # Les pre-releases SONT prises en compte (phase de test).
                 candidates = [rel for rel in releases if not rel.get("draft")]
+                # /releases/latest : la LISTE ci-dessus est parfois servie en
+                # cache obsolète par GitHub (une release neuve n'y apparaît pas
+                # tout de suite) ; /latest est à jour. On combine les deux.
+                try:
+                    rl = requests.get(
+                        GITHUB_RELEASES_API + "/latest", timeout=8,
+                        headers={"Accept": "application/vnd.github+json"})
+                    if rl.status_code == 200:
+                        candidates.append(rl.json())
+                except Exception:
+                    pass
                 if not candidates:
                     self.after(0, lambda: self._show_update_result(
                         "Aucune release publiée pour le moment.", is_error=False))
