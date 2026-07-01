@@ -48,6 +48,7 @@ from gui_registry import RegistryPanel
 from gui_preferences import PreferencesDialog
 from gui_runner import RunDialog, run_cleanup, run_prep, run_upload_flow
 from gui_validation import ValidationView, find_observations_xlsx
+from gui_synthesis import SynthesisView
 from gui_wizard import open_wizard
 
 
@@ -1392,7 +1393,7 @@ class ChiroToolApp(ctk.CTk):
         )
         map_btn.pack(side="left", padx=(0, 6))
 
-        # "Valider la nuit" : visible seulement si xlsx observations présent
+        # "Valider la nuit" / "Synthèse" : visibles si xlsx observations présent
         if find_observations_xlsx(s.path) is not None:
             validate_btn = ctk.CTkButton(
                 actions, text="🔍 Valider la nuit…", height=36, width=160,
@@ -1401,6 +1402,15 @@ class ChiroToolApp(ctk.CTk):
                 command=lambda: self._open_validation_view(s),
             )
             validate_btn.pack(side="left", padx=(0, 6))
+
+            synth_btn = ctk.CTkButton(
+                actions, text="📊 Synthèse", height=36, width=110,
+                fg_color=("gray85", "gray25"),
+                text_color=("gray15", "gray90"),
+                hover_color=("gray75", "gray35"),
+                command=lambda: self._open_synthesis_view(s),
+            )
+            synth_btn.pack(side="left", padx=(0, 6))
 
         details_btn = ctk.CTkButton(
             actions, text="Détails avancés…", height=36, width=140,
@@ -1642,6 +1652,18 @@ class ChiroToolApp(ctk.CTk):
             chirosurf_path=self.settings.chirosurf_path,
             initiales=initiales,
         )
+
+    def _open_synthesis_view(self, s: SessionState):
+        """Ouvre la fenêtre de synthèse (contacts par espèce) de la nuit."""
+        xlsx = find_observations_xlsx(s.path)
+        if xlsx is None:
+            messagebox.showwarning(
+                "Pas d'observations",
+                "Aucun tableur d'observations trouvé dans ce dossier.\n\n"
+                "Lance d'abord l'upload + Tadarida."
+            )
+            return
+        SynthesisView(self, session_path=s.path, xlsx_path=xlsx)
 
     def _guess_initiales(self) -> str:
         """Essaie de déduire les initiales de l'utilisateur (2-3 lettres majuscules)."""

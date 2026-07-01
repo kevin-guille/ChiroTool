@@ -538,6 +538,64 @@ class TestRenameAutoHeal:
         assert src.exists(), "la source ne doit pas être touchée en cas de conflit"
 
 
+# =========================================================================
+# synthesis : récap par espèce d'une nuit
+# =========================================================================
+
+class TestSynthesis:
+    HEADERS = ["nom du fichier", "tadarida_taxon", "observateur_taxon"]
+
+    def _rows(self):
+        return [
+            ["f1.wav", "Pippip", None],      # Tadarida chiros
+            ["f1.wav", "Pippip", None],      # même espèce, même fichier
+            ["f2.wav", "Nycnoc", "Pippip"],  # validé Pippip → écrase Nycnoc
+            ["f3.wav", "noise", None],       # bruit
+            ["f4.wav", None, None],          # aucune espèce → ignoré
+            ["f5.wav", "", ""],              # vide → ignoré
+        ]
+
+    def test_counts_and_totals(self):
+        from synthesis import compute_night_synthesis
+        res = compute_night_synthesis(self.HEADERS, self._rows())
+        by_taxon = {s["taxon"]: s for s in res["species"]}
+
+        # Pippip : 3 contacts (2 Tadarida + 1 validé), 2 fichiers (f1, f2)
+        assert by_taxon["Pippip"]["n_contacts"] == 3
+        assert by_taxon["Pippip"]["n_fichiers"] == 2
+        assert by_taxon["Pippip"]["validated"] is True
+        assert by_taxon["Pippip"]["groupe"] == "chiros"
+
+        # Nycnoc écrasé par la validation observateur → absent
+        assert "Nycnoc" not in by_taxon
+
+        # noise compté à part
+        assert by_taxon["noise"]["n_contacts"] == 1
+
+        assert res["total_contacts"] == 4          # 3 Pippip + 1 noise
+        assert res["total_fichiers"] == 3          # f1, f2, f3
+        assert res["by_group"]["chiros"] == 3
+        assert res["by_group"]["noise"] == 1
+
+    def test_sorted_desc(self):
+        from synthesis import compute_night_synthesis
+        res = compute_night_synthesis(self.HEADERS, self._rows())
+        counts = [s["n_contacts"] for s in res["species"]]
+        assert counts == sorted(counts, reverse=True)
+
+    def test_missing_columns_graceful(self):
+        from synthesis import compute_night_synthesis
+        res = compute_night_synthesis(["a", "b"], [[1, 2], [3, 4]])
+        assert res["species"] == []
+        assert res["total_contacts"] == 0
+        assert res["total_fichiers"] == 0
+
+    def test_empty_rows(self):
+        from synthesis import compute_night_synthesis
+        res = compute_night_synthesis(self.HEADERS, [])
+        assert res["total_contacts"] == 0
+
+
 if __name__ == "__main__":
     # Permet de lancer directement : python tests/test_core.py
     import sys
