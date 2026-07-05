@@ -92,7 +92,7 @@ Trois boutons, dans l'ordre. C'est tout.
 ChiroTool est un **logiciel portable** : pas d'installation, pas de droits
 administrateur requis.
 
-1. Récupérez le fichier **`ChiroTool.exe`** (≈ 33 Mo) auprès de votre référent ou
+1. Récupérez le fichier **`ChiroTool.exe`** (≈ 34 Mo) auprès de votre référent ou
    sur la page de téléchargement officielle.
 2. Placez-le où vous voulez (Bureau, clé USB, disque dur externe…).
 3. Double-cliquez pour le lancer.
@@ -521,6 +521,12 @@ diagnostiquer.
 
 ChiroTool couvre la grande majorité des cas, mais pas (encore) tout :
 
+- **Enregistreurs compatibles** : Wildlife (SM2/3/4/Mini Bat), Passive Recorder,
+  Bat Recorder et **AudioMoth**. Les fichiers AudioMoth bruts `…HHMMSS**T**.WAV`
+  (déclenchés, événements concaténés) doivent d'abord être **« expandés »** dans
+  l'AudioMoth Configuration App (*File → Expand*) : ChiroTool les détecte et
+  demande cette étape avant tout traitement. Les enregistreurs à noms **non datés**
+  (ex. Peersonic, Pettersson D500x) nécessitent un renommage préalable.
 - **Fichiers compressés `.w4v` / `.wac`** : non décompressés (utilisez Kaleidoscope
   en amont).
 - **Modifier une participation déjà créée** (météo erronée…) : via le portail web.

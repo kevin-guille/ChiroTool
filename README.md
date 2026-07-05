@@ -50,8 +50,22 @@ toute la chaîne dans une **seule application locale et portable**.
 
 ## 📖 Tutoriel
 
-Un **tutoriel illustré complet** (PDF, 15 pages) est disponible :
+Un **tutoriel illustré complet** (PDF, 16 pages) est disponible :
 👉 [`docs/ChiroTool-Tutoriel.pdf`](docs/ChiroTool-Tutoriel.pdf)
+
+## 🎙️ Enregistreurs compatibles
+
+Tout enregistreur dont les fichiers sont nommés `…AAAAMMJJ_HHMMSS….wav` :
+
+- **Wildlife Acoustics** — SM2 / SM3 / SM4(BAT) / Mini Bat
+- **Passive Recorder**, **Bat Recorder**
+- **AudioMoth** — fichiers *expandés* au préalable via l'AudioMoth Configuration App
+  (*File → Expand*) ; ChiroTool prend alors le relais (renommage + TE×10) et remplace
+  donc aussi Kaleidoscope, devenu payant pour l'AudioMoth
+
+D'autres modèles produisant des WAV horodatés fonctionnent selon le même principe.
+Les formats à noms **non datés** (ex. Peersonic, Pettersson D500x) nécessitent un
+renommage préalable et ne sont pas encore pris en charge directement.
 
 ## Installation
 
