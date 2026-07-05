@@ -43,7 +43,7 @@ VIGIECHIRO_RE = re.compile(
     re.IGNORECASE | re.VERBOSE,
 )
 
-# Nom "brut" typique sortie d'enregistreur (SMU03126_20250903_194608.wav, Audiomoth, etc.)
+# Nom "brut" Wildlife Acoustics (SM4/SMU/Song Meter) : SMU03126_20250903_194608.wav
 RAW_RE = re.compile(
     r"""^
     (?P<serial>[A-Za-z0-9]+)
@@ -55,13 +55,47 @@ RAW_RE = re.compile(
     re.IGNORECASE | re.VERBOSE,
 )
 
+# Nom AudioMoth EXPANDÉ (après « Expand » via AudioMoth Config App ou
+# CEREMA/TWAV_splitter) : date en tête, PAS de série, millisecondes en suffixe.
+# Ex. : 20220721_033014_451.WAV, 20260615_212501.WAV
+# La série n'y figure pas → fournie par l'utilisateur (wizard / parc matériel).
+AUDIOMOTH_RE = re.compile(
+    r"""^
+    (?P<date>\d{8})
+    _(?P<time>\d{6})
+    (?:_(?P<suffix>\d{3}))?         # millisecondes (fichier expandé), optionnel
+    \.(?P<ext>wav|w4v)$
+    """,
+    re.IGNORECASE | re.VERBOSE,
+)
+
+# Nom AudioMoth BRUT "T.WAV" (déclenché, événements CONCATÉNÉS) : à REFUSER tant
+# qu'il n'a pas été « expandé » (dé-concaténé + horodaté). Le traiter tel quel
+# donnerait des horodatages faux. Ex. : 20260615_212501T.WAV
+AUDIOMOTH_TWAV_RE = re.compile(
+    r"^(?P<date>\d{8})_(?P<time>\d{6})T\.(?:wav)$",
+    re.IGNORECASE,
+)
+
+
+def is_audiomoth_twav(name: str) -> bool:
+    """True si le nom est un AudioMoth BRUT « T.WAV » (déclenché/concaténé), qui
+    doit être « expandé » avant tout traitement."""
+    return bool(AUDIOMOTH_TWAV_RE.match(name))
+
 
 def classify_wav_name(name: str) -> str:
-    """Retourne 'vigiechiro', 'raw' ou 'unknown' pour un nom de fichier WAV."""
+    """Retourne 'vigiechiro', 'raw', 'audiomoth_twav' ou 'unknown'.
+
+    'raw' couvre Wildlife (SERIAL_date_time) ET AudioMoth EXPANDÉ (date_time_ms).
+    'audiomoth_twav' = AudioMoth brut concaténé (à expandre d'abord).
+    """
     if VIGIECHIRO_RE.match(name):
         return "vigiechiro"
-    if RAW_RE.match(name):
+    if RAW_RE.match(name) or AUDIOMOTH_RE.match(name):
         return "raw"
+    if AUDIOMOTH_TWAV_RE.match(name):
+        return "audiomoth_twav"
     return "unknown"
 
 

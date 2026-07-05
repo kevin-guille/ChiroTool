@@ -55,6 +55,7 @@ from chiro_core import (
     VIGIECHIRO_RE,
     _dir_has_wavs,
     _find_raw_wav_subdir,
+    is_audiomoth_twav,
     parse_summary_txt,
 )
 from manifest import Manifest
@@ -193,6 +194,22 @@ def rename_session(
     out["n_wav_found"] = len(wav_paths)
     out["wav_dir"] = str(wav_dir)
     out["wav_dir_kind"] = wav_dir_kind
+
+    # --- 3.bis : garde-fou AudioMoth « T.WAV » brut (déclenché/concaténé)
+    # Ces fichiers doivent d'abord être « expandés » (dé-concaténés + horodatés)
+    # via l'AudioMoth Configuration App ou l'outil CEREMA/TWAV_splitter. Les
+    # renommer/traiter tels quels donnerait des horodatages FAUX (tous les
+    # événements collés au timestamp de départ). On refuse proprement.
+    n_twav = sum(1 for p in wav_paths if is_audiomoth_twav(p.name))
+    if n_twav:
+        out["errors"].append(
+            f"{n_twav} fichier(s) AudioMoth « T.WAV » brut détecté(s) "
+            "(événements concaténés). Expandez-les d'abord (AudioMoth "
+            "Configuration App → Expand, ou l'outil CEREMA/TWAV_splitter), "
+            "puis relancez la préparation sur les fichiers .WAV obtenus."
+        )
+        out["audiomoth_twav_raw"] = n_twav
+        return out
 
     # --- 4. vérification cohérence série observée vs meta
     consistency = check_serial_consistency(meta, (p.name for p in wav_paths))

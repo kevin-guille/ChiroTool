@@ -32,7 +32,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Iterable
 
-from chiro_core import RAW_RE, VIGIECHIRO_RE
+from chiro_core import AUDIOMOTH_RE, RAW_RE, VIGIECHIRO_RE
 
 
 # ---------------------------------------------------------------------------
@@ -172,7 +172,10 @@ def extract_timestamp_from_name(name: str) -> tuple[datetime, int | None] | None
     Extrait (datetime, ms) depuis n'importe quel nom reconnu (brut ou Vigie-Chiro).
     None si aucun format reconnu.
     """
-    for rx in (VIGIECHIRO_RE, RAW_RE):
+    # Ordre : Vigie-Chiro, puis Wildlife (série en tête), puis AudioMoth (date en
+    # tête, sans série) en dernier — AudioMoth ne matche que les noms date-first
+    # que RAW_RE ne couvre pas, donc aucun risque de collision.
+    for rx in (VIGIECHIRO_RE, RAW_RE, AUDIOMOTH_RE):
         m = rx.match(name)
         if m:
             date = m.group("date")
@@ -226,7 +229,8 @@ def compute_new_wav_name(meta: SessionMeta, original_name: str,
     # Segment suffix (Kaleidoscope) : on le préserve pour ne pas écraser de fichiers
     seg = None
     if keep_segment_suffix:
-        m = VIGIECHIRO_RE.match(original_name) or RAW_RE.match(original_name)
+        m = (VIGIECHIRO_RE.match(original_name) or RAW_RE.match(original_name)
+             or AUDIOMOTH_RE.match(original_name))
         if m:
             suf = m.groupdict().get("suffix")
             if suf is not None:

@@ -1036,6 +1036,69 @@ class TestBestRelease:
         assert _best_release([]) is None
 
 
+# =========================================================================
+# AudioMoth : format date_time sans serie (issue #1)
+# =========================================================================
+
+class TestAudioMoth:
+    """Format AudioMoth (issue #1). Validé sur de vrais fichiers CEREMA/TWAV_splitter :
+    l'EXPANDÉ `date_time_ms.WAV` est traité ; le BRUT `date_time T.WAV` (déclenché,
+    concaténé) est refusé (il doit d'abord être expandé)."""
+
+    def _meta(self):
+        from naming import SessionMeta
+        return SessionMeta(
+            date_debut=datetime(2022, 7, 21), n_site_tadarida="430658",
+            n_point_fixe="Z1", n_passage=1, n_enregistreur=5,
+            n_serie="24F319", nom_contrat="T")
+
+    # --- format EXPANDÉ (date_time_ms) : traité ---
+    def test_expanded_timestamp(self):
+        from naming import extract_timestamp_from_name
+        ts = extract_timestamp_from_name("20220721_033014_451.WAV")   # avec ms
+        assert ts is not None and ts[0] == datetime(2022, 7, 21, 3, 30, 14)
+        ts2 = extract_timestamp_from_name("20260615_212501.WAV")      # sans ms
+        assert ts2 is not None and ts2[0] == datetime(2026, 6, 15, 21, 25, 1)
+
+    def test_expanded_classified_raw_no_serial(self):
+        from chiro_core import classify_wav_name
+        from naming import extract_serial_from_name
+        assert classify_wav_name("20220721_033014_451.WAV") == "raw"
+        assert extract_serial_from_name("20220721_033014_451.WAV") is None
+
+    def test_expanded_canonical_preserves_ms(self):
+        from naming import compute_new_wav_name
+        new = compute_new_wav_name(self._meta(), "20220721_033014_451.WAV")
+        assert new == "Car430658-2022-Pass1-Z1-24F319_20220721_033014_451.wav"
+
+    # --- format BRUT T.WAV : détecté et refusé ---
+    def test_raw_twav_detected_not_processed(self):
+        from chiro_core import classify_wav_name, is_audiomoth_twav
+        from naming import extract_timestamp_from_name
+        n = "20260615_212501T.WAV"
+        assert is_audiomoth_twav(n) is True
+        assert classify_wav_name(n) == "audiomoth_twav"
+        assert extract_timestamp_from_name(n) is None   # PAS traité tel quel
+
+    def test_rename_refuses_raw_twav(self, tmp_path):
+        from rename import rename_session
+        d = tmp_path / "sess" / "Data"
+        d.mkdir(parents=True)
+        (d / "20260615_212501T.WAV").write_bytes(b"RIFFxxxxWAVE")   # dummy
+        res = rename_session(tmp_path / "sess", self._meta(),
+                             dry_run=False, rename_folder=False)
+        assert res.get("audiomoth_twav_raw") == 1
+        assert res.get("errors")                       # refus explicite
+        assert (d / "20260615_212501T.WAV").exists()   # non renommé
+
+    def test_wildlife_still_works(self):
+        """Non-régression : le format Wildlife (série en tête) reste géré."""
+        from naming import compute_new_wav_name, extract_serial_from_name
+        assert extract_serial_from_name("2MU08078_20260623_211115.wav") == "2MU08078"
+        new = compute_new_wav_name(self._meta(), "2MU08078_20260623_211115.wav")
+        assert "_20260623_211115" in new and new.startswith("Car430658-2022-Pass1-Z1-")
+
+
 if __name__ == "__main__":
     # Permet de lancer directement : python tests/test_core.py
     import sys
