@@ -1099,6 +1099,72 @@ class TestAudioMoth:
         assert "_20260623_211115" in new and new.startswith("Car430658-2022-Pass1-Z1-")
 
 
+class TestObservationSidecar:
+    """Lot 1 — sidecar de synchro (donnee_id + index natif) écrit à l'export.
+    L'xlsx reste inchangé ; le mapping serveur vit dans <stem>.sync.json."""
+
+    def _fake_client(self, donnees):
+        from vigiechiro_api import VigieChiroClient
+        c = VigieChiroClient("A" * 32)
+
+        def fake_iter(pid, on_progress=None, **kw):
+            for d in donnees:
+                yield d
+        c.iter_donnees = fake_iter
+        return c
+
+    def test_sidecar_maps_native_index(self, tmp_path):
+        from vigiechiro_api import load_observation_sidecar
+        donnees = [
+            {"_id": "d1", "titre": "Car-001_x.wav", "observations": [
+                {"_id": "o0", "temps_debut": 1.0, "tadarida_taxon": "pippip"},
+                {"_id": "o1", "temps_debut": 2.0, "tadarida_taxon": "barbar"},
+                {"_id": "o2", "temps_debut": 3.0, "tadarida_taxon": "nyclei"},
+            ]},
+            {"_id": "d2", "titre": "Car-002_silent.wav", "observations": []},
+        ]
+        c = self._fake_client(donnees)
+        dst = tmp_path / "participation-abc-observations.xlsx"
+        stats = c.download_observations_as_xlsx("abc", dst)
+        assert (stats["n_files"], stats["n_contacts"], stats["n_silent_files"]) == (2, 3, 1)
+        entries = load_observation_sidecar(dst)["entries"]
+        assert len(entries) == 3                       # rien pour la donnée silencieuse
+        assert [e["obs_index"] for e in entries] == [0, 1, 2]
+        assert [e["donnee_id"] for e in entries] == ["d1", "d1", "d1"]
+        assert [e["row"] for e in entries] == [2, 3, 4]   # header=1 → contacts 2,3,4
+        assert entries[0]["nom_fichier"] == "Car-001_x.wav"
+        assert entries[0]["temps_debut"] == 1.0
+        assert load_observation_sidecar(dst)["sync"] == {}
+
+    def test_xlsx_unchanged_11_columns(self, tmp_path):
+        import openpyxl
+        donnees = [{"_id": "d1", "titre": "f.wav", "observations": [
+            {"temps_debut": 1.0, "tadarida_taxon": "pippip"}]}]
+        c = self._fake_client(donnees)
+        dst = tmp_path / "participation-abc-observations.xlsx"
+        c.download_observations_as_xlsx("abc", dst)
+        ws = openpyxl.load_workbook(dst).active
+        header = [cell.value for cell in next(ws.iter_rows())]
+        assert len(header) == 11
+        assert header[0] == "nom du fichier"
+        assert header[7] == "observateur_taxon"
+        assert header[10] == "validateur_probabilite"
+
+    def test_sidecar_canonical_fallback(self, tmp_path):
+        """Après sauvegarde en ..._KG.xlsx, le mapping reste résoluble."""
+        from vigiechiro_api import load_observation_sidecar
+        donnees = [{"_id": "d1", "titre": "f.wav", "observations": [{"temps_debut": 1.0}]}]
+        c = self._fake_client(donnees)
+        c.download_observations_as_xlsx("abc", tmp_path / "participation-abc-observations.xlsx")
+        saved = tmp_path / "participation-abc-observations_KG.xlsx"
+        side = load_observation_sidecar(saved)
+        assert len(side["entries"]) == 1 and side["entries"][0]["donnee_id"] == "d1"
+
+    def test_missing_sidecar_tolerated(self, tmp_path):
+        from vigiechiro_api import load_observation_sidecar
+        assert load_observation_sidecar(tmp_path / "nope.xlsx") == {"entries": [], "sync": {}}
+
+
 if __name__ == "__main__":
     # Permet de lancer directement : python tests/test_core.py
     import sys

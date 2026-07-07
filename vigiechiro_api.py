@@ -34,6 +34,8 @@ Robustesse :
 from __future__ import annotations
 
 import argparse
+import json
+import re
 import sys
 import time
 import warnings
@@ -234,6 +236,67 @@ def _parse_dt(v: Any) -> datetime | None:
             except ValueError:
                 continue
     return None
+
+
+# ---------------------------------------------------------------------------
+# Sidecar de synchro des observations (mapping ligne xlsx → donnée serveur)
+# ---------------------------------------------------------------------------
+
+# Suffixe de sauvegarde de la vue de validation : ``<xlsx>_<initiales>.xlsx``.
+# Les initiales sont 1 à 5 lettres. Sert au fallback canonique de résolution
+# du sidecar (le sidecar d'origine porte le stem SANS ce suffixe).
+_INITIALS_SUFFIX_RE = re.compile(r"^(?P<base>.+)_[A-Za-z]{1,5}$")
+
+
+def _sidecar_path(xlsx_path) -> Path:
+    """Chemin du sidecar de synchro associé à un xlsx d'observations.
+
+    ``participation-xxx-observations.xlsx`` → ``…-observations.sync.json``.
+    """
+    return Path(xlsx_path).with_suffix(".sync.json")
+
+
+def _write_json_atomic(path, data) -> None:
+    """Écrit un JSON de façon atomique (tmp + replace) en UTF-8."""
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=1)
+    tmp.replace(path)
+
+
+def load_observation_sidecar(xlsx_path) -> dict:
+    """Charge le sidecar ``<stem>.sync.json`` associé à un xlsx d'observations.
+
+    Deux blocs : ``entries`` (mapping natif écrit à l'export) et ``sync``
+    (état de synchro par observation). Résolution robuste :
+
+      1. sidecar direct ``<stem>.sync.json`` ;
+      2. **fallback canonique** : si le stem se termine par ``_<initiales>``
+         (fichier sauvegardé par la vue de validation), retente sur le stem
+         d'origine — le mapping ``entries`` vit sous le nom téléchargé.
+
+    Ne lève jamais : renvoie ``{"entries": [], "sync": {}}`` si rien n'est
+    lisible (xlsx reçu par mail, ancien, ou sidecar corrompu).
+    """
+    p = Path(xlsx_path)
+    candidates = [_sidecar_path(p)]
+    m = _INITIALS_SUFFIX_RE.match(p.stem)
+    if m:
+        candidates.append(p.with_name(m.group("base") + ".sync.json"))
+    for c in candidates:
+        try:
+            if c.exists():
+                with open(c, encoding="utf-8") as f:
+                    data = json.load(f)
+                if isinstance(data, dict):
+                    data.setdefault("entries", [])
+                    data.setdefault("sync", {})
+                    return data
+        except (OSError, ValueError):
+            continue
+    return {"entries": [], "sync": {}}
 
 
 # ---------------------------------------------------------------------------
@@ -806,6 +869,14 @@ class VigieChiroClient:
         n_files = 0
         n_contacts = 0
         n_silent = 0
+        # Mapping natif (sidecar) : pour chaque contact réellement écrit, on
+        # mémorise l'identifiant serveur de la donnée + l'index NATIF 0-based de
+        # l'observation dans donnee['observations'] (l'ordre exact qu'attend le
+        # PATCH /donnees/<id>/observations/<index>). Sans ça, impossible de
+        # renvoyer plus tard l'identification validée au bon endroit. On ajoute
+        # nom_fichier + temps_debut pour un ré-appariement robuste des lignes.
+        entries: list[dict] = []
+        row = 1  # ligne 1 = en-têtes ; les contacts commencent à la ligne 2
 
         def _short(tx: Any) -> str | None:
             """Extrait libelle_court d'un taxon (objet ou string)."""
@@ -817,13 +888,23 @@ class VigieChiroClient:
 
         for donnee in self.iter_donnees(participation_id, on_progress=on_progress):
             n_files += 1
+            donnee_id = donnee.get("_id")
             titre = donnee.get("titre") or ""
             obs_list = donnee.get("observations") or []
             if not obs_list:
                 n_silent += 1
                 continue
-            for obs in obs_list:
+            for obs_index, obs in enumerate(obs_list):
                 n_contacts += 1
+                row += 1
+                entries.append({
+                    "row": row,
+                    "donnee_id": donnee_id,
+                    "obs_index": obs_index,
+                    "obs_id": obs.get("_id"),
+                    "nom_fichier": titre,
+                    "temps_debut": obs.get("temps_debut"),
+                })
                 # tadarida_taxon_autre → "Code1:0.03, Code2:0.02, ..."
                 autres_s = ""
                 if obs.get("tadarida_taxon_autre"):
@@ -853,8 +934,15 @@ class VigieChiroClient:
         wb.save(str(tmp))
         tmp.replace(dst)
 
+        # Sidecar de synchro : l'xlsx reste bit-pour-bit identique au format mail
+        # (aucune colonne ajoutée → zéro régression cleanup/validation) ; le
+        # mapping serveur vit dans un fichier annexe <stem>.sync.json.
+        sidecar = _sidecar_path(dst)
+        _write_json_atomic(sidecar, {"schema": 1, "entries": entries, "sync": {}})
+
         return {
             "path": str(dst),
+            "sidecar": str(sidecar),
             "n_files": n_files,
             "n_contacts": n_contacts,
             "n_silent_files": n_silent,
