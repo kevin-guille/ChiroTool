@@ -122,6 +122,23 @@ class NotFoundError(ApiError):
     """Ressource introuvable (HTTP 404)."""
 
 
+class ForbiddenError(ApiError):
+    """Action interdite (HTTP 403) — p.ex. pas propriétaire de la donnée."""
+    status_code = 403
+
+
+class ValidationError(ApiError):
+    """Payload rejeté par le backend (HTTP 422) — champ manquant/inconnu,
+    valeur d'enum invalide."""
+    status_code = 422
+
+
+# Valeurs de confiance observateur acceptées par le backend (enum confirmé sur
+# Scille/vigiechiro-api, resources/donnees.py). Doit rester aligné avec
+# CONFIDENCE_VALUES côté GUI (gui_validation.py).
+OBSERVATEUR_PROBABILITES = ("SUR", "PROBABLE", "POSSIBLE")
+
+
 # ---------------------------------------------------------------------------
 # Données
 # ---------------------------------------------------------------------------
@@ -349,6 +366,9 @@ class VigieChiroClient:
                 "clair. Utilise https:// (http:// n'est toléré que sur localhost).")
         self.timeout = timeout
         self.source = source
+        # Index taxon {libelle_court.lower(): _id}, construit paresseusement au
+        # 1er resolve_taxon_id (un seul balayage de /taxons, ensuite en cache).
+        self._taxon_id_cache: dict[str, str] | None = None
 
         self.session = requests.Session()
         self.session.auth = HTTPBasicAuth(token, "")
@@ -427,10 +447,16 @@ class VigieChiroClient:
                 body = resp.text[:500] if resp.text else ""
                 raise ApiError(f"HTTP {resp.status_code} sur {method} {path} : {body}")
 
-            # Autres 4xx : fatal
+            # Autres 4xx : fatal, mais typé pour que l'appelant distingue
+            # « payload à corriger » (422) de « pas mes droits » (403).
             if resp.status_code >= 400:
                 body = resp.text[:500] if resp.text else ""
-                raise ApiError(f"HTTP {resp.status_code} sur {method} {path} : {body}")
+                msg = f"HTTP {resp.status_code} sur {method} {path} : {body}"
+                if resp.status_code == 403:
+                    raise ForbiddenError(msg)
+                if resp.status_code == 422:
+                    raise ValidationError(msg)
+                raise ApiError(msg)
 
             # Succès
             if resp.status_code == 204 or not resp.content:
@@ -541,6 +567,69 @@ class VigieChiroClient:
     def get_site_raw(self, site_id: str) -> dict:
         """Dict brut du site (localités complètes, _etag, observateur)."""
         return self._request("GET", f"/sites/{site_id}")
+
+    # -- taxons (résolution libelle_court → _id) ----------------------------
+
+    def iter_taxons(self, page_size: int = 99) -> Iterator[dict]:
+        """Itère sur le référentiel taxons (pagination Eve ; max_results < 100)."""
+        page = 1
+        while True:
+            data = self._request("GET", "/taxons",
+                                  params={"max_results": page_size, "page": page})
+            items = (data.get("_items") or []) if isinstance(data, dict) else []
+            if not items:
+                break
+            for it in items:
+                yield it
+            meta = data.get("_meta", {}) if isinstance(data, dict) else {}
+            total = meta.get("total") or 0
+            if page * page_size >= total:
+                break
+            page += 1
+
+    def _build_taxon_index(self) -> dict[str, str]:
+        """Construit ``{libelle_court.lower(): _id}`` depuis ``/taxons``.
+
+        En cas de collision de ``libelle_court``, **garde la 1re occurrence** et
+        émet un warning — jamais un « dernier gagnant » silencieux qui résoudrait
+        vers le mauvais ObjectId.
+        """
+        index: dict[str, str] = {}
+        for t in self.iter_taxons():
+            lib = (t.get("libelle_court") or "").strip().lower()
+            tid = _id_of(t.get("_id"))
+            if not lib or not tid:
+                continue
+            if lib in index and index[lib] != tid:
+                warnings.warn(
+                    f"taxon : libelle_court {lib!r} en double "
+                    f"(_id {index[lib]} vs {tid}) — 1re occurrence conservée",
+                    stacklevel=2)
+                continue
+            index.setdefault(lib, tid)
+        return index
+
+    def resolve_taxon_id(self, libelle_court: str) -> str:
+        """Résout un ``libelle_court`` MNHN ('barbar') en ObjectId 24-hex.
+
+        - Si l'entrée est **déjà** un ObjectId 24-hex, la renvoie telle quelle
+          (couvre le fallback de ``_short()`` quand ``libelle_court`` était absent
+          à l'export → l'``_id`` a été stocké dans la colonne observateur_taxon).
+        - Sinon mappe via ``/taxons`` (index construit au 1er appel puis caché).
+        - Lève ``NotFoundError`` si le libellé est inconnu (jamais silencieux).
+        """
+        raw = (libelle_court or "").strip()
+        if not raw:
+            raise ValueError("libelle_court vide")
+        if re.fullmatch(r"[0-9a-fA-F]{24}", raw):
+            return raw.lower()                        # déjà un ObjectId
+        if self._taxon_id_cache is None:
+            self._taxon_id_cache = self._build_taxon_index()
+        tid = self._taxon_id_cache.get(raw.lower())
+        if tid is None:
+            raise NotFoundError(
+                f"taxon inconnu : {libelle_court!r} (absent de /taxons)")
+        return tid
 
     # -- grille STOC + carrés (création / résolution) -----------------------
 
@@ -947,6 +1036,53 @@ class VigieChiroClient:
             "n_contacts": n_contacts,
             "n_silent_files": n_silent,
         }
+
+    def push_observation(
+        self,
+        donnee_id: str,
+        observation_index: int,
+        observateur_taxon_id: str,
+        observateur_probabilite: str,
+        *,
+        no_bilan: bool = True,
+    ) -> dict:
+        """Renvoie/confirme l'identification observateur d'UNE observation.
+
+        ``PATCH /donnees/<id>/observations/<index>`` avec les DEUX champs
+        obligatoires ensemble (sinon le backend renvoie 422). Idempotent
+        (``$set`` MongoDB), aucun ETag/If-Match.
+
+        ``observateur_taxon_id`` doit être un **ObjectId 24-hex** déjà résolu
+        (cf. :meth:`resolve_taxon_id`). ``observateur_probabilite`` ∈
+        ``OBSERVATEUR_PROBABILITES``.
+
+        ``no_bilan=True`` (défaut) ajoute ``?no_bilan=true`` pour ne PAS relancer
+        le bilan de la participation à chaque appel — en mode batch, le dernier
+        appel se fait avec ``no_bilan=False`` pour déclencher le bilan une fois.
+
+        N'envoie **JAMAIS** ``validateur_*`` (réservé rôles MNHN → 403).
+        Lève ``ValidationError`` (422), ``ForbiddenError`` (403, pas
+        propriétaire) ou ``NotFoundError`` (404, index hors bornes).
+        """
+        if observateur_probabilite not in OBSERVATEUR_PROBABILITES:
+            raise ValueError(
+                f"observateur_probabilite invalide : {observateur_probabilite!r} "
+                f"(attendu {list(OBSERVATEUR_PROBABILITES)})")
+        if not re.fullmatch(r"[0-9a-fA-F]{24}", observateur_taxon_id or ""):
+            raise ValueError(
+                f"observateur_taxon_id doit être un ObjectId 24-hex, "
+                f"reçu {observateur_taxon_id!r}")
+        params = {"no_bilan": "true"} if no_bilan else None
+        return self._request(
+            "PATCH",
+            f"/donnees/{donnee_id}/observations/{observation_index}",
+            json={
+                "observateur_taxon": observateur_taxon_id,
+                "observateur_probabilite": observateur_probabilite,
+            },
+            params=params,
+            source="foreground",
+        )
 
     # -- fichiers (download) -----------------------------------------------
 

@@ -1165,6 +1165,113 @@ class TestObservationSidecar:
         assert load_observation_sidecar(tmp_path / "nope.xlsx") == {"entries": [], "sync": {}}
 
 
+class TestResolveTaxon:
+    """Lot 2 — résolution libelle_court → ObjectId + cache + bypass 24-hex."""
+
+    def _client(self, taxons, counter=None):
+        from vigiechiro_api import VigieChiroClient
+        c = VigieChiroClient("A" * 32)
+
+        def fake_iter(page_size=99):
+            if counter is not None:
+                counter.append(1)
+            for t in taxons:
+                yield t
+        c.iter_taxons = fake_iter
+        return c
+
+    def test_maps_case_insensitive(self):
+        c = self._client([{"_id": "a" * 24, "libelle_court": "Barbar"}])
+        assert c.resolve_taxon_id("barbar") == "a" * 24
+        assert c.resolve_taxon_id("BARBAR") == "a" * 24
+
+    def test_cache_single_fetch(self):
+        calls = []
+        c = self._client([{"_id": "a" * 24, "libelle_court": "pippip"}], counter=calls)
+        c.resolve_taxon_id("pippip")
+        c.resolve_taxon_id("pippip")
+        assert len(calls) == 1                      # /taxons balayé une seule fois
+
+    def test_unknown_raises(self):
+        from vigiechiro_api import NotFoundError
+        c = self._client([{"_id": "a" * 24, "libelle_court": "pippip"}])
+        with pytest.raises(NotFoundError):
+            c.resolve_taxon_id("zzzzzz")
+
+    def test_bypass_objectid(self):
+        calls = []
+        c = self._client([], counter=calls)
+        oid = "5aef012345678901234567ab"
+        assert c.resolve_taxon_id(oid) == oid
+        assert c.resolve_taxon_id(oid.upper()) == oid   # normalisé en minuscule
+        assert len(calls) == 0                      # aucun appel /taxons pour un id direct
+
+    def test_collision_keeps_first_and_warns(self):
+        c = self._client([
+            {"_id": "a" * 24, "libelle_court": "dupdup"},
+            {"_id": "b" * 24, "libelle_court": "dupdup"},
+        ])
+        with pytest.warns(UserWarning):
+            assert c.resolve_taxon_id("dupdup") == "a" * 24
+
+
+class TestPushObservation:
+    """Lot 3 — PATCH d'une observation + gardes + typage des erreurs 403/422."""
+
+    def _client(self):
+        from vigiechiro_api import VigieChiroClient
+        return VigieChiroClient("A" * 32)
+
+    def test_payload_and_params(self):
+        c = self._client()
+        captured = {}
+
+        def fake_request(method, path, **kw):
+            captured.update(method=method, path=path, **kw)
+            return {"ok": True}
+        c._request = fake_request
+        oid = "a" * 24
+        c.push_observation("d1", 2, oid, "SUR")
+        assert captured["method"] == "PATCH"
+        assert captured["path"] == "/donnees/d1/observations/2"
+        assert captured["json"] == {"observateur_taxon": oid, "observateur_probabilite": "SUR"}
+        assert "validateur_taxon" not in captured["json"]       # jamais de validateur_*
+        assert "validateur_probabilite" not in captured["json"]
+        assert captured["params"] == {"no_bilan": "true"}
+        assert captured["source"] == "foreground"
+
+    def test_no_bilan_false_triggers_bilan(self):
+        c = self._client()
+        captured = {}
+        c._request = lambda method, path, **kw: captured.update(kw) or {}
+        c.push_observation("d1", 0, "a" * 24, "POSSIBLE", no_bilan=False)
+        assert captured["params"] is None                       # bilan déclenché
+
+    def test_guard_bad_enum(self):
+        c = self._client()
+        c._request = lambda *a, **k: {}
+        with pytest.raises(ValueError):
+            c.push_observation("d1", 0, "a" * 24, "possible")   # minuscule refusée
+
+    def test_guard_bad_id(self):
+        c = self._client()
+        c._request = lambda *a, **k: {}
+        with pytest.raises(ValueError):
+            c.push_observation("d1", 0, "barbar", "SUR")        # pas un ObjectId
+
+    def test_request_classifies_403_and_422(self):
+        from vigiechiro_api import ForbiddenError, ValidationError
+
+        class FakeResp:
+            def __init__(self, code):
+                self.status_code, self.text, self.content, self.headers = code, "x", b"x", {}
+        for code, exc in ((403, ForbiddenError), (422, ValidationError)):
+            c = self._client()
+            c.session.request = lambda *a, _c=code, **k: FakeResp(_c)
+            with pytest.raises(exc):
+                c._request("PATCH", "/donnees/d/observations/0", json={})
+
+
 if __name__ == "__main__":
     # Permet de lancer directement : python tests/test_core.py
     import sys
