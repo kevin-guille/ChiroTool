@@ -65,22 +65,34 @@ def next_sync_state(local_taxon, local_conf, record) -> str | None:
     return SYNC_MODIFIED
 
 
-def _match_key(nom, temps_debut):
-    """Clé d'appariement ligne↔entrée sidecar, tolérante aux types."""
+def _num(v):
+    try:
+        return round(float(v), 4)
+    except (TypeError, ValueError):
+        return None
+
+
+def _match_key(nom, temps_debut, temps_fin=None):
+    """Clé d'appariement ligne↔entrée sidecar, tolérante aux types.
+
+    Inclut ``temps_fin`` en plus de ``temps_debut`` : deux contacts d'un même WAV
+    peuvent partager le même ``temps_debut`` (ou l'avoir absent) mais diffèrent
+    sur leur ``temps_fin`` → les garde individuellement appariables.
+    """
     nom_s = str(nom or "").strip().lower()
     if nom_s.endswith(".wav"):
         nom_s = nom_s[:-4]
-    try:
-        td = round(float(temps_debut), 4)
-    except (TypeError, ValueError):
-        td = None
-    return (nom_s, td)
+    return (nom_s, _num(temps_debut), _num(temps_fin))
 
 
 def build_row_key_map(rows, col_idx, entries):
     """Associe chaque ligne (par son index) à sa clé serveur
-    ``"<donnee_id>#<obs_index>"`` via ``(nom_fichier, temps_debut)`` — jamais par
-    numéro de ligne (robuste aux lignes vides/trous).
+    ``"<donnee_id>#<obs_index>"`` via ``(nom_fichier, temps_debut, temps_fin)`` —
+    jamais par numéro de ligne (robuste aux lignes vides/trous).
+
+    **Sécurité anti-corruption** : si deux observations distinctes partagent la
+    même clé (collision → index serveur ambigu), on les EXCLUT du mapping (elles
+    deviennent non-envoyables) plutôt que d'écrire au mauvais index côté serveur.
 
     Retourne ``(row_keys, n_unmapped)`` où ``row_keys`` = ``{row_idx: key}``.
     Fonction PURE / testable.
@@ -88,24 +100,34 @@ def build_row_key_map(rows, col_idx, entries):
     ci = col_idx or {}
     fi = ci.get("nom du fichier")
     ti = ci.get("temps_debut")
+    tf = ci.get("temps_fin")
     if fi is None or ti is None or not entries:
         return {}, len(rows)
 
+    # 1re passe : construire le lookup ET compter les collisions de clé.
     lookup: dict = {}
+    counts: dict = {}
     for e in entries:
         did = e.get("donnee_id")
         oidx = e.get("obs_index")
         if did is None or oidx is None:
             continue
-        lookup.setdefault(_match_key(e.get("nom_fichier"), e.get("temps_debut")),
-                          f"{did}#{oidx}")
+        k = _match_key(e.get("nom_fichier"), e.get("temps_debut"), e.get("temps_fin"))
+        counts[k] = counts.get(k, 0) + 1
+        lookup[k] = f"{did}#{oidx}"
+    # Retirer toute clé ambiguë (≥2 observations) : mieux vaut « non mappé » que
+    # « mappé au mauvais index ».
+    for k, n in counts.items():
+        if n > 1:
+            lookup.pop(k, None)
 
     row_keys: dict[int, str] = {}
     n_unmapped = 0
     for idx, r in enumerate(rows):
         nom = r[fi] if fi < len(r) else None
         td = r[ti] if ti < len(r) else None
-        key = lookup.get(_match_key(nom, td))
+        tfin = r[tf] if (tf is not None and tf < len(r)) else None
+        key = lookup.get(_match_key(nom, td, tfin))
         if key is None:
             n_unmapped += 1
         else:

@@ -849,6 +849,9 @@ class ValidationView(ctk.CTkToplevel):
 
     def _apply_to_row(self, idx: int, taxon: str, conf: str):
         """Applique (taxon observateur, confiance) à une ligne + MAJ visuelle."""
+        if self._pushing:
+            return   # édition gelée pendant un envoi (évite qu'une ligne diverge
+                     # de la valeur réellement postée au serveur — cf. worker)
         r = self.rows[idx]
         ci = self.col_idx
         if "observateur_taxon" in ci:
@@ -1021,12 +1024,15 @@ class ValidationView(ctk.CTkToplevel):
         if not self.mappable:
             self.send_btn.configure(state="disabled", text="⬆ Envoyer (indispo.)")
             return
+        def _to_send(i):
+            # aligné sur _rows_to_push : envoyable ET pas déjà synchronisé
+            return self._is_sendable(i) and self._row_state(i) != SYNC_SYNCED
         sel = [int(i) for i in self.tree.selection()]
         if sel:
-            n = sum(1 for i in sel if self._is_sendable(i))
+            n = sum(1 for i in sel if _to_send(i))
             txt = f"⬆ Envoyer la sélection ({n})"
         else:
-            n = sum(1 for i in range(len(self.rows)) if self._is_sendable(i))
+            n = sum(1 for i in range(len(self.rows)) if _to_send(i))
             txt = f"⬆ Envoyer tout ({n})"
         self.send_btn.configure(text=txt, state="normal" if n else "disabled")
 
@@ -1088,10 +1094,12 @@ class ValidationView(ctk.CTkToplevel):
                 taxon_id = client.resolve_taxon_id(taxon)
                 client.push_observation(donnee_id, int(obs_index), taxon_id, conf,
                                         no_bilan=True)
-                results[idx] = (SYNC_SYNCED, "")
+                # On mémorise la valeur RÉELLEMENT postée (pas la ligne courante,
+                # qui pourrait avoir bougé) → pushed_taxon/pushed_conf fiables.
+                results[idx] = (SYNC_SYNCED, "", taxon, conf)
                 last_ok = (donnee_id, int(obs_index), taxon_id, conf)
             except Exception as e:
-                results[idx] = (SYNC_ERROR, str(e))
+                results[idx] = (SYNC_ERROR, str(e), None, None)
         bilan_err = None
         if last_ok is not None:
             try:
@@ -1109,18 +1117,22 @@ class ValidationView(ctk.CTkToplevel):
             self._update_send_button()
             return
         n_ok = n_err = 0
-        for idx, (state, message) in results.items():
+        for idx, (state, message, sent_taxon, sent_conf) in results.items():
             key = self.row_keys.get(idx)
             if key is None:
                 continue
             rec = dict(self.sync_state.get(key) or {})
-            rec["state"] = state
             if state == SYNC_SYNCED:
-                taxon, conf = self._row_taxon_conf(idx)
-                rec["pushed_taxon"], rec["pushed_conf"] = taxon, conf
+                # pushed_* = valeur réellement postée. On recalcule ensuite l'état
+                # depuis la ligne COURANTE : si elle a divergé entre-temps, elle
+                # repasse 'modified' (sera re-poussée) au lieu d'un faux 'synced'.
+                rec["pushed_taxon"], rec["pushed_conf"] = sent_taxon, sent_conf
                 rec.pop("error", None)
+                cur_t, cur_c = self._row_taxon_conf(idx)
+                rec["state"] = next_sync_state(cur_t, cur_c, rec) or SYNC_SYNCED
                 n_ok += 1
             else:
+                rec["state"] = state
                 rec["error"] = message
                 n_err += 1
             self.sync_state[key] = rec

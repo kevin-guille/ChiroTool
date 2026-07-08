@@ -1007,6 +1007,7 @@ class VigieChiroClient:
                     "obs_id": obs.get("_id"),
                     "nom_fichier": titre,
                     "temps_debut": obs.get("temps_debut"),
+                    "temps_fin": obs.get("temps_fin"),
                 })
                 # tadarida_taxon_autre → "Code1:0.03, Code2:0.02, ..."
                 autres_s = ""

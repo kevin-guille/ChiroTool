@@ -1327,6 +1327,33 @@ class TestSyncState:
                                   {"nom du fichier": 0, "temps_debut": 1}, [])
         assert rk == {} and n == 1
 
+    def test_build_row_key_map_collision_excluded(self):
+        """Sécurité anti-corruption : 2 obs partageant (nom, deb, fin) → EXCLUES
+        (non mappées) au lieu d'écrire toutes deux sur l'index 0 côté serveur."""
+        from sync_state import build_row_key_map
+        col_idx = {"nom du fichier": 0, "temps_debut": 1, "temps_fin": 2}
+        rows = [["f.wav", 1.0, 2.0], ["f.wav", 1.0, 2.0], ["g.wav", 5.0, 6.0]]
+        entries = [
+            {"donnee_id": "d1", "obs_index": 0, "nom_fichier": "f.wav", "temps_debut": 1.0, "temps_fin": 2.0},
+            {"donnee_id": "d1", "obs_index": 1, "nom_fichier": "f.wav", "temps_debut": 1.0, "temps_fin": 2.0},
+            {"donnee_id": "d2", "obs_index": 0, "nom_fichier": "g.wav", "temps_debut": 5.0, "temps_fin": 6.0},
+        ]
+        row_keys, n_unmapped = build_row_key_map(rows, col_idx, entries)
+        assert row_keys == {2: "d2#0"}       # seule la ligne non ambiguë est mappée
+        assert n_unmapped == 2
+
+    def test_build_row_key_map_temps_fin_disambiguates(self):
+        """Même temps_debut mais temps_fin différent → restent appariables."""
+        from sync_state import build_row_key_map
+        col_idx = {"nom du fichier": 0, "temps_debut": 1, "temps_fin": 2}
+        rows = [["f.wav", 1.0, 2.0], ["f.wav", 1.0, 3.0]]
+        entries = [
+            {"donnee_id": "d1", "obs_index": 0, "nom_fichier": "f.wav", "temps_debut": 1.0, "temps_fin": 2.0},
+            {"donnee_id": "d1", "obs_index": 1, "nom_fichier": "f.wav", "temps_debut": 1.0, "temps_fin": 3.0},
+        ]
+        row_keys, n_unmapped = build_row_key_map(rows, col_idx, entries)
+        assert row_keys == {0: "d1#0", 1: "d1#1"} and n_unmapped == 0
+
 
 class TestRegistryRollup:
     """Lot 6 — rollup envoi identifications (schéma v3), sans perte pour l'existant."""
