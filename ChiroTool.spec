@@ -40,6 +40,7 @@ hidden = [
     "chirotool_fast",       # extension Rust
     "keyring.backends.Windows",   # backend keyring Windows
     "win32timezone",        # sous-dépendance keyring
+    "PIL.ImageTk",          # pastilles de synchro (gouttière validation)
 ]
 # Tous les sous-modules tkintermapview (certains sont chargés dynamiquement)
 hidden += collect_submodules("tkintermapview")
