@@ -24,10 +24,16 @@ class AutocompleteEntry(ctk.CTkEntry):
         self._popup: tk.Toplevel | None = None
         self._list: tk.Listbox | None = None
         self._values: list[str] = []
+        self._close_after = None      # id du after de fermeture différée (grâce clic)
         self.bind("<KeyRelease>", self._on_key, add="+")
-        self.bind("<FocusOut>", lambda e: self.after(150, self._close), add="+")
+        self.bind("<FocusOut>", self._on_focus_out, add="+")
         self.bind("<Down>", self._to_list, add="+")
         self.bind("<Escape>", lambda e: self._close(), add="+")
+
+    def _on_focus_out(self, event):
+        # Fermeture différée : laisse passer un clic sur la liste. Le passage
+        # VOLONTAIRE du focus vers la liste (touche ↓) annule ce timer (_to_list).
+        self._close_after = self.after(150, self._close)
 
     # -- frappe -------------------------------------------------------------
 
@@ -78,6 +84,13 @@ class AutocompleteEntry(ctk.CTkEntry):
 
     def _to_list(self, event):
         if self._list is not None and self._popup and self._popup.winfo_exists():
+            # annule la fermeture différée : on garde la popup pour naviguer
+            if self._close_after is not None:
+                try:
+                    self.after_cancel(self._close_after)
+                except (tk.TclError, ValueError):
+                    pass
+                self._close_after = None
             self._list.focus_set()
             self._list.selection_clear(0, "end")
             self._list.selection_set(0)
@@ -102,6 +115,7 @@ class AutocompleteEntry(ctk.CTkEntry):
                 pass
 
     def _close(self):
+        self._close_after = None
         if self._popup is not None:
             try:
                 self._popup.destroy()
