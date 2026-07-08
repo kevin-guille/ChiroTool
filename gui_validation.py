@@ -38,8 +38,9 @@ import customtkinter as ctk
 
 from credentials import load_token
 from gui_config import Settings, save_settings
+from gui_tooltip import TreeCellTooltip
 from sync_state import (
-    build_row_key_map, is_sendable, next_sync_state,
+    build_row_key_map, is_sendable, next_sync_state, sync_label,
     SYNC_ERROR, SYNC_MODIFIED, SYNC_PENDING, SYNC_SYNCED, SYNC_TO_RETRACT,
 )
 from taxons import classify_taxon
@@ -315,6 +316,8 @@ class ValidationView(ctk.CTkToplevel):
 
         self.tree.bind("<<TreeviewSelect>>", lambda e: self._on_row_select())
         self.tree.bind("<Double-1>", lambda e: self._open_in_chirosurf())
+        # Infobulle au survol de la gouttière de synchro (#0)
+        TreeCellTooltip(self.tree, self._sync_tooltip)
 
         # --- Édition ---
         edit = ctk.CTkFrame(self, fg_color=("gray92", "gray20"),
@@ -506,6 +509,16 @@ class ValidationView(ctk.CTkToplevel):
         key = self.row_keys.get(idx)
         rec = self.sync_state.get(key) if key else None
         return rec.get("state") if rec else None
+
+    def _sync_tooltip(self, row_id, col_name):
+        """Infobulle de la gouttière de synchro (colonne #0)."""
+        if col_name != "#0":
+            return None
+        try:
+            idx = int(row_id)
+        except (TypeError, ValueError):
+            return None
+        return sync_label(self._row_state(idx))
 
     def _row_dot_image(self, idx: int):
         """PhotoImage de la pastille d'une ligne (ou "" si aucune à afficher)."""

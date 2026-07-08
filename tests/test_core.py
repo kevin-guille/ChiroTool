@@ -1281,6 +1281,13 @@ class TestSyncState:
         assert not is_sendable("barbar", "")      # sans confiance → non envoyable
         assert not is_sendable("", "SUR")
 
+    def test_sync_label(self):
+        from sync_state import sync_label, SYNC_SYNCED, SYNC_TO_RETRACT
+        assert sync_label(SYNC_SYNCED)             # libellé non vide (tooltip)
+        assert sync_label(SYNC_TO_RETRACT)
+        assert sync_label(None) is None            # pas d'état → pas d'infobulle
+        assert sync_label("bogus") is None
+
     def test_pending_when_validated_never_pushed(self):
         from sync_state import next_sync_state, SYNC_PENDING
         assert next_sync_state("barbar", "SUR", None) == SYNC_PENDING

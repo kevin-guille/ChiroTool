@@ -23,6 +23,7 @@ from typing import Any
 
 import customtkinter as ctk
 
+from gui_tooltip import TreeCellTooltip
 from registry import ETAT_LABELS, Registry
 
 
@@ -471,6 +472,8 @@ class RegistryPanel(ctk.CTkFrame):
         self.tree.bind("<Double-1>", self._on_double_click)
         # Clic droit = menu contextuel (ghost actions, archive, etc.)
         self.tree.bind("<Button-3>", self._on_right_click)
+        # Infobulles au survol des colonnes icône-only (État / Src / ⬆)
+        TreeCellTooltip(self.tree, self._cell_tooltip)
 
         # Tri par colonne
         for col in columns:
@@ -690,6 +693,32 @@ class RegistryPanel(ctk.CTkFrame):
         if pushed >= total:
             return "●"             # tout remonté
         return "◐" if pushed else "○"   # partiel / rien encore
+
+    def _cell_tooltip(self, row_id, col_name):
+        """Infobulle des colonnes icône-only du Registre (État / Src / ⬆)."""
+        if not row_id or row_id.startswith("__group_"):
+            return None
+        s = next((x for x in self._sessions if x.get("id") == row_id), None)
+        if not s:
+            return None
+        if col_name == "sync":
+            total = s.get("ident_total") or 0
+            pushed = s.get("ident_pushed") or 0
+            if not total:
+                return "Aucune identification à remonter"
+            if pushed >= total:
+                return f"Toutes les identifications remontées ({pushed}/{total})"
+            return f"{pushed}/{total} identifications remontées vers Vigie-Chiro"
+        if col_name == "etat":
+            lbl = ETAT_LABELS.get(s.get("etat_global"))
+            return lbl[1] if lbl else None
+        if col_name == "source":
+            return {
+                "local": "Session locale (pas encore couplée au serveur)",
+                "server": "Sur le serveur uniquement (fantôme)",
+                "synced": "Couplée : locale + serveur",
+            }.get(s.get("source"))
+        return None
 
     def _render_grouped(self):
         by_contrat: dict[str, list[dict]] = {}

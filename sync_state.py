@@ -29,6 +29,20 @@ SYNC_MODIFIED = "modified"
 SYNC_TO_RETRACT = "to_retract"
 SYNC_ERROR = "error"
 
+# Libellés lisibles (tooltips au survol de la pastille de synchro).
+SYNC_LABELS = {
+    SYNC_PENDING: "Validé, pas encore envoyé",
+    SYNC_SYNCED: "Envoyé à Vigie-Chiro",
+    SYNC_MODIFIED: "Modifié depuis l'envoi — à renvoyer",
+    SYNC_TO_RETRACT: "Effacé ici — reste sur le serveur",
+    SYNC_ERROR: "Échec de l'envoi",
+}
+
+
+def sync_label(state) -> str | None:
+    """Libellé lisible d'un état de synchro (ou None si aucun état)."""
+    return SYNC_LABELS.get(state)
+
 
 def is_sendable(taxon, conf) -> bool:
     """Une identification est envoyable ssi elle a un taxon ET une confiance."""
