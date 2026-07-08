@@ -1126,6 +1126,7 @@ class ValidationView(ctk.CTkToplevel):
             self.sync_state[key] = rec
             self._update_row_dot(idx)
         self._save(silent=True)          # persiste xlsx + sidecar (état de synchro)
+        self._update_registry_rollup()   # best-effort : rollup vue transverse
         self._refresh_stats()
         recap = f"{n_ok} identification(s) envoyée(s)"
         if n_err:
@@ -1134,6 +1135,29 @@ class ValidationView(ctk.CTkToplevel):
             recap += f"\n\nBilan non relancé : {bilan_err}"
         (messagebox.showwarning if (n_err or bilan_err) else messagebox.showinfo)(
             "Envoi terminé", recap)
+
+    def _update_registry_rollup(self):
+        """Best-effort : reporte X/Y (envoyées / envoyables) dans le registre
+        central pour la vue transverse « Registre ». Localise ``registry.db`` en
+        remontant depuis la session. Totalement silencieux en cas d'échec (le
+        registre peut être absent, verrouillé, ou la session non référencée)."""
+        try:
+            total = len(self.rows)
+            sendable = [i for i in range(total) if self._is_sendable(i)]
+            n_synced = sum(1 for i in sendable if self._row_state(i) == SYNC_SYNCED)
+            workspace = None
+            for anc in [self.session_path, *self.session_path.parents]:
+                if (anc / "registry.db").is_file():
+                    workspace = anc
+                    break
+            if workspace is None:
+                return
+            from registry import Registry
+            Registry(workspace).update_fields(
+                self.session_path.name,
+                {"ident_pushed": n_synced, "ident_total": len(sendable)})
+        except Exception:
+            pass
 
     # -- Sauvegarde ---------------------------------------------------------
 

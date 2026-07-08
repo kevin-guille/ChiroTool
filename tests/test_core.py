@@ -1328,6 +1328,45 @@ class TestSyncState:
         assert rk == {} and n == 1
 
 
+class TestRegistryRollup:
+    """Lot 6 — rollup envoi identifications (schéma v3), sans perte pour l'existant."""
+
+    def _reg(self, tmp_path):
+        from registry import Registry
+        return Registry(tmp_path)
+
+    def _add(self, reg, tmp_path, sid="s1"):
+        reg.upsert_session({"id": sid, "canonical_name": sid,
+                            "session_path": str(tmp_path / sid)})
+        return sid
+
+    def test_columns_default_zero_and_writable(self, tmp_path):
+        reg = self._reg(tmp_path)
+        sid = self._add(reg, tmp_path)
+        row = reg.get_session(sid)
+        assert row["ident_pushed"] == 0 and row["ident_total"] == 0
+        reg.update_fields(sid, {"ident_pushed": 3, "ident_total": 5})
+        row = reg.get_session(sid)
+        assert row["ident_pushed"] == 3 and row["ident_total"] == 5
+
+    def test_rescan_does_not_reset_rollup(self, tmp_path):
+        reg = self._reg(tmp_path)
+        sid = self._add(reg, tmp_path)
+        reg.update_fields(sid, {"ident_pushed": 4, "ident_total": 6})
+        self._add(reg, tmp_path)                    # re-scan (upsert existant)
+        row = reg.get_session(sid)
+        assert row["ident_pushed"] == 4 and row["ident_total"] == 6
+
+    def test_migration_idempotent_preserves_data(self, tmp_path):
+        from registry import Registry
+        reg = self._reg(tmp_path)
+        self._add(reg, tmp_path)
+        reg2 = Registry(tmp_path)                   # ré-ouverture → migration idempotente
+        cols = {r[1] for r in reg2._get_conn().execute("PRAGMA table_info(sessions)")}
+        assert {"ident_pushed", "ident_total"} <= cols
+        assert reg2.get_session("s1") is not None    # données préservées
+
+
 if __name__ == "__main__":
     # Permet de lancer directement : python tests/test_core.py
     import sys

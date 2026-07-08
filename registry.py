@@ -126,7 +126,7 @@ def _migrate_to_internal(workspace: Path) -> dict:
                 report["skipped"].append(f"{src.name}: {e}")
 
     return report
-SCHEMA_VERSION = 2   # v2 : ajout colonnes vigiechiro_participation_id + source
+SCHEMA_VERSION = 3   # v3 : rollup envoi identifications (ident_pushed/ident_total)
 
 
 # ---------------------------------------------------------------------------
@@ -211,6 +211,10 @@ CREATE TABLE IF NOT EXISTS sessions (
     source            TEXT DEFAULT 'local',   -- 'local' | 'server' | 'synced'
     api_etat          TEXT,                    -- état traitement côté API
     last_api_sync_at  TEXT,                    -- dernier pull
+
+    -- Rollup envoi des identifications (v3) : orthogonal à etat_global
+    ident_pushed      INTEGER DEFAULT 0,       -- identifications envoyées au serveur
+    ident_total       INTEGER DEFAULT 0,       -- identifications envoyables (taxon+conf)
 
     first_scanned_at  TEXT,
     last_updated_at   TEXT
@@ -339,6 +343,9 @@ class Registry:
             ("source", "TEXT DEFAULT 'local'"),
             ("api_etat", "TEXT"),
             ("last_api_sync_at", "TEXT"),
+            # v3 : rollup envoi des identifications
+            ("ident_pushed", "INTEGER DEFAULT 0"),
+            ("ident_total", "INTEGER DEFAULT 0"),
         ]
         for col, typ in to_add:
             if col not in existing:
@@ -509,6 +516,7 @@ class Registry:
         "commentaires", "custom_fields", "n_wav", "total_bytes",
         "vigiechiro_participation_id", "vigiechiro_site_id", "api_etat",
         "source", "last_api_sync_at", "last_updated_at", "first_scanned_at",
+        "ident_pushed", "ident_total",
     })
 
     def update_fields(self, sid: str, fields: dict) -> None:
