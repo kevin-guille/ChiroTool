@@ -38,11 +38,13 @@ import customtkinter as ctk
 
 from credentials import load_token
 from gui_config import Settings, save_settings
+from gui_autocomplete import AutocompleteEntry
 from gui_tooltip import TreeCellTooltip
 from sync_state import (
     build_row_key_map, is_sendable, next_sync_state, sync_label,
     SYNC_ERROR, SYNC_MODIFIED, SYNC_PENDING, SYNC_SYNCED, SYNC_TO_RETRACT,
 )
+from taxon_index import genus_code_for, is_known, load_taxon_index, suggest
 from taxons import classify_taxon
 from vigiechiro_api import (
     ApiError, VigieChiroClient,
@@ -162,6 +164,10 @@ class ValidationView(ctk.CTkToplevel):
         self.filtered_indexes: list[int] = []
         self._wav_present: list[bool] = []   # par ligne : le WAV existe-t-il encore ?
         self._dirty = False
+
+        # Index des taxons acceptés par le serveur (autocomplétion + validation
+        # de la saisie ; {} si snapshot absent → saisie libre comme avant).
+        self._taxon_index = load_taxon_index()
 
         # Synchro serveur (envoi des identifications) — cf. sync_state.py
         self._sidecar_entries: list[dict] = []      # mapping natif (donnee_id, index)
@@ -341,12 +347,22 @@ class ValidationView(ctk.CTkToplevel):
         ctk.CTkLabel(edit, text="Taxon :",
                       font=ctk.CTkFont(size=11)).grid(row=1, column=0, padx=(10, 6), pady=8)
         self.edit_taxon_var = ctk.StringVar(value="")
-        self.edit_taxon_entry = ctk.CTkEntry(
+        # Autocomplétion sur les taxons acceptés par le serveur (si snapshot chargé),
+        # sinon champ libre classique. La sélection insère le code.
+        self.edit_taxon_entry = AutocompleteEntry(
             edit, textvariable=self.edit_taxon_var, width=160,
             font=ctk.CTkFont(family="Consolas", size=12),
+            suggest_fn=(lambda q: suggest(q, self._taxon_index)
+                        if self._taxon_index else []),
+            on_pick=lambda code: self._update_taxon_indicator(),
         )
         self.edit_taxon_entry.grid(row=1, column=1, padx=(0, 6), pady=8)
         self.edit_taxon_entry.bind("<Return>", lambda e: self._apply_edit_and_next())
+        # Indicateur de validité serveur (✓ connu / ⚠ inconnu → ne partira pas)
+        self.taxon_ind = ctk.CTkLabel(edit, text="", width=90, anchor="w",
+                                      font=ctk.CTkFont(size=11))
+        self.taxon_ind.grid(row=2, column=1, sticky="w", padx=(0, 6))
+        self.edit_taxon_var.trace_add("write", lambda *a: self._update_taxon_indicator())
 
         ctk.CTkLabel(edit, text="Confiance :",
                       font=ctk.CTkFont(size=11)).grid(row=1, column=2, padx=(16, 6), pady=8)
@@ -367,6 +383,15 @@ class ValidationView(ctk.CTkToplevel):
             edit, text="▶ ChiroSurf", width=120, height=30,
             command=self._open_in_chirosurf,
         ).grid(row=1, column=7, padx=(0, 10), pady=8, sticky="e")
+
+        # « Monter au genre » : son incertain entre 2 espèces d'un même genre
+        # (ex. Pleaur/Pleaus → Plesp « Oreillard sp. »). Confiance courante conservée.
+        if self._taxon_index:
+            ctk.CTkButton(
+                edit, text="↑ Monter au genre (incertain)", width=220, height=28,
+                fg_color=("gray85", "gray25"), text_color=("gray15", "gray90"),
+                hover_color=("gray75", "gray35"), command=self._raise_to_genus,
+            ).grid(row=2, column=3, columnspan=4, sticky="w", padx=(0, 8), pady=(0, 6))
 
         # --- Footer ---
         footer = ctk.CTkFrame(self, fg_color="transparent")
@@ -905,6 +930,51 @@ class ValidationView(ctk.CTkToplevel):
         for iid in sel:
             self._apply_to_row(int(iid), new_taxon, new_conf)
         self._refresh_stats()
+
+    def _update_taxon_indicator(self):
+        """Signale si le code saisi est accepté par le serveur (✓) ou non (⚠ :
+        il ne pourra pas être envoyé). Silencieux sans snapshot taxons."""
+        ind = getattr(self, "taxon_ind", None)
+        if ind is None:
+            return
+        code = self.edit_taxon_var.get().strip()
+        if not self._taxon_index or not code:
+            ind.configure(text="")
+        elif is_known(code, self._taxon_index):
+            ind.configure(text="✓ connu", text_color="#16a34a")
+        else:
+            ind.configure(text="⚠ inconnu", text_color="#e08a1e")
+
+    def _raise_to_genus(self):
+        """Remplace, pour les lignes sélectionnées, l'espèce par son code « genre »
+        (Pleaur/Pleaus → Plesp « Oreillard sp. ») quand il existe côté serveur —
+        cas des sons incertains entre deux espèces d'un genre. Confiance conservée."""
+        sel = self.tree.selection()
+        if not sel:
+            return
+        ci = self.col_idx
+        conf = self.edit_conf_var.get().strip().upper()
+        n_ok = 0
+        for iid in sel:
+            idx = int(iid)
+            cur = None
+            if "observateur_taxon" in ci and self.rows[idx][ci["observateur_taxon"]]:
+                cur = self.rows[idx][ci["observateur_taxon"]]
+            elif "tadarida_taxon" in ci:
+                cur = self.rows[idx][ci["tadarida_taxon"]]
+            g = genus_code_for(str(cur or ""), self._taxon_index)
+            if g:
+                c = conf or (str(self.rows[idx][ci["observateur_probabilite"]]).upper()
+                             if "observateur_probabilite" in ci
+                             and self.rows[idx][ci["observateur_probabilite"]] else "")
+                self._apply_to_row(idx, g, c)
+                n_ok += 1
+        self._refresh_stats()
+        if n_ok == 0:
+            messagebox.showinfo(
+                "Monter au genre",
+                "Aucun code « genre » disponible pour la sélection "
+                "(genre sans code groupe, ou déjà au genre).", parent=self)
 
     def _quick_validate(self, confidence: str):
         """Valide les lignes sélectionnées : chacune reçoit SON taxon Tadarida

@@ -1,0 +1,203 @@
+# Taxons acceptes par l'API Vigie-Chiro (GET /taxons) — snapshot pour
+# l'autocompletion/validation de la saisie observateur. Source de verite
+# des codes envoyables ; regenerable via: python vigiechiro_api.py dump-taxons
+code;libelle
+234;JB
+345;JB2
+amph;Amphibien sp. (Amphibia sp.)
+Anoalp;Analote des Alpes (Anonconotus alpinus)
+Anosp;Analote indéterminée (Anonconotus sp.)
+Antbou;Antaxie corse (Antaxius bouvieri)
+Antcho;Antaxie catalane (Antaxius chopardi)
+Anthis;Antaxie pyrénéenne (Antaxius hispanicus)
+Antius;Antaxie voyageuse (Antaxius spinibrachius)
+Antped;Antaxie marbrée (Antaxius pedestris)
+Antsor;Antaxie cévénole (Antaxius sorrezensis)
+Antsp;Antaxie sp. (Antaxius sp.)
+Apofla;Mulot à collier (Apodemus flavicollis)
+Aposp;Mulot sp. (Apodemus sp.)
+Aposyl;Mulot sylvestre (Apodemus sylvaticus)
+Barbar;Barbastelle d'Europe (Barbastella barbastellus)
+Barfis;Barbitiste languedocien (Barbitistes fischerii)
+Barobt;Barbitiste empourpré (Barbitistes obtusus)
+Barsan;Barbitiste languedocien (Barbitistes fischeri)
+Barser;Barbitiste des bois (Barbitistes serricauda)
+Bicbic;Decticelle bicolore (Bicolorana bicolor)
+buzz;Bourdonnement
+Calram;Ephippigere gasconne (Callicrania ramburii)
+Cansp.;Cansp.
+car;Vehicule
+Chiroptera;Chauves-souris
+Chirosp;Chiroptère sp. (Chiroptera sp.)
+chirp;chirp
+Cicatr;Cigale noire (Cicadatra atra)
+Cicorn;Cigale grise (Cicada orni)
+cigale;Cigale indéterminée (Cicadidae sp.)
+Concon;Conocéphale africain (Conocephalus conocephalus)
+Condor;Conocéphale des marais (Conocephalus dorsalis)
+Confus;Conocéphale bigarré (Conocephalus fuscus)
+Corcho;Ephippigère corse (Corsteropleurus chopardi)
+criq;Criquet (Caelifera sp.)
+Cympud;Ecaille pudique (Cymbalophora pudica)
+Cyrscu;Méconème à bouclier (Cyrtaspis scutata)
+Decalb;Dectique à front blanc (Decticus albifrons)
+elec;Bruit electronique
+empty;vide
+Epheph;Ephippigère des vignes (Ephippiger ephippiger)
+Ephter;Ephippigere terrestre (Ephippiger terrestris)
+Eptisa;Sérotine isabelle (Eptesicus isabellinus)
+Eptnil;Sérotine boréale (Eptesicus nilssonii)
+Eptser;Sérotine commune (Eptesicus serotinus)
+Erirub;Rougegorge familier (Erithacus rubecula)
+Eugpip;Grillon siffleur (Eugryllodes pipiens)
+Eumbor;Grillon bordelais (Eumodicogryllus bordigalensis)
+Eupcha;Decticelle splendide (Eupholidoptera chabrieri)
+Eupsp;Decticelle splendide (Eupholidoptera sp.)
+Euptyr;Decticelle corse (Eupholidoptera tyrrhenica)
+Gligli;Loir gris (Glis glis)
+gril;Grillon indeterminé (Grylloidea)
+Grycam;Grillon champêtre (Gryllus campestris)
+Grysp.;Gryllidae
+Hemsp.;Hemiptera
+Hylmer;Rainette méridionale (Hyla meridionalis)
+Hypsav;Vespère (Hypsugo savii)
+Insp10;Insecte sp.10
+Insp11;Insecte sp. 11
+Insp12;Insecte sp. 12
+Insp13;Insecte sp. 13 (Insecta sp. 13)
+Insp14;Insecte sp. 14 (Insecta sp. 14)
+Insp15;Insecte sp. 15 (Insecta sp. 15)
+Inssp1;Insecte sp.1
+Inssp2;Insecte sp.2
+Inssp5;Insecte sp.5
+Inssp6;Insecte sp.6
+Inssp7;Insecte sp.7
+Inssp8;Insecte sp.8
+Inssp9;Insecte sp.9
+Isopyr;Barbitiste pyrénéen (Isophya pyrenea)
+JKK;JKK
+Lamsp.;Lampyre (Lampyridae sp.)
+Lepalb;Petite Sauterelle (Leptophyes albovittata)
+Lepbos;Sauterelle sarmate (Leptophyes boscii)
+Leplat;Sauterelle provençale (Leptophyes laticauda)
+Leppun;Sauterelle ponctuée (Leptophyes punctatissima)
+Lusmeg;Rossignol philomèle (Luscinia megarhynchos)
+Lyrple;Cigale commune (Lyristes plebejus)
+mamm;Mammifère sp.
+mec;Autre bruit
+Meldes;Grillon noiratre (Melanogryllus desertus)
+Metbra;Decticelle des bruyeres (Metrioptera brachyptera)
+Metpul;Barbitiste corse (Metaplastes pulchripennis)
+Metsau;Decticelle des alpages (Metrioptera saussuriana)
+Micagr;Campagnol agreste (Microtus agrestis)
+Micarv;Campagnol des champs (Microtus arvalis)
+Mimasp;Micromammifère sp.
+Minsch;Minioptère (Miniopterus schreibersii)
+Minsp.;Miniopteridae
+Molsp.;Molossidae
+Musave;Muscardin (Muscardinus avellanarius)
+Musniv;Belette d'Europe (Mustela nivalis)
+Mussp;Musaraigne sp. (Soricidae sp.)
+Myoalc;Murin d'Alcathoe (Myotis alcathoe)
+Myobec;Murin sylvestre / de Bechstein (Myotis bechsteinii)
+Myobly;Murin à tache blanche / Petit Murin (Myotis blythii)
+Myobra;Murin à poils dorés / de Brandt (Myotis brandtii)
+Myocap;Murin pêcheur / de Capaccini (Myotis capaccinii)
+Myocry;Murin cryptique (Myotis crypticus)
+Myodas;Murin des marais (Myotis dasycneme)
+Myodau;Murin des rivières / de Daubenton (Myotis daubentonii)
+Myoema;Murin à oreilles échancrées (Myotis emarginatus)
+Myoesc;Murin ibérique / d'Escalera (Myotis escalerai)
+Myogla;Campagnol roussatre (Myodes glareolus)
+MyoGT;Petit/Grand Murin (Myotis blythii/myotis)
+Myomyo;Grand Murin (Myotis myotis)
+Myomys;Murin à moustaches (Myotis mystacinus)
+Myonat;Murin à ventre blanc / de Natterer (Myotis nattereri)
+Myosp;Murin sp. (Myotis sp.)
+noise;bruit
+Nyclas;Grande Noctule (Nyctalus lasiopterus)
+Nyclei;Petite Noctule / Noctule de Leisler (Nyctalus leisleri)
+Nycnoc;Noctule commune (Nyctalus noctula)
+Odomac;Sauterelle de Macpherson (Odontura macphersoni)
+Ortsp.;Orthoptera
+Pelgra;Grenouille de Perez (Pelophylax perezi)
+Pelrid;Grenouille rieuse (Pelophylax ridibundus)
+Phafal;Phanéroptère commun (Phaneroptera falcata)
+Phalat;Phaneroptere à larges cerques (Phaneroptera laticerca)
+Phanan;Phanéroptère méridional (Phaneroptera nana)
+Phofem;Decticelle des friches (Pholidoptera femorata)
+Phogri;Decticelle cendrée (Pholidoptera griseoaptera)
+Phooch;Rougequeue noir (Phoenicurus ochruros)
+piaf;Oiseau sp. (Aves sp.)
+Pipkuh;Pipistrelle à liseré blanc / de Kuhl (Pipistrellus kuhlii)
+Pipmad;Pipistrelle de Madère (Pipistrellus madeirensis)
+Pipnat;Pipistrelle voyageuse / de Nathusius (Pipistrellus nathusii)
+Pippip;Pipistrelle commune (Pipistrellus pipistrellus)
+Pippyg;Pipistrelle soprane / pygmée (Pipistrellus pygmaeus)
+Pipsp;Pipistrelle sp. (Pipistrellus sp.)
+Plaaff;Decticelle côtière (Platycleis affinis)
+Plaalb;Decticelle chagrinée (Platycleis albopunctata)
+Plafal;Decticelle à serpe (Platycleis falx)
+Plaint;Decticelle intermédiaire (Platycleis intermedia)
+plane;Avion
+Plasab;Decticelle des sables (Platycleis sabulosa)
+Pleaur;Oreillard roux (Plecotus auritus)
+Pleaus;Oreillard gris (Plecotus austriacus)
+Plekol;Oreillard des Balkans (Plecotus kolombatovici)
+Plemac;Oreillard montagnard (Plecotus macrobullaris)
+Plesp;Oreillard sp. (Plecotus sp.)
+Poepal;Poepal
+Psepra;Halias du hetre (Pseudoips prasinana)
+Ptebon;Decticelle d'Evisa (Pterolepis bonfilsi)
+Ptecor;Decticelle de Porto-Vecchio (Pterolepis corsicana)
+Pteger;Decticelle orientale (Pterolepis germanica)
+Ptehey;Grillon des marais (Pteronemobius heydenii)
+Ptepon;Decticelle varoise (Pterolepis poneli)
+rain;Pluie
+Ratnor;Rat surmulot (Rattus norvegicus)
+Ratrat;Rat noir (Rattus rattus)
+Ratsp;Rat sp. (Rattus sp.)
+Renard volant à lunettes;Pteropus conspicillatus
+Rhaann;Decticelle annelée (Rhacocleis annulata)
+Rhapon;Decticelle varoise (Rhacocleis poneli)
+Rhasp;Decticelle type Rhacocleis (Rhacocleis sp.)
+Rhieur;Rhinolophe euryale (Rhinolophus euryale)
+Rhifer;Grand Rhinolophe (Rhinolophus ferrumequinum)
+Rhihip;Petit Rhinolophe (Rhinolophus hipposideros)
+Rhisp.;Rhinolophidae
+river;Cours d'eau
+Roeroe;Decticelle bariolée (Roeseliana roeselii)
+rousette;Roussette
+Rousettus aegyptiacus;Roussette d'Égypte
+Rusnit;Conocéphale gracieux (Ruspolia nitidula)
+SauIn1;Sauterelle sp. Inde type 1
+SauIn2;Sauterelle sp. Inde type 2
+SauIn3;Sauterelle sp. Inde type 3
+Sausp1;Sauterelle sp 1 (Tettigonioidea sp. 1)
+Sausp2;Sauterelle sp 2 (Tettigonioidea sp. 2)
+Sepsep;Decticelle échassière (Sepiana sepium)
+Sorcor;Musaraigne couronnée (Sorex coronatus)
+Sormin;Musaraigne pygmée (Sorex minutus)
+Tadten;Molosse (Tadarida teniotis)
+Testes;Decticelle carroyée (Tessellana tessellata)
+Tetarg;Cigale argentée (Tettigettalna argentata)
+Tetcan;Sauterelle cymbalière (Tettigonia cantans)
+Tethis;Sauterelle espagnole (Tettigonia hispanica)
+Tetpyg;Cigale pygmée (Tettigettula pygmea)
+Tetsp.;Tettigoniidae
+Tetvir;Sauterelle verte (Tettigonia viridissima)
+Thycor;Decticelle marocaine (Thyreonotus corsicus)
+Trotro;Troglodyte mignon (Troglodytes troglodytes)
+Turmer;Merle noir (Turdus merula)
+Turphi;Grive musicienne (Turdus philomelos)
+Tyllil;Phanéroptère liliacé (Tylopsis lilifolia)
+Urobre;Ephippigère algérienne (Uromenus brevicollis)
+Urorug;Ephippigère carénée (Uromenus rugosicollis)
+Urosp;Ephippigère carénée/d'Algérie (Uromenus sp.)
+Vesmur;Sérotine bicolore (Vespertilio murinus)
+Vessp.;Vespertilionidae
+wind;Vent
+Yerbey;Decticelle italienne (Yersinella beybienkoi)
+Yerray;Decticelle frêle (Yersinella raymondii)
+Yposp;Hyponomeute sp. (Yponomeuta sp.)
+Zeuabb;Decticelle aquitaine (Zeuneriana abbreviata)

@@ -1491,6 +1491,44 @@ class TestSynthesisValidatedTotal:
         assert s["richesse_totale"] == 2           # noise exclu
 
 
+class TestTaxonIndex:
+    """Index /taxons Vigie-Chiro : validation, autocomplétion, code genre."""
+
+    def test_load_and_is_known(self):
+        from taxon_index import load_taxon_index, is_known
+        idx = load_taxon_index()
+        assert is_known("Pleaur", idx) and is_known("plesp", idx)   # casse-insensible
+        assert not is_known("zzzzz", idx)
+        assert not is_known("Pip35", idx)   # code Tadarida non accepté par le serveur
+
+    def test_canonical_code(self):
+        from taxon_index import load_taxon_index, canonical_code
+        idx = load_taxon_index()
+        assert canonical_code("pleaur", idx) == "Pleaur"
+        assert canonical_code("inconnu", idx) is None
+
+    def test_suggest_surfaces_species_and_genus(self):
+        from taxon_index import load_taxon_index, suggest
+        idx = load_taxon_index()
+        codes = {c for c, _ in suggest("orei", idx)}     # recherche par libellé FR
+        assert {"Pleaur", "Pleaus", "Plesp"} <= codes    # espèces + genre incertain
+        assert suggest("", idx) == []
+
+    def test_genus_code_for_uncertain(self):
+        from taxon_index import load_taxon_index, genus_code_for
+        idx = load_taxon_index()
+        assert genus_code_for("Pleaur", idx) == "Plesp"  # Oreillard indéterminé
+        assert genus_code_for("Pleaus", idx) == "Plesp"
+        assert genus_code_for("Pippip", idx) == "Pipsp"
+        assert genus_code_for("Myodau", idx) == "Myosp"
+        assert genus_code_for("Plesp", idx) is None      # déjà un code genre
+        assert genus_code_for("Barbar", idx) is None     # genre monospécifique (pas de Barsp)
+
+    def test_missing_snapshot_degrades(self, tmp_path):
+        from taxon_index import load_taxon_index
+        assert load_taxon_index(tmp_path / "nope.csv") == {}
+
+
 if __name__ == "__main__":
     # Permet de lancer directement : python tests/test_core.py
     import sys
