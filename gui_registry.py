@@ -421,7 +421,7 @@ class RegistryPanel(ctk.CTkFrame):
         self.table_frame.grid_rowconfigure(0, weight=1)
 
         # Treeview (flat mode)
-        columns = ("etat", "source", "date", "contrat", "site", "point",
+        columns = ("etat", "source", "sync", "date", "contrat", "site", "point",
                    "pass", "serie", "campaign", "commentaires")
         self.tree = ttk.Treeview(
             self.table_frame, columns=columns, show="headings",
@@ -429,6 +429,7 @@ class RegistryPanel(ctk.CTkFrame):
         )
         self.tree.heading("etat", text="État")
         self.tree.heading("source", text="Src")
+        self.tree.heading("sync", text="⬆")
         self.tree.heading("date", text="Date")
         self.tree.heading("contrat", text="Contrat")
         self.tree.heading("site", text="Site")
@@ -440,6 +441,7 @@ class RegistryPanel(ctk.CTkFrame):
 
         self.tree.column("etat", width=40, anchor="center")
         self.tree.column("source", width=35, anchor="center")
+        self.tree.column("sync", width=32, anchor="center")
         self.tree.column("date", width=90, anchor="center")
         self.tree.column("contrat", width=200)
         self.tree.column("site", width=70, anchor="center")
@@ -654,7 +656,7 @@ class RegistryPanel(ctk.CTkFrame):
             self.tree.insert(
                 "", "end", iid=s["id"],
                 values=(
-                    pastille, source_icon, date,
+                    pastille, source_icon, self._sync_glyph(s), date,
                     s.get("nom_contrat") or "",
                     s.get("n_site_tadarida") or "",
                     s.get("n_point_fixe") or "",
@@ -674,6 +676,21 @@ class RegistryPanel(ctk.CTkFrame):
             "synced": "✓",     # local + serveur (couplé)
         }.get(source, "?")
 
+    @staticmethod
+    def _sync_glyph(s: dict) -> str:
+        """Indicateur discret de remontée des identifications (colonne ⬆).
+
+        Vide si rien à remonter ; sinon cercle vide (rien envoyé) → partiel →
+        plein (tout remonté). Attire l'œil sur les nuits « pas encore remontées ».
+        """
+        total = s.get("ident_total") or 0
+        pushed = s.get("ident_pushed") or 0
+        if not total:
+            return ""              # feature non utilisée / rien d'envoyable
+        if pushed >= total:
+            return "●"             # tout remonté
+        return "◐" if pushed else "○"   # partiel / rien encore
+
     def _render_grouped(self):
         by_contrat: dict[str, list[dict]] = {}
         for s in self._sessions:
@@ -685,12 +702,15 @@ class RegistryPanel(ctk.CTkFrame):
             n = len(sessions)
             n_done = sum(1 for s in sessions
                          if s.get("etat_global") == "processed")
+            g_pushed = sum(s.get("ident_pushed") or 0 for s in sessions)
+            g_total = sum(s.get("ident_total") or 0 for s in sessions)
+            remontees = f", {g_pushed}/{g_total} remontées" if g_total else ""
             group_id = f"__group_{contrat}"
 
             self.tree.insert(
                 "", "end", iid=group_id,
-                values=("", "", "",
-                        f"📁 {contrat}  ({n} nuits, {n_done} terminées)",
+                values=("", "", "", "",
+                        f"📁 {contrat}  ({n} nuits, {n_done} terminées{remontees})",
                         "", "", "", "", "", ""),
                 tags=("group_header",),
                 open=True,
@@ -707,7 +727,7 @@ class RegistryPanel(ctk.CTkFrame):
                 self.tree.insert(
                     group_id, "end", iid=s["id"],
                     values=(
-                        pastille, source_icon, date, "",
+                        pastille, source_icon, self._sync_glyph(s), date, "",
                         s.get("n_site_tadarida") or "",
                         s.get("n_point_fixe") or "",
                         s.get("n_passage") or "",
