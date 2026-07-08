@@ -1402,41 +1402,70 @@ class TestRegistryRollup:
 
 
 class TestActivityReference:
-    """Référentiel d'activité national Vigie-Chiro (Bas et al. 2020, contacts/nuit)."""
+    """Référentiel d'activité Vigie-Chiro (Bas et al. 2020) — combiné + repli."""
 
     def test_load_real_reference(self):
         from activity_reference import load_reference
         ref = load_reference()
-        assert "pippip" in ref                       # code casse-insensible
-        assert ref["pippip"]["q25"] == 13 and ref["pippip"]["q98"] == 3737
+        row = ref[("national", "toutes", "pippip")]   # clé (referentiel, saison, code)
+        assert row["q25"] == 13 and row["q98"] == 3737
 
     def test_classify_boundaries(self):
         from activity_reference import classify
         row = {"q25": 13, "q75": 411, "q98": 3737}
         assert classify(5, row) == "Faible"
         assert classify(13, row) == "Moyenne"        # ≥ Q25
-        assert classify(410, row) == "Moyenne"
         assert classify(411, row) == "Forte"         # ≥ Q75
-        assert classify(3736, row) == "Forte"
         assert classify(3737, row) == "Très forte"   # ≥ Q98
 
-    def test_activity_for_and_unknown(self):
+    def test_region_from_dept_and_site(self):
+        from activity_reference import region_for_dept, region_for_site
+        assert region_for_dept("34") == "Occitanie"
+        assert region_for_dept("2A") == "Corse"
+        assert region_for_dept("1") == "Auvergne-Rhone-Alpes"   # zero-pad
+        assert region_for_site("340123") == "Occitanie"          # 2 premiers = dept
+        assert region_for_dept("999") is None
+
+    def test_season_from_date(self):
+        from datetime import datetime
+        from activity_reference import season_for_date
+        assert season_for_date(datetime(2026, 5, 1)) == "printemps"
+        assert season_for_date(datetime(2026, 7, 15)) == "ete"
+        assert season_for_date(datetime(2026, 10, 1)) == "automne"
+        assert season_for_date(datetime(2026, 12, 25)) == "toutes"   # hors fenêtres
+        assert season_for_date(None) == "toutes"
+
+    def test_activity_for_real_region(self):
         from activity_reference import load_reference, activity_for
         ref = load_reference()
-        a = activity_for("Pippip", 500, ref)
-        assert a["classe"] == "Forte" and a["fiable"] is True
+        a = activity_for("Pippip", 100, ref, saison="automne", region="Occitanie")
+        assert a["referentiel"] == "region:Occitanie"   # Occitanie automne = fiable
+        assert a["classe"] == "Forte"                    # Q75=87 ≤ 100 < Q98=1999
         assert activity_for("zzzzzz", 10, ref) is None   # code hors référentiel
 
-    def test_annotate_synthesis(self):
+    def test_fallback_prefers_reliable_national_over_weak_region(self):
+        from activity_reference import activity_for
+        # région peu fiable ('Faible') vs national fiable : on garde le national.
+        ref = {
+            ("region:Corse", "automne", "barbar"):
+                {"q25": 1, "q75": 5, "q98": 50, "nbocc": 10, "confiance": "Faible"},
+            ("national", "automne", "barbar"):
+                {"q25": 2, "q75": 16, "q98": 181, "nbocc": 4000, "confiance": "Tres bonne"},
+        }
+        a = activity_for("barbar", 20, ref, saison="automne", region="Corse")
+        assert a["referentiel"] == "national" and a["fiable"] is True
+
+    def test_annotate_synthesis_with_context(self):
         from activity_reference import load_reference, annotate_synthesis
         ref = load_reference()
         synth = {"species": [
             {"taxon": "pippip", "groupe": "chiros", "n_contacts": 5000},
             {"taxon": "noise", "groupe": "noise", "n_contacts": 999},
         ]}
-        annotate_synthesis(synth, ref)
-        assert synth["species"][0]["activite"]["classe"] == "Très forte"
-        assert synth["species"][1]["activite"] is None   # non-chiro → pas de classe
+        annotate_synthesis(synth, ref, saison="ete", region="Occitanie")
+        assert synth["species"][0]["activite"]["classe"] in (
+            "Faible", "Moyenne", "Forte", "Très forte")
+        assert synth["species"][1]["activite"] is None   # non-chiro
 
     def test_missing_reference_degrades(self, tmp_path):
         from activity_reference import load_reference

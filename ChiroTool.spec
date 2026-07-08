@@ -31,7 +31,8 @@ datas += collect_data_files("tkintermapview")
 # Notre table taxons officielle
 datas += [("SpeciesListComplete.csv", ".")]
 # Référentiel d'activité Vigie-Chiro Point Fixe (Bas et al. 2020, contacts/nuit)
-datas += [("activity_ref_PF_national.csv", ".")]
+# — national + déclinaisons saison/région/habitat (généré par build_activity_ref.py)
+datas += [("activity_ref_PF.csv", ".")]
 # Icône — embarquée aussi dans les datas pour l'accéder en runtime via
 # sys._MEIPASS (fenêtre principale appelle iconbitmap au démarrage).
 datas += [("icon.ico", ".")]
