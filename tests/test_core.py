@@ -1272,6 +1272,62 @@ class TestPushObservation:
                 c._request("PATCH", "/donnees/d/observations/0", json={})
 
 
+class TestSyncState:
+    """Lot 4 — machine à états de synchro + mapping ligne↔serveur (pur)."""
+
+    def test_is_sendable(self):
+        from sync_state import is_sendable
+        assert is_sendable("barbar", "SUR")
+        assert not is_sendable("barbar", "")      # sans confiance → non envoyable
+        assert not is_sendable("", "SUR")
+
+    def test_pending_when_validated_never_pushed(self):
+        from sync_state import next_sync_state, SYNC_PENDING
+        assert next_sync_state("barbar", "SUR", None) == SYNC_PENDING
+        assert next_sync_state("barbar", "SUR", {}) == SYNC_PENDING
+
+    def test_none_when_not_sendable_never_pushed(self):
+        from sync_state import next_sync_state
+        assert next_sync_state("", "", None) is None
+        assert next_sync_state("barbar", "", None) is None    # taxon sans confiance
+
+    def test_synced_and_modified(self):
+        from sync_state import next_sync_state, SYNC_SYNCED, SYNC_MODIFIED
+        rec = {"pushed_taxon": "barbar", "pushed_conf": "SUR"}
+        assert next_sync_state("barbar", "SUR", rec) == SYNC_SYNCED
+        assert next_sync_state("pippip", "SUR", rec) == SYNC_MODIFIED
+        assert next_sync_state("barbar", "PROBABLE", rec) == SYNC_MODIFIED
+
+    def test_modified_back_to_synced(self):
+        from sync_state import next_sync_state, SYNC_SYNCED
+        rec = {"pushed_taxon": "barbar", "pushed_conf": "SUR", "state": "modified"}
+        assert next_sync_state("barbar", "SUR", rec) == SYNC_SYNCED
+
+    def test_to_retract_when_cleared_after_push(self):
+        from sync_state import next_sync_state, SYNC_TO_RETRACT
+        rec = {"pushed_taxon": "barbar", "pushed_conf": "SUR"}
+        assert next_sync_state("", "", rec) == SYNC_TO_RETRACT
+        assert next_sync_state("barbar", "", rec) == SYNC_TO_RETRACT   # non-envoyable
+
+    def test_build_row_key_map(self):
+        from sync_state import build_row_key_map
+        col_idx = {"nom du fichier": 0, "temps_debut": 1}
+        rows = [["f1.wav", 1.0], ["f1.wav", 2.0], ["f2.wav", 0.5]]
+        entries = [
+            {"donnee_id": "d1", "obs_index": 0, "nom_fichier": "f1.wav", "temps_debut": 1.0},
+            {"donnee_id": "d1", "obs_index": 1, "nom_fichier": "f1.wav", "temps_debut": 2.0},
+        ]
+        row_keys, n_unmapped = build_row_key_map(rows, col_idx, entries)
+        assert row_keys == {0: "d1#0", 1: "d1#1"}
+        assert n_unmapped == 1                     # f2.wav non présent dans entries
+
+    def test_build_row_key_map_no_entries(self):
+        from sync_state import build_row_key_map
+        rk, n = build_row_key_map([["f.wav", 1.0]],
+                                  {"nom du fichier": 0, "temps_debut": 1}, [])
+        assert rk == {} and n == 1
+
+
 if __name__ == "__main__":
     # Permet de lancer directement : python tests/test_core.py
     import sys

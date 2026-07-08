@@ -29,6 +29,7 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
+import threading
 from pathlib import Path
 from tkinter import messagebox, ttk
 from typing import Any
@@ -37,7 +38,15 @@ import customtkinter as ctk
 
 from credentials import load_token
 from gui_config import Settings, save_settings
+from sync_state import (
+    build_row_key_map, is_sendable, next_sync_state,
+    SYNC_ERROR, SYNC_MODIFIED, SYNC_PENDING, SYNC_SYNCED, SYNC_TO_RETRACT,
+)
 from taxons import classify_taxon
+from vigiechiro_api import (
+    ApiError, VigieChiroClient,
+    load_observation_sidecar, save_observation_sidecar,
+)
 
 
 # Espèces patrimoniales (à étendre selon besoin client / région)
@@ -153,6 +162,14 @@ class ValidationView(ctk.CTkToplevel):
         self._wav_present: list[bool] = []   # par ligne : le WAV existe-t-il encore ?
         self._dirty = False
 
+        # Synchro serveur (envoi des identifications) — cf. sync_state.py
+        self._sidecar_entries: list[dict] = []      # mapping natif (donnee_id, index)
+        self.row_keys: dict[int, str] = {}          # row_idx → "donnee_id#index"
+        self.sync_state: dict[str, dict] = {}       # key → {state, pushed_taxon, ...}
+        self.mappable = False                       # au moins une ligne mappée serveur ?
+        self._dot_imgs: dict[str, Any] = {}         # PhotoImage par état (anti-GC)
+        self._pushing = False
+
         # Mapping index colonne -> clé logique
         self.col_idx: dict[str, int] = {}
 
@@ -259,9 +276,15 @@ class ValidationView(ctk.CTkToplevel):
 
         columns = ("heure", "duree", "freq", "tad_taxon", "tad_proba",
                    "obs_taxon", "obs_conf", "groupe")
+        # ``tree headings`` : on affiche la colonne d'arbre #0 comme une fine
+        # gouttière de statut de synchro (une petite pastille par ligne), sans
+        # toucher aux colonnes de données.
         self.tree = ttk.Treeview(
-            table_frame, columns=columns, show="headings", selectmode="extended",
+            table_frame, columns=columns, show="tree headings", selectmode="extended",
         )
+        self.tree.column("#0", width=22, minwidth=22, stretch=False, anchor="center")
+        self.tree.heading("#0", text="")
+        self._build_dot_images()
         self.tree.heading("heure", text="Heure")
         self.tree.heading("duree", text="Durée (s)")
         self.tree.heading("freq", text="Fréq. méd. (kHz)")
@@ -353,20 +376,29 @@ class ValidationView(ctk.CTkToplevel):
         )
         self.stats_lbl.grid(row=0, column=0, sticky="w")
 
+        # Bouton d'envoi des identifications au serveur. Contextuel : selon la
+        # sélection, il envoie « la sélection » ou « tout » (lignes envoyables).
+        self.send_btn = ctk.CTkButton(
+            footer, text="⬆ Envoyer", width=190, height=32,
+            font=ctk.CTkFont(weight="bold"),
+            command=self._on_send_click,
+        )
+        self.send_btn.grid(row=0, column=1, padx=(6, 6))
+
         ctk.CTkButton(
             footer, text="🔄 Rafraîchir", width=110, height=32,
             fg_color=("gray85", "gray25"),
             text_color=("gray15", "gray90"),
             hover_color=("gray75", "gray35"),
             command=self._on_filters_changed,
-        ).grid(row=0, column=1, padx=(6, 6))
+        ).grid(row=0, column=2, padx=(6, 6))
 
         self.save_btn = ctk.CTkButton(
             footer, text="Enregistrer", width=130, height=32,
             font=ctk.CTkFont(weight="bold"),
             command=self._save,
         )
-        self.save_btn.grid(row=0, column=2, padx=(6, 6))
+        self.save_btn.grid(row=0, column=3, padx=(6, 6))
         self._save_btn_fg = self.save_btn.cget("fg_color")   # couleur par défaut
 
         ctk.CTkButton(
@@ -375,7 +407,7 @@ class ValidationView(ctk.CTkToplevel):
             text_color=("gray15", "gray90"),
             hover_color=("gray75", "gray35"),
             command=self._on_close,
-        ).grid(row=0, column=3)
+        ).grid(row=0, column=4)
 
         # --- Raccourcis clavier ---
         # CRITIQUE : les binds niveau Toplevel captureraient la frappe aussi
@@ -438,6 +470,85 @@ class ValidationView(ctk.CTkToplevel):
 
     # -- Chargement xlsx ----------------------------------------------------
 
+    # -- pastilles de synchro serveur --------------------------------------
+
+    def _build_dot_images(self):
+        """Construit une petite pastille (~14 px) par état de synchro. Gardées
+        dans ``self._dot_imgs`` pour éviter la collecte GC de Tk (sinon l'image
+        devient invisible). Dégradation propre si Pillow est absent."""
+        self._dot_imgs = {}
+        try:
+            from PIL import Image, ImageDraw, ImageTk
+        except Exception:
+            return
+        palette = {
+            SYNC_PENDING: ("#b7bdc7", False, False),    # cercle creux gris
+            SYNC_SYNCED: ("#16a34a", True, False),      # plein vert
+            SYNC_MODIFIED: ("#e08a1e", True, False),    # plein orange
+            SYNC_TO_RETRACT: ("#e08a1e", True, True),   # orange barré
+            SYNC_ERROR: ("#dc2626", True, False),       # plein rouge
+        }
+        size, r = 14, 4
+        c = size // 2
+        for state, (col, fill, barred) in palette.items():
+            img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+            d = ImageDraw.Draw(img)
+            box = [c - r, c - r, c + r, c + r]
+            if fill:
+                d.ellipse(box, fill=col)
+            else:
+                d.ellipse(box, outline=col, width=1)
+            if barred:
+                d.line([c - r, c + r, c + r, c - r], fill="#ffffff", width=1)
+            self._dot_imgs[state] = ImageTk.PhotoImage(img)
+
+    def _row_state(self, idx: int) -> str | None:
+        key = self.row_keys.get(idx)
+        rec = self.sync_state.get(key) if key else None
+        return rec.get("state") if rec else None
+
+    def _row_dot_image(self, idx: int):
+        """PhotoImage de la pastille d'une ligne (ou "" si aucune à afficher)."""
+        state = self._row_state(idx)
+        if not state:
+            return ""
+        return self._dot_imgs.get(state, "")
+
+    def _update_row_dot(self, idx: int):
+        iid = str(idx)
+        if self.tree.exists(iid):
+            self.tree.item(iid, image=self._row_dot_image(idx))
+
+    def _row_taxon_conf(self, idx: int) -> tuple[str, str]:
+        r = self.rows[idx]
+        ci = self.col_idx
+        taxon = r[ci["observateur_taxon"]] if "observateur_taxon" in ci else ""
+        conf = r[ci["observateur_probabilite"]] if "observateur_probabilite" in ci else ""
+        return (str(taxon or ""), str(conf or ""))
+
+    def _refresh_sync_state(self, idx: int):
+        """Recalcule l'état de synchro d'une ligne après édition + MAJ pastille."""
+        key = self.row_keys.get(idx)
+        if key is None:
+            return
+        taxon, conf = self._row_taxon_conf(idx)
+        rec = self.sync_state.get(key)
+        new = next_sync_state(taxon, conf, rec)
+        if new is None:
+            self.sync_state.pop(key, None)
+        else:
+            rec = dict(rec or {})
+            rec["state"] = new
+            self.sync_state[key] = rec
+        self._update_row_dot(idx)
+
+    def _is_sendable(self, idx: int) -> bool:
+        """Ligne envoyable = mappée serveur ET taxon + confiance renseignés."""
+        if idx not in self.row_keys:
+            return False
+        taxon, conf = self._row_taxon_conf(idx)
+        return is_sendable(taxon, conf)
+
     def _load_xlsx(self):
         try:
             import warnings
@@ -470,9 +581,25 @@ class ValidationView(ctk.CTkToplevel):
             if wanted in lower:
                 self.col_idx[wanted] = lower.index(wanted)
 
+        # Mapping serveur (sidecar) : associe chaque ligne à (donnee_id, index)
+        # natif, et charge l'état de synchro persisté. Sans sidecar (xlsx reçu par
+        # mail ou téléchargé avant cette version), la vue reste « non mappable » →
+        # l'envoi sera désactivé proprement.
+        side = load_observation_sidecar(self.xlsx_path)
+        self._sidecar_entries = side.get("entries", [])
+        self.sync_state = dict(side.get("sync", {}))
+        self.row_keys, n_unmapped = build_row_key_map(
+            self.rows, self.col_idx, self._sidecar_entries)
+        self.mappable = bool(self.row_keys)
+
+        header_txt = f"{len(self.rows)} contacts chargés"
+        if self._sidecar_entries and n_unmapped and self.mappable:
+            # Mapping partiel : quelques lignes non appariées (fichier vide, trou…)
+            header_txt = f"{len(self.rows)} contacts · {n_unmapped} non mappés serveur"
+
         self._compute_wav_presence()
         self._on_filters_changed()   # peuple le menu taxons (filtré) + rafraîchit
-        self.header_info.configure(text=f"{len(self.rows)} contacts chargés")
+        self.header_info.configure(text=header_txt)
 
     def _compute_wav_presence(self):
         """Détermine, par ligne, si le WAV correspondant existe encore sur disque.
@@ -636,6 +763,7 @@ class ValidationView(ctk.CTkToplevel):
                 values=(heure, duree, freq_str, tad, proba_str,
                         obs or "", obs_conf or "", groupe),
                 tags=tags,
+                image=self._row_dot_image(idx),
             )
 
         self._refresh_stats()
@@ -660,15 +788,25 @@ class ValidationView(ctk.CTkToplevel):
         )
         # Garde contre total==0 (xlsx avec en-tête mais zéro contact)
         pct = (validated / total * 100) if total else 0.0
+        # Compteur de synchro serveur : X envoyées / Y envoyables (mappées + taxon
+        # + confiance). Y ne dépend PAS de la présence locale du WAV (une identif
+        # sur un son purgé au nettoyage reste valide côté serveur).
+        sync_txt = ""
+        if self.mappable:
+            sendable = [i for i in range(total) if self._is_sendable(i)]
+            n_synced = sum(1 for i in sendable if self._row_state(i) == SYNC_SYNCED)
+            sync_txt = f"  ·  ⬆ {n_synced}/{len(sendable)} identifications envoyées"
         self.stats_lbl.configure(text=(
             f"{len(self.filtered_indexes)}/{total} affichés  ·  "
             f"{validated} validés ({pct:.1f}%)  ·  "
-            f"{patri} patrimoniaux ({patri_val} validés)"
+            f"{patri} patrimoniaux ({patri_val} validés){sync_txt}"
         ))
+        self._update_send_button()
 
     # -- Sélection / édition ------------------------------------------------
 
     def _on_row_select(self):
+        self._update_send_button()       # « Envoyer la sélection (N) » / « tout »
         sel = self.tree.selection()
         if not sel:
             self.sel_info_lbl.configure(text="(aucune ligne sélectionnée)")
@@ -733,6 +871,8 @@ class ValidationView(ctk.CTkToplevel):
             current[5] = taxon
             current[6] = conf
             self.tree.item(iid, values=current, tags=tags)
+        # État de synchro (recalculé même si la ligne est filtrée/masquée).
+        self._refresh_sync_state(idx)
 
     def _apply_edit_and_next(self):
         self._apply_edit()
@@ -870,11 +1010,140 @@ class ValidationView(ctk.CTkToplevel):
             return candidate
         return None
 
+    # -- envoi des identifications au serveur -------------------------------
+
+    def _update_send_button(self):
+        """Bouton contextuel : « Envoyer la sélection (N) » si des lignes sont
+        sélectionnées, sinon « Envoyer tout (M) ». Désactivé si la vue n'est pas
+        mappable (xlsx sans sidecar) ou si rien n'est envoyable."""
+        if not hasattr(self, "send_btn") or self._pushing:
+            return
+        if not self.mappable:
+            self.send_btn.configure(state="disabled", text="⬆ Envoyer (indispo.)")
+            return
+        sel = [int(i) for i in self.tree.selection()]
+        if sel:
+            n = sum(1 for i in sel if self._is_sendable(i))
+            txt = f"⬆ Envoyer la sélection ({n})"
+        else:
+            n = sum(1 for i in range(len(self.rows)) if self._is_sendable(i))
+            txt = f"⬆ Envoyer tout ({n})"
+        self.send_btn.configure(text=txt, state="normal" if n else "disabled")
+
+    def _rows_to_push(self) -> list[int]:
+        """Lignes à envoyer : la sélection si non vide, sinon toutes ; on ne garde
+        que les envoyables (taxon + confiance + mappées) et pas déjà « synced »."""
+        sel = [int(i) for i in self.tree.selection()]
+        base = sel if sel else list(range(len(self.rows)))
+        return [i for i in base
+                if self._is_sendable(i) and self._row_state(i) != SYNC_SYNCED]
+
+    def _on_send_click(self):
+        if self._pushing or not self.mappable:
+            return
+        token = load_token()
+        if not token:
+            messagebox.showwarning(
+                "Token requis",
+                "Aucun token Vigie-Chiro enregistré.\n"
+                "Renseignez-le dans ⚙ Préférences → API Vigie-Chiro.")
+            return
+        targets = self._rows_to_push()
+        if not targets:
+            messagebox.showinfo(
+                "Rien à envoyer",
+                "Aucune identification envoyable (taxon + confiance) en attente.")
+            return
+        n_retract = sum(1 for i in range(len(self.rows))
+                        if self._row_state(i) == SYNC_TO_RETRACT)
+        msg = f"Envoyer {len(targets)} identification(s) vers Vigie-Chiro ?"
+        if n_retract:
+            msg += (f"\n\nNote : {n_retract} identification(s) effacée(s) localement "
+                    "resteront sur le serveur (une donnée ne peut pas être "
+                    "supprimée côté observateur).")
+        if not messagebox.askyesno("Envoyer les identifications", msg):
+            return
+        self._pushing = True
+        self.send_btn.configure(state="disabled", text="⬆ Envoi en cours…")
+        threading.Thread(target=self._push_worker, args=(token, targets),
+                         daemon=True).start()
+
+    def _push_worker(self, token: str, targets: list[int]):
+        """Thread : PATCH chaque identification (no_bilan=True), puis relance le
+        bilan une seule fois à la fin sur un envoi réussi (try/finally)."""
+        results: dict[int, tuple[str, str]] = {}
+        last_ok = None
+        try:
+            client = VigieChiroClient(token)
+        except Exception as e:
+            self.after(0, self._on_push_done, results, f"Client API : {e}")
+            return
+        for idx in targets:
+            key = self.row_keys.get(idx)
+            if key is None:
+                continue
+            donnee_id, _, obs_index = key.partition("#")
+            taxon, conf = self._row_taxon_conf(idx)
+            try:
+                taxon_id = client.resolve_taxon_id(taxon)
+                client.push_observation(donnee_id, int(obs_index), taxon_id, conf,
+                                        no_bilan=True)
+                results[idx] = (SYNC_SYNCED, "")
+                last_ok = (donnee_id, int(obs_index), taxon_id, conf)
+            except Exception as e:
+                results[idx] = (SYNC_ERROR, str(e))
+        bilan_err = None
+        if last_ok is not None:
+            try:
+                d_id, o_idx, t_id, cf = last_ok
+                client.push_observation(d_id, o_idx, t_id, cf, no_bilan=False)
+            except Exception as e:
+                bilan_err = str(e)
+        self.after(0, self._on_push_done, results, None, bilan_err)
+
+    def _on_push_done(self, results, fatal=None, bilan_err=None):
+        """Thread UI : applique les résultats, MAJ pastilles + compteur, persiste."""
+        self._pushing = False
+        if fatal:
+            messagebox.showerror("Envoi échoué", fatal)
+            self._update_send_button()
+            return
+        n_ok = n_err = 0
+        for idx, (state, message) in results.items():
+            key = self.row_keys.get(idx)
+            if key is None:
+                continue
+            rec = dict(self.sync_state.get(key) or {})
+            rec["state"] = state
+            if state == SYNC_SYNCED:
+                taxon, conf = self._row_taxon_conf(idx)
+                rec["pushed_taxon"], rec["pushed_conf"] = taxon, conf
+                rec.pop("error", None)
+                n_ok += 1
+            else:
+                rec["error"] = message
+                n_err += 1
+            self.sync_state[key] = rec
+            self._update_row_dot(idx)
+        self._save(silent=True)          # persiste xlsx + sidecar (état de synchro)
+        self._refresh_stats()
+        recap = f"{n_ok} identification(s) envoyée(s)"
+        if n_err:
+            recap += f", {n_err} en échec (pastilles rouges)"
+        if bilan_err:
+            recap += f"\n\nBilan non relancé : {bilan_err}"
+        (messagebox.showwarning if (n_err or bilan_err) else messagebox.showinfo)(
+            "Envoi terminé", recap)
+
     # -- Sauvegarde ---------------------------------------------------------
 
-    def _save(self):
+    def _save(self, silent: bool = False):
         """Enregistre dans un fichier <nom>_<initiales>.xlsx pour préserver
-        l'original."""
+        l'original. Persiste aussi le sidecar de synchro sous le nouveau stem
+        (sinon le mapping serveur serait perdu au 1er enregistrement).
+
+        ``silent`` : appel interne (après un envoi) — ne pas afficher le message
+        « ✓ enregistré » (le récapitulatif d'envoi s'en charge)."""
         if not self.rows:
             return
 
@@ -901,13 +1170,22 @@ class ValidationView(ctk.CTkToplevel):
             messagebox.showerror("Enregistrement échoué", str(e))
             return
 
+        # Sidecar de synchro : recopie le mapping natif + l'état de synchro sous
+        # le stem sauvegardé (survit au renommage _<initiales>). Best-effort.
+        if self._sidecar_entries or self.sync_state:
+            try:
+                save_observation_sidecar(out_path, self._sidecar_entries, self.sync_state)
+            except Exception:
+                pass
+
         self._dirty = False
         try:
             self.title(f"Validation — {self.session_path.name}")
             self.save_btn.configure(text="Enregistrer", fg_color=self._save_btn_fg)
         except Exception:
             pass
-        self.header_info.configure(text=f"✓ enregistré : {out_path.name}")
+        if not silent:
+            self.header_info.configure(text=f"✓ enregistré : {out_path.name}")
 
     def _on_close(self):
         if self._dirty:

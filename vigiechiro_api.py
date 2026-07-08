@@ -316,6 +316,20 @@ def load_observation_sidecar(xlsx_path) -> dict:
     return {"entries": [], "sync": {}}
 
 
+def save_observation_sidecar(xlsx_path, entries, sync) -> Path:
+    """Écrit/actualise le sidecar de synchro sous le stem de ``xlsx_path``.
+
+    Utilisé par la vue de validation à l'enregistrement : le fichier étant
+    renommé ``…_<initiales>.xlsx``, on **recopie** le mapping ``entries`` sous le
+    nouveau stem (sinon le lien serait perdu au 1er enregistrement) et on y joint
+    l'état de synchro courant. Renvoie le chemin du sidecar écrit.
+    """
+    sidecar = _sidecar_path(xlsx_path)
+    _write_json_atomic(sidecar, {"schema": 1, "entries": entries or [],
+                                 "sync": sync or {}})
+    return sidecar
+
+
 # ---------------------------------------------------------------------------
 # Client
 # ---------------------------------------------------------------------------
