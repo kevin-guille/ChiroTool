@@ -291,8 +291,11 @@ class ValidationView(ctk.CTkToplevel):
         self.tree = ttk.Treeview(
             table_frame, columns=columns, show="tree headings", selectmode="extended",
         )
-        self.tree.column("#0", width=22, minwidth=22, stretch=False, anchor="center")
-        self.tree.heading("#0", text="")
+        # #0 = gouttière de statut. Tkinter réserve un retrait interne (zone
+        # d'indicateur d'arbre) AVANT l'image : à 22 px la pastille de 14 px était
+        # rognée. On élargit pour la dégager entièrement, colonne non étirable.
+        self.tree.column("#0", width=42, minwidth=42, stretch=False, anchor="center")
+        self.tree.heading("#0", text="⬆")
         self._build_dot_images()
         self.tree.heading("heure", text="Heure")
         self.tree.heading("duree", text="Durée (s)")
