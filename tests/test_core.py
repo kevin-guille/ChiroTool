@@ -1490,6 +1490,49 @@ class TestSynthesisValidatedTotal:
         assert s["richesse_chiros"] == 2           # pippip + barbar
         assert s["richesse_totale"] == 2           # noise exclu
 
+    def test_validated_only_filter(self):
+        from synthesis import compute_night_synthesis
+        headers = ["nom du fichier", "tadarida_taxon", "observateur_taxon"]
+        rows = [
+            ["f1.wav", "pippip", "pippip"],   # validé
+            ["f2.wav", "pippip", ""],          # Tadarida seul → exclu si validated_only
+            ["f3.wav", "barbar", "barbar"],    # validé
+        ]
+        s = compute_night_synthesis(headers, rows, validated_only=True)
+        assert s["total_contacts"] == 2            # seulement f1 + f3
+        assert {sp["taxon"] for sp in s["species"]} == {"pippip", "barbar"}
+        assert next(sp for sp in s["species"] if sp["taxon"] == "pippip")["n_contacts"] == 1
+
+
+class TestEntriesFromDonnees:
+    """Reconstruction du mapping serveur (fallback xlsx sans sidecar)."""
+
+    def test_entries_from_donnees(self):
+        from vigiechiro_api import entries_from_donnees
+        donnees = [
+            {"_id": "d1", "titre": "f1.wav", "observations": [
+                {"_id": "o0", "temps_debut": 1.0, "temps_fin": 2.0},
+                {"_id": "o1", "temps_debut": 3.0, "temps_fin": 4.0}]},
+            {"_id": "d2", "titre": "f2.wav", "observations": []},
+        ]
+        e = entries_from_donnees(donnees)
+        assert len(e) == 2
+        assert e[0] == {"donnee_id": "d1", "obs_index": 0, "obs_id": "o0",
+                        "nom_fichier": "f1.wav", "temps_debut": 1.0, "temps_fin": 2.0}
+        assert e[1]["obs_index"] == 1
+
+    def test_entries_feed_row_key_map(self):
+        # bout-en-bout : les entries reconstruites doivent mapper les lignes xlsx
+        from vigiechiro_api import entries_from_donnees
+        from sync_state import build_row_key_map
+        donnees = [{"_id": "d1", "titre": "f1.wav", "observations": [
+            {"temps_debut": 1.0, "temps_fin": 2.0}]}]
+        entries = entries_from_donnees(donnees)
+        rows = [["f1.wav", 1.0, 2.0]]
+        col_idx = {"nom du fichier": 0, "temps_debut": 1, "temps_fin": 2}
+        rk, n = build_row_key_map(rows, col_idx, entries)
+        assert rk == {0: "d1#0"} and n == 0
+
 
 class TestTaxonIndex:
     """Index /taxons Vigie-Chiro : validation, autocomplétion, code genre."""

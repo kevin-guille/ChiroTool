@@ -42,8 +42,13 @@ def retained_taxon(row: list, ci: dict[str, int]) -> tuple[str, bool]:
     return "", False
 
 
-def compute_night_synthesis(headers: list, rows: list) -> dict:
+def compute_night_synthesis(headers: list, rows: list, *,
+                            validated_only: bool = False) -> dict:
     """Récapitulatif par espèce d'une nuit.
+
+    ``validated_only`` : ne compter que les contacts **validés par l'observateur**
+    (colonne ``observateur_taxon`` renseignée) et ignorer les identifications
+    automatiques Tadarida non revues.
 
     Retour ::
 
@@ -73,6 +78,8 @@ def compute_night_synthesis(headers: list, rows: list) -> dict:
         taxon, validated = retained_taxon(row, ci)
         if not taxon:
             continue
+        if validated_only and not validated:
+            continue                              # ignore les non-validés (Tadarida seul)
         d = per.setdefault(taxon, {"n": 0, "n_val": 0, "files": set(), "validated": False})
         d["n"] += 1
         if validated:

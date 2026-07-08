@@ -38,6 +38,7 @@ import customtkinter as ctk
 
 from credentials import load_token
 from gui_config import Settings, save_settings
+from manifest import Manifest
 from gui_autocomplete import AutocompleteEntry
 from gui_tooltip import TreeCellTooltip
 from sync_state import (
@@ -47,7 +48,7 @@ from sync_state import (
 from taxon_index import genus_code_for, is_known, load_taxon_index, suggest
 from taxons import classify_taxon
 from vigiechiro_api import (
-    ApiError, VigieChiroClient,
+    ApiError, VigieChiroClient, entries_from_donnees,
     load_observation_sidecar, save_observation_sidecar,
 )
 
@@ -174,6 +175,7 @@ class ValidationView(ctk.CTkToplevel):
         self.row_keys: dict[int, str] = {}          # row_idx → "donnee_id#index"
         self.sync_state: dict[str, dict] = {}       # key → {state, pushed_taxon, ...}
         self.mappable = False                       # au moins une ligne mappée serveur ?
+        self._participation_id = None               # pour reconstruire le mapping si besoin
         self._dot_imgs: dict[str, Any] = {}         # PhotoImage par état (anti-GC)
         self._pushing = False
 
@@ -581,9 +583,8 @@ class ValidationView(ctk.CTkToplevel):
         self._update_row_dot(idx)
 
     def _is_sendable(self, idx: int) -> bool:
-        """Ligne envoyable = mappée serveur ET taxon + confiance renseignés."""
-        if idx not in self.row_keys:
-            return False
+        """Ligne envoyable = taxon + confiance renseignés. Le mapping serveur est
+        résolu au moment de l'envoi (sidecar ou re-fetch de la participation)."""
         taxon, conf = self._row_taxon_conf(idx)
         return is_sendable(taxon, conf)
 
@@ -629,6 +630,15 @@ class ValidationView(ctk.CTkToplevel):
         self.row_keys, n_unmapped = build_row_key_map(
             self.rows, self.col_idx, self._sidecar_entries)
         self.mappable = bool(self.row_keys)
+
+        # participation_id (manifest) : permet de reconstruire le mapping serveur
+        # si le sidecar est absent (xlsx téléchargé avant cette version).
+        try:
+            m = Manifest.load(self.session_path)
+            self._participation_id = (m.meta.get("vigiechiro_participation_id")
+                                      if m else None)
+        except Exception:
+            self._participation_id = None
 
         header_txt = f"{len(self.rows)} contacts chargés"
         if self._sidecar_entries and n_unmapped and self.mappable:
@@ -951,6 +961,18 @@ class ValidationView(ctk.CTkToplevel):
         cas des sons incertains entre deux espèces d'un genre. Confiance conservée."""
         sel = self.tree.selection()
         if not sel:
+            # Aucune ligne sélectionnée : si un taxon est saisi, propose son genre
+            # dans le champ ; sinon explique quoi faire.
+            typed = self.edit_taxon_var.get().strip()
+            g = genus_code_for(typed, self._taxon_index) if typed else None
+            if g:
+                self.edit_taxon_var.set(g)
+            else:
+                messagebox.showinfo(
+                    "Monter au genre",
+                    "Sélectionnez d'abord une ou plusieurs lignes, ou saisissez une "
+                    "espèce ayant un code « genre » (ex. Pleaur → Plesp).",
+                    parent=self)
             return
         ci = self.col_idx
         conf = self.edit_conf_var.get().strip().upper()
@@ -1104,7 +1126,8 @@ class ValidationView(ctk.CTkToplevel):
         mappable (xlsx sans sidecar) ou si rien n'est envoyable."""
         if not hasattr(self, "send_btn") or self._pushing:
             return
-        if not self.mappable:
+        if not (self.mappable or self._participation_id):
+            # ni sidecar, ni participation connue → rien à quoi rattacher l'envoi
             self.send_btn.configure(state="disabled", text="⬆ Envoyer (indispo.)")
             return
         def _to_send(i):
@@ -1128,7 +1151,7 @@ class ValidationView(ctk.CTkToplevel):
                 if self._is_sendable(i) and self._row_state(i) != SYNC_SYNCED]
 
     def _on_send_click(self):
-        if self._pushing or not self.mappable:
+        if self._pushing or not (self.mappable or self._participation_id):
             return
         token = load_token()
         if not token:
@@ -1158,18 +1181,36 @@ class ValidationView(ctk.CTkToplevel):
                          daemon=True).start()
 
     def _push_worker(self, token: str, targets: list[int]):
-        """Thread : PATCH chaque identification (no_bilan=True), puis relance le
-        bilan une seule fois à la fin sur un envoi réussi (try/finally)."""
-        results: dict[int, tuple[str, str]] = {}
+        """Thread : reconstruit le mapping serveur si le sidecar manque, puis
+        PATCH chaque identification (no_bilan=True) et relance le bilan une fois
+        à la fin sur un envoi réussi."""
+        results: dict[int, tuple] = {}
         last_ok = None
+        new_keys = None
+        new_entries = None
         try:
             client = VigieChiroClient(token)
         except Exception as e:
             self.after(0, self._on_push_done, results, f"Client API : {e}")
             return
+        keymap = dict(self.row_keys)
+        # Fallback : xlsx sans sidecar → re-fetch la participation pour mapper les
+        # lignes à leurs observations serveur (par nom + temps_debut/fin).
+        if not keymap and self._participation_id:
+            try:
+                donnees = list(client.iter_donnees(self._participation_id))
+                new_entries = entries_from_donnees(donnees)
+                keymap, _ = build_row_key_map(self.rows, self.col_idx, new_entries)
+                new_keys = keymap
+            except Exception as e:
+                self.after(0, self._on_push_done, results,
+                           f"Association au serveur impossible : {e}")
+                return
         for idx in targets:
-            key = self.row_keys.get(idx)
+            key = keymap.get(idx)
             if key is None:
+                results[idx] = (SYNC_ERROR, "contact introuvable côté serveur",
+                                None, None)
                 continue
             donnee_id, _, obs_index = key.partition("#")
             taxon, conf = self._row_taxon_conf(idx)
@@ -1177,8 +1218,7 @@ class ValidationView(ctk.CTkToplevel):
                 taxon_id = client.resolve_taxon_id(taxon)
                 client.push_observation(donnee_id, int(obs_index), taxon_id, conf,
                                         no_bilan=True)
-                # On mémorise la valeur RÉELLEMENT postée (pas la ligne courante,
-                # qui pourrait avoir bougé) → pushed_taxon/pushed_conf fiables.
+                # valeur RÉELLEMENT postée (pas la ligne courante qui a pu bouger)
                 results[idx] = (SYNC_SYNCED, "", taxon, conf)
                 last_ok = (donnee_id, int(obs_index), taxon_id, conf)
             except Exception as e:
@@ -1190,36 +1230,47 @@ class ValidationView(ctk.CTkToplevel):
                 client.push_observation(d_id, o_idx, t_id, cf, no_bilan=False)
             except Exception as e:
                 bilan_err = str(e)
-        self.after(0, self._on_push_done, results, None, bilan_err)
+        self.after(0, self._on_push_done, results, None, bilan_err, new_keys, new_entries)
 
-    def _on_push_done(self, results, fatal=None, bilan_err=None):
+    def _on_push_done(self, results, fatal=None, bilan_err=None,
+                      new_keys=None, new_entries=None):
         """Thread UI : applique les résultats, MAJ pastilles + compteur, persiste."""
         self._pushing = False
         if fatal:
-            messagebox.showerror("Envoi échoué", fatal)
+            messagebox.showerror("Envoi échoué", fatal, parent=self)
             self._update_send_button()
             return
+        # Mapping reconstruit à la volée (fallback) : on l'adopte + le persistera _save.
+        if new_keys is not None:
+            self.row_keys = new_keys
+            if new_entries is not None:
+                self._sidecar_entries = new_entries
+            self.mappable = bool(new_keys)
         n_ok = n_err = 0
         for idx, (state, message, sent_taxon, sent_conf) in results.items():
-            key = self.row_keys.get(idx)
-            if key is None:
-                continue
-            rec = dict(self.sync_state.get(key) or {})
             if state == SYNC_SYNCED:
-                # pushed_* = valeur réellement postée. On recalcule ensuite l'état
-                # depuis la ligne COURANTE : si elle a divergé entre-temps, elle
-                # repasse 'modified' (sera re-poussée) au lieu d'un faux 'synced'.
+                key = self.row_keys.get(idx)
+                if key is None:
+                    continue
+                rec = dict(self.sync_state.get(key) or {})
+                # pushed_* = valeur postée ; l'état est recalculé depuis la ligne
+                # courante (si elle a divergé → 'modified' au lieu d'un faux 'synced').
                 rec["pushed_taxon"], rec["pushed_conf"] = sent_taxon, sent_conf
                 rec.pop("error", None)
                 cur_t, cur_c = self._row_taxon_conf(idx)
                 rec["state"] = next_sync_state(cur_t, cur_c, rec) or SYNC_SYNCED
+                self.sync_state[key] = rec
+                self._update_row_dot(idx)
                 n_ok += 1
             else:
-                rec["state"] = state
-                rec["error"] = message
                 n_err += 1
-            self.sync_state[key] = rec
-            self._update_row_dot(idx)
+                key = self.row_keys.get(idx)
+                if key is not None:
+                    rec = dict(self.sync_state.get(key) or {})
+                    rec["state"] = state
+                    rec["error"] = message
+                    self.sync_state[key] = rec
+                    self._update_row_dot(idx)
         self._save(silent=True)          # persiste xlsx + sidecar (état de synchro)
         self._update_registry_rollup()   # best-effort : rollup vue transverse
         self._refresh_stats()

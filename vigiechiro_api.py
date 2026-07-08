@@ -316,6 +316,30 @@ def load_observation_sidecar(xlsx_path) -> dict:
     return {"entries": [], "sync": {}}
 
 
+def entries_from_donnees(donnees) -> list[dict]:
+    """Construit les « entries » de mapping (donnee_id, index natif 0-based,
+    nom_fichier, temps_debut, temps_fin) depuis une liste de « donnees » serveur.
+
+    Même forme que le bloc ``entries`` du sidecar → sert à **reconstruire le
+    mapping** quand le sidecar est absent (xlsx téléchargé avant cette version),
+    en re-fetchant ``/participations/<id>/donnees``.
+    """
+    entries: list[dict] = []
+    for d in donnees:
+        did = d.get("_id")
+        titre = d.get("titre") or ""
+        for obs_index, obs in enumerate(d.get("observations") or []):
+            entries.append({
+                "donnee_id": did,
+                "obs_index": obs_index,
+                "obs_id": obs.get("_id"),
+                "nom_fichier": titre,
+                "temps_debut": obs.get("temps_debut"),
+                "temps_fin": obs.get("temps_fin"),
+            })
+    return entries
+
+
 def save_observation_sidecar(xlsx_path, entries, sync) -> Path:
     """Écrit/actualise le sidecar de synchro sous le stem de ``xlsx_path``.
 

@@ -96,6 +96,15 @@ class SynthesisView(ctk.CTkToplevel):
             font=ctk.CTkFont(size=16, weight="bold"), anchor="w",
         ).grid(row=0, column=0, sticky="w")
 
+        # Ne compter que les identifications VALIDÉES par l'observateur (ignore
+        # les identifications automatiques Tadarida non revues).
+        self.validated_only_var = ctk.BooleanVar(value=False)
+        ctk.CTkCheckBox(
+            header, text="Identifications validées seulement",
+            variable=self.validated_only_var, command=self._recompute,
+            font=ctk.CTkFont(size=11), checkbox_width=18, checkbox_height=18,
+        ).grid(row=1, column=0, sticky="w", pady=(4, 0))
+
         # Sélecteur « milieu dominant » : affine le référentiel d'activité
         # (contexte général autour du point). Défaut = national.
         if self._reference:
@@ -186,9 +195,15 @@ class SynthesisView(ctk.CTkToplevel):
             self.destroy()
             return
 
-        headers = [str(h) if h is not None else "" for h in data[0]]
-        rows = [list(r) for r in data[1:] if any(c is not None for c in r)]
-        self.result = compute_night_synthesis(headers, rows)
+        self._headers = [str(h) if h is not None else "" for h in data[0]]
+        self._rows = [list(r) for r in data[1:] if any(c is not None for c in r)]
+        self._recompute()
+
+    def _recompute(self):
+        """(Re)calcule la synthèse selon la case « validées seulement », puis
+        (ré)applique les niveaux d'activité et rafraîchit."""
+        vo = bool(self.validated_only_var.get()) if hasattr(self, "validated_only_var") else False
+        self.result = compute_night_synthesis(self._headers, self._rows, validated_only=vo)
         self._apply_activity()
 
     # -- niveaux d'activité -------------------------------------------------
