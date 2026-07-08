@@ -1401,6 +1401,67 @@ class TestRegistryRollup:
         assert reg2.get_session("s1") is not None    # données préservées
 
 
+class TestActivityReference:
+    """Référentiel d'activité national Vigie-Chiro (Bas et al. 2020, contacts/nuit)."""
+
+    def test_load_real_reference(self):
+        from activity_reference import load_reference
+        ref = load_reference()
+        assert "pippip" in ref                       # code casse-insensible
+        assert ref["pippip"]["q25"] == 13 and ref["pippip"]["q98"] == 3737
+
+    def test_classify_boundaries(self):
+        from activity_reference import classify
+        row = {"q25": 13, "q75": 411, "q98": 3737}
+        assert classify(5, row) == "Faible"
+        assert classify(13, row) == "Moyenne"        # ≥ Q25
+        assert classify(410, row) == "Moyenne"
+        assert classify(411, row) == "Forte"         # ≥ Q75
+        assert classify(3736, row) == "Forte"
+        assert classify(3737, row) == "Très forte"   # ≥ Q98
+
+    def test_activity_for_and_unknown(self):
+        from activity_reference import load_reference, activity_for
+        ref = load_reference()
+        a = activity_for("Pippip", 500, ref)
+        assert a["classe"] == "Forte" and a["fiable"] is True
+        assert activity_for("zzzzzz", 10, ref) is None   # code hors référentiel
+
+    def test_annotate_synthesis(self):
+        from activity_reference import load_reference, annotate_synthesis
+        ref = load_reference()
+        synth = {"species": [
+            {"taxon": "pippip", "groupe": "chiros", "n_contacts": 5000},
+            {"taxon": "noise", "groupe": "noise", "n_contacts": 999},
+        ]}
+        annotate_synthesis(synth, ref)
+        assert synth["species"][0]["activite"]["classe"] == "Très forte"
+        assert synth["species"][1]["activite"] is None   # non-chiro → pas de classe
+
+    def test_missing_reference_degrades(self, tmp_path):
+        from activity_reference import load_reference
+        assert load_reference(tmp_path / "nope.csv") == {}
+
+
+class TestSynthesisValidatedTotal:
+    """Enrichissement synthèse : contacts validés vs total + richesse."""
+
+    def test_validated_vs_total_and_richesse(self):
+        from synthesis import compute_night_synthesis
+        headers = ["nom du fichier", "tadarida_taxon", "observateur_taxon"]
+        rows = [
+            ["f1.wav", "pippip", "pippip"],   # validé
+            ["f2.wav", "pippip", ""],          # non validé (Tadarida seul)
+            ["f3.wav", "barbar", "barbar"],    # validé
+            ["f4.wav", "noise", ""],           # bruit
+        ]
+        s = compute_night_synthesis(headers, rows)
+        assert s["total_contacts"] == 4
+        assert s["validated_contacts"] == 2       # f1 + f3
+        assert s["richesse_chiros"] == 2           # pippip + barbar
+        assert s["richesse_totale"] == 2           # noise exclu
+
+
 if __name__ == "__main__":
     # Permet de lancer directement : python tests/test_core.py
     import sys

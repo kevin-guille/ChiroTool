@@ -49,12 +49,19 @@ def compute_night_synthesis(headers: list, rows: list) -> dict:
 
         {
           "species": [                       # trié par n_contacts décroissant
-            {"taxon", "groupe", "n_contacts", "n_fichiers", "validated"}, ...
+            {"taxon", "groupe", "n_contacts", "n_valides", "n_fichiers", "validated"}, ...
           ],
           "total_contacts": int,             # contacts avec une espèce retenue
+          "validated_contacts": int,         # contacts issus d'une validation observateur
           "total_fichiers": int,             # fichiers distincts concernés
           "by_group": {groupe: n_contacts},  # ex. {"chiros": 42, "noise": 7}
+          "richesse_chiros": int,            # nb d'espèces chiro distinctes
+          "richesse_totale": int,            # nb de taxons distincts (hors noise/unknown)
         }
+
+    « validated_contacts / total_contacts » = « X identifiés (validés) sur Y
+    détectés ». Les contacts supprimés au nettoyage ne sont pas dans ``rows``
+    (l'xlsx nettoyé ne les contient plus) → naturellement exclus.
     """
     ci = _col_index(headers)
     t_file = ci.get("nom du fichier")
@@ -66,10 +73,11 @@ def compute_night_synthesis(headers: list, rows: list) -> dict:
         taxon, validated = retained_taxon(row, ci)
         if not taxon:
             continue
-        d = per.setdefault(taxon, {"n": 0, "files": set(), "validated": False})
+        d = per.setdefault(taxon, {"n": 0, "n_val": 0, "files": set(), "validated": False})
         d["n"] += 1
         if validated:
             d["validated"] = True
+            d["n_val"] += 1
         if t_file is not None and t_file < len(row):
             fn = row[t_file]
             if fn:
@@ -78,6 +86,7 @@ def compute_night_synthesis(headers: list, rows: list) -> dict:
     species: list[dict] = []
     by_group: dict[str, int] = {}
     total_contacts = 0
+    validated_contacts = 0
     all_files: set[str] = set()
     for taxon, d in per.items():
         grp = classify_taxon(taxon)
@@ -85,17 +94,24 @@ def compute_night_synthesis(headers: list, rows: list) -> dict:
             "taxon": taxon,
             "groupe": grp,
             "n_contacts": d["n"],
+            "n_valides": d["n_val"],
             "n_fichiers": len(d["files"]),
             "validated": d["validated"],
         })
         by_group[grp] = by_group.get(grp, 0) + d["n"]
         total_contacts += d["n"]
+        validated_contacts += d["n_val"]
         all_files |= d["files"]
 
     species.sort(key=lambda s: (-s["n_contacts"], s["taxon"].lower()))
+    richesse_chiros = sum(1 for s in species if s["groupe"] == "chiros")
+    richesse_totale = sum(1 for s in species if s["groupe"] not in ("noise", "unknown"))
     return {
         "species": species,
         "total_contacts": total_contacts,
+        "validated_contacts": validated_contacts,
         "total_fichiers": len(all_files),
         "by_group": by_group,
+        "richesse_chiros": richesse_chiros,
+        "richesse_totale": richesse_totale,
     }

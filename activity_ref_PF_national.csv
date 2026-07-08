@@ -1,0 +1,90 @@
+# Referentiel d'activite Vigie-Chiro Point Fixe - national - contacts/nuit
+# Source : Bas Y, Kerbiriou C, Roemer C & Julien JF (2020) Bat reference scale of activity levels (Team-Chiro / MNHN)
+# https://croemer3.wixsite.com/teamchiro/reference-scales-of-activity - libre d'usage avec citation obligatoire
+# Classes : Faible <Q25 | Moyenne Q25-Q75 | Forte Q75-Q98 | Tres forte >=Q98
+code;q25;q75;q98;moy_si_present;nbocc;confiance
+amph;1;10;223;28.98;1895;Tres bonne
+Antsp;1;16;457;98.69;340;Bonne
+Aposp;2;19;379;35.19;109;Bonne
+Barbar;2;16;181;25.91;4770;Tres bonne
+Barfis;1;5;538;41.51;3003;Tres bonne
+Condor;1;4;42;5.36;42;Moderee
+Confus;1;4;104;12.04;1750;Tres bonne
+criq;1;1;12;1.88;65;Moderee
+Cympud;1;3;57;7.83;472;Bonne
+Cyrscu;1;8;1346;82.68;2956;Tres bonne
+Decalb;1;2;16;2.48;1937;Tres bonne
+Epheph;1;8;178;15.58;4829;Tres bonne
+Eptnil;1;2;27;3.51;267;Bonne
+Eptser;2;24;323;35.69;9612;Tres bonne
+Eupsp;1;4;41;5.62;5219;Tres bonne
+gril;1;3;29;4.67;3093;Tres bonne
+Hypsav;2;16;221;26.98;4828;Tres bonne
+Insp11;1;2;8;1.73;143;Bonne
+Insp12;1;1;2;1.21;52;Moderee
+Inssp5;1;2;8;2.04;2035;Tres bonne
+Inssp7;1;9;101;12.59;1460;Tres bonne
+Inssp8;1;1;4;1.41;39;Faible
+Isopyr;4;32;717;67.39;2447;Tres bonne
+Lamsp.;1;5;345;39.38;2367;Tres bonne
+Leppun;3;31;409;45.37;11282;Tres bonne
+mamm;1;3;52;5.33;944;Tres bonne
+Metbra;1;3;17;3.06;658;Tres bonne
+Micagr;1;3;31;4.27;1757;Tres bonne
+Mimasp;1;5;41;5.94;4142;Tres bonne
+Minsch;2;23;660;50.79;4774;Tres bonne
+Mussp;1;8;354;31.23;1179;Tres bonne
+Myoalc;1;7;67;8.23;1362;Tres bonne
+Myobec;1;2;16;2.24;677;Tres bonne
+Myocap;2;30;442;62.24;1818;Tres bonne
+Myodas;1;2;11;2.56;16;Faible
+Myodau;2;18;1349;81.26;7356;Tres bonne
+Myoema;1;9;69;8.88;6835;Tres bonne
+MyoGT;1;6;73;10.32;2238;Tres bonne
+Myomys;2;13;277;23.35;7737;Tres bonne
+Myonat;2;14;229;26.32;6768;Tres bonne
+Myosp;1;7;20;5.15;53;Moderee
+noise;129;2433;8140;1813.79;17420;Tres bonne
+Nyclas;2;13;111;17.69;36;Faible
+Nyclei;3;26;383;38.6;11433;Tres bonne
+Nycnoc;2;13;272;20.32;5798;Tres bonne
+Phafal;1;3;28;5.73;250;Bonne
+Phanan;3;29;387;41.6;10381;Tres bonne
+Phofem;1;2;25;3.42;2046;Tres bonne
+Phogri;2;18;243;27.22;11846;Tres bonne
+piaf;40;402;1489;295.52;10920;Tres bonne
+Pipkuh;7;129;1734;180.17;13524;Tres bonne
+Pipnat;2;16;237;24.52;7974;Tres bonne
+Pippip;13;411;3737;434.32;14847;Tres bonne
+Pippyg;2;84;1938;157.17;7794;Tres bonne
+Plaaff;1;17;1167;201.21;221;Bonne
+Plaalb;1;6;273;31.2;1980;Tres bonne
+Plafal;1;1;3;1.27;11;Faible
+Plaint;1;10;223;23.86;5939;Tres bonne
+Plasab;1;9;214;21.04;756;Tres bonne
+Pleaur;1;4;73;7.59;4046;Tres bonne
+Pleaus;1;9;95;12.91;7076;Tres bonne
+Plemac;1;3;19;3.77;516;Tres bonne
+Plesp;1;4;10;3.25;36;Faible
+Pteger;1;2;4;1.76;17;Faible
+Ratnor;1;10;212;17.8;2356;Tres bonne
+Rhasp;1;9;313;44.08;624;Tres bonne
+Rhieur;1;18;778;86.05;1066;Tres bonne
+Rhifer;2;21;672;67.24;3505;Tres bonne
+Rhihip;2;20;996;75.06;4763;Tres bonne
+Roeroe;1;8;825;65.46;2038;Tres bonne
+Rusnit;1;11;1065;81.89;3586;Tres bonne
+Sepsep;1;2;19;3.94;864;Tres bonne
+Tadten;3;31;343;53.57;4424;Tres bonne
+Testes;1;8;247;24.8;5958;Tres bonne
+Tetarg;1;2;19;3.06;647;Tres bonne
+Tetcan;1;1;10;1.92;24;Faible
+Tetpyg;1;1;9;1.74;155;Bonne
+Tetvir;6;68;1453;138.39;14866;Tres bonne
+Thycor;1;1;2;1.08;49;Moderee
+Tyllil;1;2;15;2.75;3234;Tres bonne
+Urosp;1;4;539;39.49;2317;Tres bonne
+Vesmur;1;2;13;2.45;178;Bonne
+Yerbey;1;1;2;1.07;15;Faible
+Yerray;1;10;90;11.74;7047;Tres bonne
+Yposp;1;9;914;63.64;8947;Tres bonne
