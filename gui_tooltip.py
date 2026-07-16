@@ -15,6 +15,75 @@ from __future__ import annotations
 import tkinter as tk
 
 
+def _popup(parent, text: str, x: int, y: int) -> tk.Toplevel:
+    """Petite fenêtre d'infobulle (fond sombre, texte clair) positionnée en (x, y)."""
+    tip = tk.Toplevel(parent)
+    tip.wm_overrideredirect(True)
+    try:
+        tip.attributes("-topmost", True)
+    except tk.TclError:
+        pass
+    frame = tk.Frame(tip, background="#1f1f1f",
+                     highlightbackground="#3a3a3a", highlightthickness=1)
+    frame.pack()
+    tk.Label(frame, text=text, background="#1f1f1f", foreground="#f2f2f2",
+             font=("Segoe UI", 9), padx=8, pady=4, justify="left").pack()
+    tip.wm_geometry(f"+{x}+{y}")
+    return tip
+
+
+class WidgetTooltip:
+    """Infobulle au survol d'un widget quelconque (bouton…).
+
+    Permet des libellés de boutons COURTS (tout tient sur une ligne) tout en
+    gardant le détail accessible au survol. ``text`` peut être un callable pour
+    un texte calculé à l'affichage.
+    """
+
+    def __init__(self, widget, text, *, delay: int = 400):
+        self.widget = widget
+        self._text = text
+        self.delay = delay
+        self._tip: tk.Toplevel | None = None
+        self._after = None
+        widget.bind("<Enter>", self._schedule, add="+")
+        widget.bind("<Leave>", lambda e: self._hide(), add="+")
+        widget.bind("<ButtonPress>", lambda e: self._hide(), add="+")
+
+    def _schedule(self, event):
+        self._cancel()
+        x = event.x_root + 12
+        y = event.y_root + 20
+        self._after = self.widget.after(self.delay, lambda: self._show(x, y))
+
+    def _show(self, x: int, y: int):
+        self._hide()
+        txt = self._text() if callable(self._text) else self._text
+        if not txt:
+            return
+        try:
+            self._tip = _popup(self.widget, str(txt), x, y)
+        except tk.TclError:
+            self._tip = None
+
+    def _hide(self):
+        self._cancel()
+        if self._tip is not None:
+            try:
+                self._tip.destroy()
+            except tk.TclError:
+                pass
+            self._tip = None
+
+    def _cancel(self):
+        if self._after is not None:
+            try:
+                self.widget.after_cancel(self._after)
+            except (tk.TclError, ValueError):
+                pass
+            self._after = None
+
+
 class TreeCellTooltip:
     """Infobulle par cellule pour un ``ttk.Treeview``.
 

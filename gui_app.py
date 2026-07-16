@@ -44,6 +44,7 @@ from gui_config import (
 )
 from gui_history import HistoryPanel
 from gui_map import MapPanel
+from gui_tooltip import WidgetTooltip
 from gui_registry import RegistryPanel
 from gui_preferences import PreferencesDialog
 from gui_runner import RunDialog, run_cleanup, run_prep, run_upload_flow
@@ -1331,13 +1332,6 @@ class ChiroToolApp(ctk.CTk):
         # encore analysée), l'action est tentée et remonte proprement l'erreur.
         actions = ctk.CTkFrame(self.session_container, fg_color="transparent")
         actions.grid(row=3, column=0, sticky="ew", padx=8, pady=(2, 8))
-        # DEUX rangées : le workflow principal (Préparer / Upload / Nettoyer /
-        # Valider) reste toujours visible, même sur un portable 1366×768 où les
-        # 8 boutons sur une seule ligne poussaient « Valider » hors écran.
-        row1 = ctk.CTkFrame(actions, fg_color="transparent")
-        row1.pack(side="top", anchor="w", fill="x")
-        row2 = ctk.CTkFrame(actions, fg_color="transparent")
-        row2.pack(side="top", anchor="w", fill="x", pady=(4, 0))
 
         next_step = self._next_step_name(s)  # "prep" | "upload" | "cleanup" | "done"
 
@@ -1349,66 +1343,50 @@ class ChiroToolApp(ctk.CTk):
         can_upload = bool(s.flag_renamed and s.flag_te10_done)
         can_cleanup = bool(s.flag_analyzed)
 
-        def _mk_btn(parent, label: str, cmd, is_primary: bool, enabled: bool = True):
-            state = "normal" if enabled else "disabled"
-            if is_primary and enabled:
-                return ctk.CTkButton(
-                    parent, text=label, height=36,
-                    font=ctk.CTkFont(size=13, weight="bold"),
-                    state=state, command=cmd,
-                )
-            return ctk.CTkButton(
-                parent, text=label, height=36,
-                fg_color=("gray85", "gray25"),
-                text_color=("gray15", "gray90"),
-                hover_color=("gray75", "gray35"),
-                state=state, command=cmd,
-            )
+        # Libellés COURTS (tout tient sur une ligne) + détail en infobulle au
+        # survol. Remplace les 2 rangées peu esthétiques.
+        def _btn(label, cmd, tip, *, is_primary=False, enabled=True, accent=None):
+            kw = dict(text=label, height=34,
+                      state=("normal" if enabled else "disabled"), command=cmd)
+            if accent:
+                kw.update(fg_color=accent, hover_color="#1158c7", text_color="white")
+            elif is_primary and enabled:
+                kw["font"] = ctk.CTkFont(size=13, weight="bold")
+            else:
+                kw.update(fg_color=("gray85", "gray25"),
+                          text_color=("gray15", "gray90"),
+                          hover_color=("gray75", "gray35"))
+            b = ctk.CTkButton(actions, **kw)
+            b.pack(side="left", padx=(0, 5))
+            WidgetTooltip(b, tip)
+            return b
 
-        # --- Rangée 1 : le workflow principal ---
-        _mk_btn(row1, "▶  Préparer (rename + TE×10)", lambda: self._run_prep(s),
-                is_primary=(next_step == "prep")).pack(side="left", padx=(0, 6))
-        _mk_btn(row1, "▶  Upload + Tadarida", lambda: self._run_upload(s),
-                is_primary=(next_step == "upload"), enabled=can_upload
-                ).pack(side="left", padx=(0, 6))
-        _mk_btn(row1, "▶  Nettoyer (seuils)", lambda: self._run_cleanup(s),
-                is_primary=(next_step == "cleanup"), enabled=can_cleanup
-                ).pack(side="left", padx=(0, 10))
+        _btn("▶ Préparer", lambda: self._run_prep(s),
+             "Renommage des WAV au format Vigie-Chiro + expansion temporelle ×10",
+             is_primary=(next_step == "prep"))
+        _btn("☁ Upload", lambda: self._run_upload(s),
+             "Envoi vers Vigie-Chiro + lancement de l'analyse Tadarida",
+             is_primary=(next_step == "upload"), enabled=can_upload)
+        _btn("🧹 Nettoyer", lambda: self._run_cleanup(s),
+             "Purge des contacts sous les seuils de confiance "
+             "(aperçu du volume avant toute suppression)",
+             is_primary=(next_step == "cleanup"), enabled=can_cleanup)
 
         has_obs = find_observations_xlsx(s.path) is not None
         if has_obs:
-            ctk.CTkButton(
-                row1, text="🔍 Valider la nuit…", height=36, width=160,
-                fg_color="#1f6feb", hover_color="#1158c7",
-                command=lambda: self._open_validation_view(s),
-            ).pack(side="left", padx=(0, 6))
+            _btn("🔍 Valider", lambda: self._open_validation_view(s),
+                 "Vue de validation des contacts (ChiroSurf) + envoi des "
+                 "identifications validées au serveur", accent="#1f6feb")
 
-        # --- Rangée 2 : actions secondaires ---
-        ctk.CTkButton(
-            row2, text="Modifier métadonnées…", height=36, width=180,
-            fg_color=("gray85", "gray25"), text_color=("gray15", "gray90"),
-            hover_color=("gray75", "gray35"), border_width=0,
-            command=lambda: self._edit_meta(s),
-        ).pack(side="left", padx=(0, 6))
-        ctk.CTkButton(
-            row2, text="📍 Voir sur la carte", height=36, width=160,
-            fg_color=("gray85", "gray25"), text_color=("gray15", "gray90"),
-            hover_color=("gray75", "gray35"), border_width=0,
-            command=lambda: self._view_on_map(s),
-        ).pack(side="left", padx=(0, 6))
+        _btn("✎ Métadonnées", lambda: self._edit_meta(s),
+             "Modifier les métadonnées de la session (site, point, passage, série…)")
+        _btn("📍 Carte", lambda: self._view_on_map(s),
+             "Voir le point d'écoute sur la carte")
         if has_obs:
-            ctk.CTkButton(
-                row2, text="📊 Synthèse", height=36, width=110,
-                fg_color=("gray85", "gray25"), text_color=("gray15", "gray90"),
-                hover_color=("gray75", "gray35"),
-                command=lambda: self._open_synthesis_view(s),
-            ).pack(side="left", padx=(0, 6))
-        ctk.CTkButton(
-            row2, text="Détails avancés…", height=36, width=140,
-            fg_color=("gray85", "gray25"), text_color=("gray15", "gray90"),
-            hover_color=("gray75", "gray35"), border_width=0,
-            command=lambda: self._show_advanced(s),
-        ).pack(side="left")
+            _btn("📊 Synthèse", lambda: self._open_synthesis_view(s),
+                 "Synthèse de la nuit par espèce + niveaux d'activité")
+        _btn("⋯ Détails", lambda: self._show_advanced(s),
+             "Détails avancés : manifest, historique des actions, fichiers")
 
     def _naming_summary(self, s: SessionState) -> str:
         parts = []
