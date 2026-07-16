@@ -395,7 +395,8 @@ class PreferencesDialog(ctk.CTkToplevel):
         if not messagebox.askyesno(
             "Effacer le token ?",
             "Le token enregistré sera supprimé du stockage sécurisé.\n"
-            "Tu devras le recoller au prochain usage de l'API."):
+            "Tu devras le recoller au prochain usage de l'API.",
+            default=messagebox.NO):
             return
         delete_token()
         self.token_var.set("")
@@ -881,7 +882,7 @@ class PreferencesDialog(ctk.CTkToplevel):
             if not messagebox.askyesno(
                 "Supprimer ?",
                 "Aucune ligne sélectionnée. Supprimer le dernier enregistreur ?",
-                parent=self,
+                parent=self, default=messagebox.NO,
             ):
                 return
             idx = len(self._materiels) - 1
@@ -891,7 +892,7 @@ class PreferencesDialog(ctk.CTkToplevel):
                 "Supprimer ?",
                 f"Supprimer l'enregistreur #{m.id} "
                 f"({m.modele or m.marque or 'sans modèle'}) ?",
-                parent=self,
+                parent=self, default=messagebox.NO,
             ):
                 return
         del self._materiels[idx]

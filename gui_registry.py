@@ -289,6 +289,45 @@ def _ask_format(master, *, title: str, prompt: str,
     return dlg.choice
 
 
+class _TextEditDialog(ctk.CTkToplevel):
+    """Édition d'un texte multi-ligne **pré-rempli** (commentaires). Remplace
+    ``CTkInputDialog`` qui ouvre toujours vide → l'utilisateur perdait le
+    commentaire existant s'il ne le retapait pas. Renvoie le texte ou None."""
+
+    def __init__(self, master, *, title: str, prompt: str, initial: str = ""):
+        super().__init__(master)
+        self.title(title)
+        self.geometry("480x260")
+        self.transient(master)
+        self.result: str | None = None
+        self.grid_columnconfigure(0, weight=1)
+        self.grid_rowconfigure(1, weight=1)
+        ctk.CTkLabel(self, text=prompt, anchor="w").grid(
+            row=0, column=0, columnspan=2, sticky="ew", padx=12, pady=(12, 4))
+        self.box = ctk.CTkTextbox(self, wrap="word")
+        self.box.grid(row=1, column=0, columnspan=2, sticky="nsew", padx=12, pady=4)
+        self.box.insert("1.0", initial)
+        ctk.CTkButton(self, text="Annuler", width=100,
+                       fg_color=("gray85", "gray25"), text_color=("gray15", "gray90"),
+                       hover_color=("gray75", "gray35"),
+                       command=self._cancel).grid(row=2, column=0, sticky="e",
+                                                   padx=(0, 6), pady=(4, 12))
+        ctk.CTkButton(self, text="Enregistrer", width=120,
+                       command=self._ok).grid(row=2, column=1, sticky="w",
+                                              padx=(6, 12), pady=(4, 12))
+        self.protocol("WM_DELETE_WINDOW", self._cancel)
+        self.after(60, self.grab_set)
+        self.after(80, self.box.focus_set)
+
+    def _ok(self):
+        self.result = self.box.get("1.0", "end-1c")
+        self.destroy()
+
+    def _cancel(self):
+        self.result = None
+        self.destroy()
+
+
 class RegistryPanel(ctk.CTkFrame):
     """Panneau Registre (onglet principal)."""
 
@@ -814,13 +853,12 @@ class RegistryPanel(ctk.CTkFrame):
         if not s or not self.registry:
             return
 
-        # Dialog simple : éditer commentaire
+        # Dialogue PRÉ-REMPLI (le commentaire existant reste éditable, pas effacé).
         current = s.get("commentaires") or ""
-        dlg = ctk.CTkInputDialog(
-            text=f"Commentaire pour {sid} :",
-            title="Édition",
-        )
-        new_val = dlg.get_input()
+        dlg = _TextEditDialog(self, title="Édition du commentaire",
+                              prompt=f"Commentaire pour {sid} :", initial=current)
+        self.wait_window(dlg)
+        new_val = dlg.result
         if new_val is not None and new_val != current:
             self.registry.update_fields(sid, {"commentaires": new_val})
             s["commentaires"] = new_val

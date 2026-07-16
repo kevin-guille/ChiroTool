@@ -166,27 +166,36 @@ class RunDialog(ctk.CTkToplevel):
                 self._progress_frame.grid()
             except Exception:
                 pass
+            # Phase wait Tadarida : done/total = SECONDES écoulées / timeout, pas
+            # des fichiers → surtout pas d'ETA ni de ratio "X/Y" trompeur (un
+            # "178m" mensonger). On affiche le temps d'attente ; le traitement
+            # est côté serveur, sa durée réelle est inconnue.
+            is_wait = bool(label) and "wait" in label.lower()
             pct = (done / total) if total else 0.0
             self.progress_bar.set(pct)
 
-            # ETA basé sur le débit observé depuis le début de la phase
-            elapsed = time.monotonic() - (self._progress_start_ts or time.monotonic())
-            if done > 0 and elapsed > 1.0:
-                rate = done / elapsed
-                eta = int((total - done) / rate) if rate > 0 else 0
-                eta_s = (f"{eta // 60}m{eta % 60:02d}s"
-                         if eta >= 60 else f"{eta}s")
-                txt = f"{done}/{total}  ({int(pct * 100)}%)  ETA {eta_s}"
+            if is_wait:
+                mins = done // 60
+                txt = f"{label}   ·   {mins} min d'attente"
             else:
-                txt = f"{done}/{total}  ({int(pct * 100)}%)"
-            if label:
-                txt = f"{label}   {txt}"
+                # ETA basé sur le débit observé depuis le début de la phase
+                elapsed = time.monotonic() - (self._progress_start_ts or time.monotonic())
+                if done > 0 and elapsed > 1.0:
+                    rate = done / elapsed
+                    eta = int((total - done) / rate) if rate > 0 else 0
+                    eta_s = (f"{eta // 60}m{eta % 60:02d}s"
+                             if eta >= 60 else f"{eta}s")
+                    txt = f"{done}/{total}  ({int(pct * 100)}%)  ETA {eta_s}"
+                else:
+                    txt = f"{done}/{total}  ({int(pct * 100)}%)"
+                if label:
+                    txt = f"{label}   {txt}"
             self.progress_lbl.configure(text=txt)
 
             # En phase wait Tadarida, on expose le bouton "Arrière-plan" :
             # le traitement tourne côté serveur, l'utilisateur peut sortir
             # sans rien casser et récupérer le xlsx plus tard.
-            if label and "wait" in label.lower():
+            if is_wait:
                 try:
                     self.background_btn.grid()
                     self.status_lbl.configure(

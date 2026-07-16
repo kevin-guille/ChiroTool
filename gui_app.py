@@ -1331,6 +1331,13 @@ class ChiroToolApp(ctk.CTk):
         # encore analysée), l'action est tentée et remonte proprement l'erreur.
         actions = ctk.CTkFrame(self.session_container, fg_color="transparent")
         actions.grid(row=3, column=0, sticky="ew", padx=8, pady=(2, 8))
+        # DEUX rangées : le workflow principal (Préparer / Upload / Nettoyer /
+        # Valider) reste toujours visible, même sur un portable 1366×768 où les
+        # 8 boutons sur une seule ligne poussaient « Valider » hors écran.
+        row1 = ctk.CTkFrame(actions, fg_color="transparent")
+        row1.pack(side="top", anchor="w", fill="x")
+        row2 = ctk.CTkFrame(actions, fg_color="transparent")
+        row2.pack(side="top", anchor="w", fill="x", pady=(4, 0))
 
         next_step = self._next_step_name(s)  # "prep" | "upload" | "cleanup" | "done"
 
@@ -1342,93 +1349,66 @@ class ChiroToolApp(ctk.CTk):
         can_upload = bool(s.flag_renamed and s.flag_te10_done)
         can_cleanup = bool(s.flag_analyzed)
 
-        def _mk_btn(label: str, cmd, is_primary: bool, enabled: bool = True):
+        def _mk_btn(parent, label: str, cmd, is_primary: bool, enabled: bool = True):
             state = "normal" if enabled else "disabled"
             if is_primary and enabled:
                 return ctk.CTkButton(
-                    actions, text=label, height=36,
+                    parent, text=label, height=36,
                     font=ctk.CTkFont(size=13, weight="bold"),
                     state=state, command=cmd,
                 )
             return ctk.CTkButton(
-                actions, text=label, height=36,
+                parent, text=label, height=36,
                 fg_color=("gray85", "gray25"),
                 text_color=("gray15", "gray90"),
                 hover_color=("gray75", "gray35"),
                 state=state, command=cmd,
             )
 
-        prep_btn = _mk_btn(
-            "▶  Préparer (rename + TE×10)",
-            lambda: self._run_prep(s),
-            is_primary=(next_step == "prep"),
-        )
-        prep_btn.pack(side="left", padx=(0, 6))
+        # --- Rangée 1 : le workflow principal ---
+        _mk_btn(row1, "▶  Préparer (rename + TE×10)", lambda: self._run_prep(s),
+                is_primary=(next_step == "prep")).pack(side="left", padx=(0, 6))
+        _mk_btn(row1, "▶  Upload + Tadarida", lambda: self._run_upload(s),
+                is_primary=(next_step == "upload"), enabled=can_upload
+                ).pack(side="left", padx=(0, 6))
+        _mk_btn(row1, "▶  Nettoyer (seuils)", lambda: self._run_cleanup(s),
+                is_primary=(next_step == "cleanup"), enabled=can_cleanup
+                ).pack(side="left", padx=(0, 10))
 
-        upload_btn = _mk_btn(
-            "▶  Upload + Tadarida",
-            lambda: self._run_upload(s),
-            is_primary=(next_step == "upload"),
-            enabled=can_upload,
-        )
-        upload_btn.pack(side="left", padx=(0, 6))
-
-        cleanup_btn = _mk_btn(
-            "▶  Nettoyer (seuils)",
-            lambda: self._run_cleanup(s),
-            is_primary=(next_step == "cleanup"),
-            enabled=can_cleanup,
-        )
-        cleanup_btn.pack(side="left", padx=(0, 10))
-
-        edit_btn = ctk.CTkButton(
-            actions, text="Modifier métadonnées…", height=36, width=180,
-            fg_color=("gray85", "gray25"),
-            text_color=("gray15", "gray90"),
-            hover_color=("gray75", "gray35"),
-            border_width=0,
-            command=lambda: self._edit_meta(s),
-        )
-        edit_btn.pack(side="left", padx=(0, 6))
-
-        map_btn = ctk.CTkButton(
-            actions, text="📍 Voir sur la carte", height=36, width=160,
-            fg_color=("gray85", "gray25"),
-            text_color=("gray15", "gray90"),
-            hover_color=("gray75", "gray35"),
-            border_width=0,
-            command=lambda: self._view_on_map(s),
-        )
-        map_btn.pack(side="left", padx=(0, 6))
-
-        # "Valider la nuit" / "Synthèse" : visibles si xlsx observations présent
-        if find_observations_xlsx(s.path) is not None:
-            validate_btn = ctk.CTkButton(
-                actions, text="🔍 Valider la nuit…", height=36, width=160,
-                fg_color="#1f6feb",
-                hover_color="#1158c7",
+        has_obs = find_observations_xlsx(s.path) is not None
+        if has_obs:
+            ctk.CTkButton(
+                row1, text="🔍 Valider la nuit…", height=36, width=160,
+                fg_color="#1f6feb", hover_color="#1158c7",
                 command=lambda: self._open_validation_view(s),
-            )
-            validate_btn.pack(side="left", padx=(0, 6))
+            ).pack(side="left", padx=(0, 6))
 
-            synth_btn = ctk.CTkButton(
-                actions, text="📊 Synthèse", height=36, width=110,
-                fg_color=("gray85", "gray25"),
-                text_color=("gray15", "gray90"),
+        # --- Rangée 2 : actions secondaires ---
+        ctk.CTkButton(
+            row2, text="Modifier métadonnées…", height=36, width=180,
+            fg_color=("gray85", "gray25"), text_color=("gray15", "gray90"),
+            hover_color=("gray75", "gray35"), border_width=0,
+            command=lambda: self._edit_meta(s),
+        ).pack(side="left", padx=(0, 6))
+        ctk.CTkButton(
+            row2, text="📍 Voir sur la carte", height=36, width=160,
+            fg_color=("gray85", "gray25"), text_color=("gray15", "gray90"),
+            hover_color=("gray75", "gray35"), border_width=0,
+            command=lambda: self._view_on_map(s),
+        ).pack(side="left", padx=(0, 6))
+        if has_obs:
+            ctk.CTkButton(
+                row2, text="📊 Synthèse", height=36, width=110,
+                fg_color=("gray85", "gray25"), text_color=("gray15", "gray90"),
                 hover_color=("gray75", "gray35"),
                 command=lambda: self._open_synthesis_view(s),
-            )
-            synth_btn.pack(side="left", padx=(0, 6))
-
-        details_btn = ctk.CTkButton(
-            actions, text="Détails avancés…", height=36, width=140,
-            fg_color=("gray85", "gray25"),
-            text_color=("gray15", "gray90"),
-            hover_color=("gray75", "gray35"),
-            border_width=0,
+            ).pack(side="left", padx=(0, 6))
+        ctk.CTkButton(
+            row2, text="Détails avancés…", height=36, width=140,
+            fg_color=("gray85", "gray25"), text_color=("gray15", "gray90"),
+            hover_color=("gray75", "gray35"), border_width=0,
             command=lambda: self._show_advanced(s),
-        )
-        details_btn.pack(side="left")
+        ).pack(side="left")
 
     def _naming_summary(self, s: SessionState) -> str:
         parts = []
@@ -1604,27 +1584,57 @@ class ChiroToolApp(ctk.CTk):
         meta = self._resolve_meta_interactive(s)
         if meta is None:
             return
+        # Phase 1 — SIMULATION (dry-run) : calcule le plan (combien de WAV, quel
+        # volume) SANS rien supprimer, pour montrer l'impact réel AVANT une
+        # suppression irréversible.
+        dry = run_cleanup(s.path, meta, self.settings, dry_run=True, force=False)
+
+        def _after_dry(result):
+            if result.get("errors") or result.get("error"):
+                messagebox.showerror(
+                    "Nettoyage impossible",
+                    "\n".join(result.get("errors")
+                              or [str(result.get("error"))]) or "Erreur inconnue")
+                return
+            if not result.get("stats"):
+                # ex. « déjà nettoyé » (garde manifest) : aucun plan calculé
+                messagebox.showinfo(
+                    "Nettoyage",
+                    "\n".join(result.get("warnings")
+                              or ["Aucun plan de nettoyage à appliquer."]))
+                return
+            self._confirm_and_run_cleanup(s, meta, result["stats"])
+
+        RunDialog(self, title=f"Analyse du nettoyage — {s.name}",
+                  worker=dry, on_done=_after_dry)
+
+    def _confirm_and_run_cleanup(self, s: SessionState, meta, stats: dict):
+        """Aperçu chiffré (issu de la simulation) puis confirmation AVANT la
+        suppression définitive. Défaut « Non » (pas de suppression par Entrée)."""
+        files = (stats or {}).get("files", {}) if isinstance(stats, dict) else {}
+        n_tot = files.get("total_wav_on_disk", 0) or 0
+        n_del = files.get("planned_deleted", 0) or 0
+        go = (files.get("bytes_to_delete", 0) or 0) / (1024 ** 3)
+        pct = (n_del / n_tot * 100) if n_tot else 0.0
         t = self.settings
+        warn = ("\n\n⚠ Proportion inhabituellement élevée — vérifie tes seuils "
+                "dans Préférences avant de continuer.") if pct > 80 else ""
         if not messagebox.askyesno(
-            "Confirmer le nettoyage",
+            "Confirmer la suppression",
             f"Session : {s.name}\n\n"
-            f"Seuils utilisés :\n"
-            f"  • chiroptères  ≥ {t.threshold_chiros:.2f}\n"
-            f"  • orthoptères  ≥ {t.threshold_orthos:.2f}\n"
-            f"  • micro-mam.   ≥ {t.threshold_micromam:.2f}\n"
-            f"  • oiseaux      ≥ {t.threshold_oiseaux:.2f}\n"
-            f"  • silencieux   : {t.silent_policy}\n"
-            f"  • taxon inconnu: {t.unknown_action}\n\n"
-            f"Les seuils sont modifiables dans Préférences.\n"
-            f"Les WAV supprimés sont identifiés dans le xlsx _cleanup.\n\n"
-            f"Continuer ?"):
+            f"Sur {n_tot} fichiers WAV :\n"
+            f"  • {n_del} seront SUPPRIMÉS définitivement  (~{go:.2f} Go)\n"
+            f"  • {n_tot - n_del} seront conservés\n\n"
+            f"Seuils : chiro ≥ {t.threshold_chiros:.2f}  ortho ≥ {t.threshold_orthos:.2f}  "
+            f"micromam ≥ {t.threshold_micromam:.2f}  oiseaux ≥ {t.threshold_oiseaux:.2f}\n"
+            f"Silencieux : {t.silent_policy}   ·   Taxon inconnu : {t.unknown_action}\n\n"
+            f"⚠ Suppression IRRÉVERSIBLE.{warn}\n\nContinuer ?",
+            default=messagebox.NO, icon=messagebox.WARNING):
             return
-        worker = run_cleanup(s.path, meta, self.settings,
-                             dry_run=False, force=False)
-        # On capture la session path pour pouvoir ouvrir le récap après
+        worker = run_cleanup(s.path, meta, self.settings, dry_run=False, force=False)
+
         def _on_cleanup_done(result, session_path=s.path):
             self._after_phase_done(result)
-            # Si le cleanup a effectivement écrit ses stats, montre le récap
             from pathlib import Path as _P
             if (_P(session_path) / "_stats_before_cleanup.json").is_file() \
                     and not (result.get("errors") or result.get("error")):

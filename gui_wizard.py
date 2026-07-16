@@ -926,7 +926,16 @@ class SessionMetaWizard(ctk.CTkToplevel):
 
         validation_errs = validate_meta(meta)
         if validation_errs:
-            errs.extend(validation_errs)
+            # Traduit les noms de champs internes (n_site_tadarida…) en libellés
+            # d'écran lisibles par un naturaliste. naming.validate_meta reste pur.
+            _lbl = {"n_site_tadarida": "N° site Tadarida", "n_point_fixe": "Point",
+                    "n_passage": "Passage", "n_enregistreur": "N° enregistreur",
+                    "n_serie": "Série", "date_debut": "Date de début",
+                    "nom_contrat": "Contrat"}
+            for e in validation_errs:
+                for k, v in _lbl.items():
+                    e = e.replace(k, v)
+                errs.append(e)
 
         if errs:
             self.err_lbl.configure(text="⚠  " + "\n⚠  ".join(errs))

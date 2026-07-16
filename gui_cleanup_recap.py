@@ -391,7 +391,7 @@ class CleanupRecapDialog(ctk.CTkToplevel):
             "ne sont plus utilisés. Mais ils ne pourront plus être re-analysés\n"
             "manuellement par la suite.\n\n"
             "Confirmer la suppression ?",
-            parent=self,
+            parent=self, default=messagebox.NO, icon=messagebox.WARNING,
         ):
             return
 
