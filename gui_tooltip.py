@@ -62,7 +62,21 @@ class WidgetTooltip:
         if not txt:
             return
         try:
-            self._tip = _popup(self.widget, str(txt), x, y)
+            tip = _popup(self.widget, str(txt), x, y)
+            # Recadrage : sans ça, une infobulle près du bord droit/bas est
+            # tronquée. On borne sur la FENÊTRE de l'app (et non winfo_screenwidth,
+            # qui ne décrit que l'écran principal en multi-écran).
+            tip.update_idletasks()
+            w, h = tip.winfo_reqwidth(), tip.winfo_reqheight()
+            top = self.widget.winfo_toplevel()
+            left = top.winfo_rootx()
+            right = left + top.winfo_width()
+            bottom = top.winfo_rooty() + top.winfo_height()
+            nx = max(left + 4, min(x, right - w - 8))
+            ny = y if (y + h) <= (bottom - 4) else (y - h - 32)
+            if (nx, ny) != (x, y):
+                tip.wm_geometry(f"+{int(nx)}+{int(ny)}")
+            self._tip = tip
         except tk.TclError:
             self._tip = None
 

@@ -205,6 +205,19 @@ class ChiroToolApp(ctk.CTk):
         ctk.set_appearance_mode(self.settings.appearance)
         ctk.set_default_color_theme("blue")
 
+        # --- Fluidité au changement d'écran (multi-moniteur de DPI différents) ---
+        # CustomTkinter sonde le DPI toutes les 100 ms ; à chaque changement il
+        # fait clignoter la fenêtre (alpha 0.15) et re-scale TOUS les widgets.
+        # Pendant qu'on fait glisser la fenêtre d'un écran à l'autre, ça se
+        # déclenche en rafale → saccades. On espace la détection et on allonge la
+        # pause après un re-scale : l'app s'adapte une fois la fenêtre POSÉE,
+        # au lieu de recalculer en continu pendant le déplacement.
+        try:
+            ctk.ScalingTracker.update_loop_interval = 800          # 100 → 800 ms
+            ctk.ScalingTracker.loop_pause_after_new_scaling = 2500  # 1500 → 2500 ms
+        except Exception:
+            pass
+
         self.title(APP_TITLE)
         self.geometry(f"{MIN_WIDTH}x{MIN_HEIGHT}")
         self.minsize(900, 600)
