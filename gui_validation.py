@@ -144,7 +144,7 @@ class ValidationView(ctk.CTkToplevel):
     def __init__(self, master, *, session_path: Path,
                  xlsx_path: Path,
                  chirosurf_path: str | None = None,
-                 initiales: str = "KG"):
+                 initiales: str = "XX"):
         super().__init__(master)
         self.session_path = Path(session_path)
         self.xlsx_path = Path(xlsx_path)

@@ -4,7 +4,7 @@ gui_tooltip.py — infobulle légère au survol pour ``ttk.Treeview``.
 ``ttk.Treeview`` n'a pas d'infobulle native. ``TreeCellTooltip`` en attache une :
 au survol d'une cellule, un ``resolver(row_id, col_name) -> str | None`` fournit
 le texte à afficher (None = pas d'infobulle sur cette cellule). Rendu discret,
-texte clair sur fond sombre (style Claude), avec un léger délai anti-clignotement.
+texte clair sur fond sombre, avec un léger délai anti-clignotement.
 
 Usage :
     TreeCellTooltip(tree, resolver)   # se branche tout seul (binds add="+")

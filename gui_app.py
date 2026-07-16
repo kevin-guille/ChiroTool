@@ -1697,7 +1697,11 @@ class ChiroToolApp(ctk.CTk):
                 return u[:2].upper()
         except Exception:
             pass
-        return "KG"
+        # Dernier recours : initiales neutres. Surtout PAS des initiales
+        # codées en dur d'une personne : en diffusion publique, cela
+        # attribuerait les validations d'un autre observateur à quelqu'un
+        # d'autre (le suffixe se retrouve dans le nom du xlsx validé).
+        return "XX"
 
     def _view_on_map(self, s: SessionState):
         """Bascule sur l'onglet Carte et centre sur la session."""

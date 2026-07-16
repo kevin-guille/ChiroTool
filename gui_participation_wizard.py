@@ -31,6 +31,12 @@ from vigiechiro_enums import (
     couverture_from_label, couverture_labels, vent_from_label, vent_labels,
 )
 
+# Valeur sentinelle en tête des listes non devinables (météo, matériel) : force
+# un choix conscient. Sans elle, les menus défaultaient sur la 1re valeur et une
+# participation validée sans y toucher publiait des métadonnées FAUSSES et
+# irrécupérables sur le serveur national.
+_UNSET = "— à renseigner —"
+
 
 class ParticipationWizard(ctk.CTkToplevel):
     """Wizard pour collecter les metadata de participation.
@@ -231,19 +237,19 @@ class ParticipationWizard(ctk.CTkToplevel):
                        ).grid(row=row, column=1, sticky="w", padx=8, pady=4)
         row += 1
 
-        self._label(form, row, "Vent")
-        self.vent_label_var = ctk.StringVar(value=vent_labels()[0])
+        self._label(form, row, "Vent *")
+        self.vent_label_var = ctk.StringVar(value=_UNSET)
         ctk.CTkOptionMenu(
-            form, variable=self.vent_label_var, values=vent_labels(),
+            form, variable=self.vent_label_var, values=[_UNSET] + vent_labels(),
             width=160,
         ).grid(row=row, column=1, sticky="w", padx=8, pady=4)
         row += 1
 
-        self._label(form, row, "Couverture nuageuse")
-        self.cov_label_var = ctk.StringVar(value=couverture_labels()[0])
+        self._label(form, row, "Couverture nuageuse *")
+        self.cov_label_var = ctk.StringVar(value=_UNSET)
         ctk.CTkOptionMenu(
-            form, variable=self.cov_label_var, values=couverture_labels(),
-            width=160,
+            form, variable=self.cov_label_var,
+            values=[_UNSET] + couverture_labels(), width=160,
         ).grid(row=row, column=1, sticky="w", padx=8, pady=4)
         row += 1
 
@@ -265,7 +271,7 @@ class ParticipationWizard(ctk.CTkToplevel):
         det_frame.grid(row=row, column=1, sticky="ew", padx=8, pady=4)
         det_frame.grid_columnconfigure(1, weight=1)
         ctk.CTkOptionMenu(
-            det_frame, variable=self.det_var, values=det_values,
+            det_frame, variable=self.det_var, values=[_UNSET] + det_values,
             width=220, command=self._on_det_change,
             dynamic_resizing=False,
         ).grid(row=0, column=0, sticky="w")
@@ -284,7 +290,7 @@ class ParticipationWizard(ctk.CTkToplevel):
         mic0_frame.grid(row=row, column=1, sticky="ew", padx=8, pady=4)
         mic0_frame.grid_columnconfigure(1, weight=1)
         ctk.CTkOptionMenu(
-            mic0_frame, variable=self.mic0_var, values=mic_values,
+            mic0_frame, variable=self.mic0_var, values=[_UNSET] + mic_values,
             width=220, command=self._on_mic0_change,
             dynamic_resizing=False,
         ).grid(row=0, column=0, sticky="w")
@@ -581,7 +587,7 @@ class ParticipationWizard(ctk.CTkToplevel):
             self.det_other_var.set(det)
             self._on_det_change("Autre")
         else:
-            self.det_var.set(det_choices[0])
+            self.det_var.set(_UNSET)   # rien de deviné → choix conscient requis
 
         mic0 = pre.get("micro0_modele")
         if mic0 and mic0 in mic_choices:
@@ -591,7 +597,7 @@ class ParticipationWizard(ctk.CTkToplevel):
             self.mic0_other_var.set(mic0)
             self._on_mic0_change("Autre")
         else:
-            self.mic0_var.set(mic_choices[0])
+            self.mic0_var.set(_UNSET)   # rien de deviné → non renseigné
 
     # -- Validation ---------------------------------------------------------
 
@@ -631,9 +637,14 @@ class ParticipationWizard(ctk.CTkToplevel):
         temp_deb = _parse_temp(self.temp_deb_var.get(), "température début")
         temp_fin = _parse_temp(self.temp_fin_var.get(), "température fin")
 
-        # Vent / couverture
+        # Vent / couverture — sentinelle non convertie (from_label → None) : on
+        # BLOQUE plutôt que de publier une météo par défaut fausse et irréversible.
         vent = vent_from_label(self.vent_label_var.get())
         couverture = couverture_from_label(self.cov_label_var.get())
+        if vent is None:
+            errs.append("vent : à renseigner (observation de terrain, non devinée)")
+        if couverture is None:
+            errs.append("couverture nuageuse : à renseigner")
 
         # Détecteur — si "Autre", on prend la valeur libre saisie
         detecteur = self.det_var.get().strip()
@@ -643,7 +654,7 @@ class ParticipationWizard(ctk.CTkToplevel):
                 errs.append("détecteur 'Autre' : précise le modèle dans le champ à côté")
             else:
                 detecteur = other
-        elif not detecteur:
+        elif not detecteur or detecteur == _UNSET:
             errs.append("modèle de détecteur manquant (choisis dans la liste)")
 
         # Hauteur bornes : négatif possible (gîte) mais pas absurde
@@ -658,8 +669,11 @@ class ParticipationWizard(ctk.CTkToplevel):
                 return None
             return v
 
-        # Micro gauche
+        # Micro gauche (optionnel) : sentinelle → non renseigné (pas de modèle
+        # inventé), le champ matériel est libre côté serveur.
         mic0 = self.mic0_var.get().strip()
+        if mic0 == _UNSET:
+            mic0 = ""
         if mic0 == "Autre":
             other = self.mic0_other_var.get().strip()
             if not other:
