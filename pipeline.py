@@ -813,11 +813,15 @@ def run_phase_cleanup(
     force: bool,
     meta: SessionMeta | None = None,
     progress=None,
+    allow_mass_delete: bool = False,
 ) -> dict:
     """Phase 5 : purge des observations + annotation xlsx + update Suivi.
 
     ``progress`` propagé à ``cleanup_session`` qui l'appelle pour chaque WAV
     supprimé (gros volumes : 60-80% de plusieurs milliers de WAV).
+    ``allow_mass_delete`` : autorise une suppression > seuil (défaut 80 %) —
+    exposé pour la confirmation explicite depuis la GUI (nuit majoritairement
+    du bruit) ; sinon le garde-fou de ``cleanup_session`` bloque.
     """
     from cleanup import cleanup_session
 
@@ -829,6 +833,7 @@ def run_phase_cleanup(
         unknown_action=unknown_action,
         dry_run=dry_run,
         force=force,
+        allow_mass_delete=allow_mass_delete,
         progress=progress,
     )
 

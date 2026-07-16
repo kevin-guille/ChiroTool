@@ -435,7 +435,8 @@ def run_prep(session_path: Path, meta, *, dry_run: bool = False, force: bool = F
 
 
 def run_cleanup(session_path: Path, meta, settings,
-                *, dry_run: bool = False, force: bool = False):
+                *, dry_run: bool = False, force: bool = False,
+                allow_mass_delete: bool = False):
     from pipeline import run_phase_cleanup
 
     thresholds = {
@@ -458,6 +459,7 @@ def run_cleanup(session_path: Path, meta, settings,
             lambda: run_phase_cleanup(
                 session_path, thresholds, set(), settings.silent_policy,
                 settings.unknown_action, dry_run=dry_run, force=force,
+                allow_mass_delete=allow_mass_delete,
                 meta=meta, progress=progress,
             ),
             log,

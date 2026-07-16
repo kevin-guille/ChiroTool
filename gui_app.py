@@ -1590,6 +1590,11 @@ class ChiroToolApp(ctk.CTk):
         dry = run_cleanup(s.path, meta, self.settings, dry_run=True, force=False)
 
         def _after_dry(result):
+            # Ferme la fenêtre de simulation (sinon elle reste orpheline derrière).
+            try:
+                dry_dialog.destroy()
+            except Exception:
+                pass
             if result.get("errors") or result.get("error"):
                 messagebox.showerror(
                     "Nettoyage impossible",
@@ -1605,8 +1610,8 @@ class ChiroToolApp(ctk.CTk):
                 return
             self._confirm_and_run_cleanup(s, meta, result["stats"])
 
-        RunDialog(self, title=f"Analyse du nettoyage — {s.name}",
-                  worker=dry, on_done=_after_dry)
+        dry_dialog = RunDialog(self, title=f"Analyse du nettoyage — {s.name}",
+                               worker=dry, on_done=_after_dry)
 
     def _confirm_and_run_cleanup(self, s: SessionState, meta, stats: dict):
         """Aperçu chiffré (issu de la simulation) puis confirmation AVANT la
@@ -1617,8 +1622,9 @@ class ChiroToolApp(ctk.CTk):
         go = (files.get("bytes_to_delete", 0) or 0) / (1024 ** 3)
         pct = (n_del / n_tot * 100) if n_tot else 0.0
         t = self.settings
-        warn = ("\n\n⚠ Proportion inhabituellement élevée — vérifie tes seuils "
-                "dans Préférences avant de continuer.") if pct > 80 else ""
+        mass = pct > 80
+        warn = ("\n\n⚠ Proportion inhabituellement élevée (> 80 %) — vérifie tes "
+                "seuils dans Préférences.") if mass else ""
         if not messagebox.askyesno(
             "Confirmer la suppression",
             f"Session : {s.name}\n\n"
@@ -1631,7 +1637,24 @@ class ChiroToolApp(ctk.CTk):
             f"⚠ Suppression IRRÉVERSIBLE.{warn}\n\nContinuer ?",
             default=messagebox.NO, icon=messagebox.WARNING):
             return
-        worker = run_cleanup(s.path, meta, self.settings, dry_run=False, force=False)
+        # Garde-fou mass-delete : au-delà de 80 %, le backend refuse la suppression
+        # sauf autorisation EXPLICITE. On la demande via une 2e confirmation
+        # consciente (cas légitime d'une nuit très majoritairement du bruit),
+        # au lieu de laisser l'utilisateur dans un cul-de-sac.
+        allow_mass = False
+        if mass:
+            if not messagebox.askyesno(
+                "Suppression de masse",
+                f"{n_del} des {n_tot} fichiers ({pct:.0f} %) seraient supprimés — "
+                "c'est beaucoup.\n\n"
+                "Si c'est bien voulu (nuit quasi exclusivement du bruit), confirme "
+                "explicitement.\nSinon, annule et ajuste tes seuils dans Préférences.\n\n"
+                "Supprimer quand même ?",
+                default=messagebox.NO, icon=messagebox.WARNING):
+                return
+            allow_mass = True
+        worker = run_cleanup(s.path, meta, self.settings, dry_run=False,
+                             force=False, allow_mass_delete=allow_mass)
 
         def _on_cleanup_done(result, session_path=s.path):
             self._after_phase_done(result)
