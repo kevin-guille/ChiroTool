@@ -28,6 +28,7 @@ import customtkinter as ctk
 from activity_graph import (
     aggregate_multi_xlsx,
     cascade_options,
+    filter_items,
     list_nights,
     list_passages,
     list_points,
@@ -150,6 +151,15 @@ class ActivityPanel(ctk.CTkFrame):
     # UI : panneau filtres (gauche)
     # =========================================================================
 
+    # Sections du panneau : (clé, titre, recherche ?, repliée par défaut ?)
+    _SECTION_DEFS = (
+        ("sites", "Sites (carrés)", False, False),
+        ("points", "Points", False, True),
+        ("passages", "Passages", False, True),
+        ("nights", "Nuits", True, False),
+        ("taxons", "Taxons", True, False),
+    )
+
     def _build_filters_panel(self):
         side = ctk.CTkFrame(self, fg_color=("gray96", "gray17"),
                               corner_radius=6, width=280)
@@ -157,64 +167,184 @@ class ActivityPanel(ctk.CTkFrame):
         side.grid_columnconfigure(0, weight=1)
         side.grid_rowconfigure(0, weight=1)
 
-        # Tout dans un scroll vertical : sur petite hauteur d'écran, on
-        # peut faire défiler la liste des filtres au lieu d'être tronqué.
+        # UN SEUL scroll pour tout le panneau. Avant : un scroll externe qui
+        # contenait 5 scrolls internes de 110 px → la molette était imprévisible
+        # et on lisait 3 lignes à la fois. Les sections sont maintenant de simples
+        # frames repliables dans ce scroll unique.
         outer = ctk.CTkScrollableFrame(side, fg_color="transparent", width=260)
         outer.grid(row=0, column=0, sticky="nsew", padx=2, pady=2)
         outer.grid_columnconfigure(0, weight=1)
 
-        row = 0
+        hdr = ctk.CTkFrame(outer, fg_color="transparent")
+        hdr.grid(row=0, column=0, sticky="ew", padx=6, pady=(6, 0))
+        hdr.grid_columnconfigure(0, weight=1)
+        ctk.CTkLabel(hdr, text="Filtres", anchor="w",
+                      font=ctk.CTkFont(size=13, weight="bold")
+                      ).grid(row=0, column=0, sticky="w")
+        ctk.CTkButton(hdr, text="Réinitialiser", width=86, height=22,
+                       font=ctk.CTkFont(size=10), fg_color="transparent",
+                       text_color=("#2f6bb0", "#5aa0e0"),
+                       hover_color=("gray88", "gray28"),
+                       command=self._reset_filters).grid(row=0, column=1, sticky="e")
 
-        # Toggle "1 courbe par point"
+        # Résumé des filtres actifs : voir l'état sans dérouler les 5 sections.
+        self.filters_summary_lbl = ctk.CTkLabel(
+            outer, text="", anchor="w", justify="left", wraplength=238,
+            font=ctk.CTkFont(size=10), text_color=("gray35", "gray65"))
+        self.filters_summary_lbl.grid(row=1, column=0, sticky="ew", padx=8, pady=(2, 4))
+
         self._group_by_point_var = ctk.BooleanVar(value=False)
         ctk.CTkCheckBox(
             outer, text="Détailler par point",
             variable=self._group_by_point_var,
             command=self._on_group_toggle,
             font=ctk.CTkFont(size=11),
-        ).grid(row=row, column=0, sticky="w", padx=8, pady=(8, 8))
-        row += 1
+        ).grid(row=2, column=0, sticky="w", padx=8, pady=(2, 6))
 
-        self.sites_box, row = self._build_filter_section(
-            outer, row, "Sites (carrés)",
-            "filtre les contacts d'un ou plusieurs carrés")
-        self.points_box, row = self._build_filter_section(
-            outer, row, "Points",
-            "Z3, A1 — vide = tous les points des sites cochés")
-        self.passages_box, row = self._build_filter_section(
-            outer, row, "Passages",
-            "Pass1, Pass2, … — vide = tous")
-        self.nights_box, row = self._build_filter_section(
-            outer, row, "Nuits",
-            "coche pour cumuler sur le graph")
-        self.taxons_box, row = self._build_filter_section(
-            outer, row, "Taxons",
-            "espèces et groupes détectés", scroll_height=200)
+        self._sections: dict[str, dict] = {}
+        row = 3
+        for key, title, searchable, collapsed in self._SECTION_DEFS:
+            row = self._build_section(outer, row, key, title, searchable, collapsed)
 
-    def _build_filter_section(self, parent, row: int, title: str,
-                                help_text: str = "",
-                                scroll_height: int = 110
-                                ) -> tuple[ctk.CTkScrollableFrame, int]:
-        """Crée un mini-bloc 'titre + scroll' compact. Retourne (box, next_row)."""
-        ctk.CTkLabel(
-            parent, text=title,
-            font=ctk.CTkFont(size=12, weight="bold"),
-        ).grid(row=row, column=0, sticky="w", padx=8, pady=(6, 0))
-        row += 1
-        if help_text:
-            ctk.CTkLabel(
-                parent, text=f"({help_text})",
-                font=ctk.CTkFont(size=9),
-                text_color=("gray50", "gray60"),
-                wraplength=240, justify="left",
-            ).grid(row=row, column=0, sticky="w", padx=8, pady=(0, 2))
-            row += 1
-        box = ctk.CTkScrollableFrame(
-            parent, fg_color="transparent", height=scroll_height,
+        # Compat : les _render_* ciblent le corps de chaque section.
+        self.sites_box = self._sections["sites"]["items"]
+        self.points_box = self._sections["points"]["items"]
+        self.passages_box = self._sections["passages"]["items"]
+        self.nights_box = self._sections["nights"]["items"]
+        self.taxons_box = self._sections["taxons"]["items"]
+
+    def _build_section(self, parent, row: int, key: str, title: str,
+                        searchable: bool, collapsed: bool) -> int:
+        """Section repliable : en-tête cliquable (▾/▸ + compteur) + corps."""
+        head = ctk.CTkButton(
+            parent, text="", height=26, anchor="w",
+            font=ctk.CTkFont(size=11, weight="bold"),
+            fg_color=("gray91", "gray23"), text_color=("gray10", "gray92"),
+            hover_color=("gray84", "gray30"),
+            command=lambda k=key: self._toggle_section(k),
         )
-        box.grid(row=row, column=0, sticky="ew", padx=2, pady=(0, 6))
-        box.grid_columnconfigure(0, weight=1)
-        return box, row + 1
+        head.grid(row=row, column=0, sticky="ew", padx=4, pady=(5, 0))
+        row += 1
+
+        body = ctk.CTkFrame(parent, fg_color="transparent")
+        body.grid(row=row, column=0, sticky="ew", padx=2, pady=(0, 2))
+        body.grid_columnconfigure(0, weight=1)
+        row += 1
+
+        search_var = None
+        if searchable:
+            search_var = ctk.StringVar(value="")
+            ent = ctk.CTkEntry(
+                body, textvariable=search_var, height=26,
+                placeholder_text="rechercher…", font=ctk.CTkFont(size=11))
+            ent.grid(row=0, column=0, sticky="ew", padx=6, pady=(4, 2))
+            # Re-render de CETTE section seulement (pas de cascade) à la frappe.
+            search_var.trace_add(
+                "write", lambda *a, k=key: self._on_search_change(k))
+
+        items = ctk.CTkFrame(body, fg_color="transparent")
+        items.grid(row=1, column=0, sticky="ew")
+        items.grid_columnconfigure(0, weight=1)
+
+        self._sections[key] = {
+            "head": head, "body": body, "items": items,
+            "title": title, "search": search_var, "collapsed": collapsed,
+            "n_sel": 0, "n_total": 0,
+        }
+        if collapsed:
+            body.grid_remove()
+        self._update_section_header(key)
+        return row
+
+    # -- sections repliables : repli / compteur / recherche -----------------
+
+    def _toggle_section(self, key: str):
+        sec = self._sections.get(key)
+        if not sec:
+            return
+        sec["collapsed"] = not sec["collapsed"]
+        (sec["body"].grid_remove if sec["collapsed"] else sec["body"].grid)()
+        self._update_section_header(key)
+
+    def _update_section_header(self, key: str, n_sel=None, n_total=None):
+        sec = self._sections.get(key)
+        if not sec:
+            return
+        if n_sel is not None:
+            sec["n_sel"] = n_sel
+        if n_total is not None:
+            sec["n_total"] = n_total
+        arrow = "▸" if sec["collapsed"] else "▾"
+        ns, nt = sec["n_sel"], sec["n_total"]
+        if nt == 0:
+            cnt = "—"
+        elif ns >= nt:
+            cnt = "tous"
+        else:
+            cnt = f"{ns} / {nt}"
+        sec["head"].configure(text=f"{arrow}  {sec['title']}     {cnt}")
+
+    def _section_query(self, key: str) -> str:
+        sec = self._sections.get(key)
+        var = sec.get("search") if sec else None
+        return var.get() if var else ""
+
+    def _on_search_change(self, key: str):
+        # Re-render de CETTE section uniquement (aucune cascade, aucun saut).
+        {
+            "sites": self._render_sites, "points": self._render_points,
+            "passages": self._render_passages, "nights": self._render_nights,
+            "taxons": self._render_taxons,
+        }.get(key, lambda: None)()
+
+    def _reset_filters(self):
+        """Restaure les sélections par défaut (comme au 1er chargement) + vide
+        les recherches. Un seul point d'entrée pour « tout remettre à plat »."""
+        agg = self._aggregated or {}
+        self._sel_sites = set(list_sites(agg))
+        self._sel_points = set(list_points(agg))
+        self._sel_passages = set(list_passages(agg))
+        nights = list_nights(agg)
+        self._sel_nights = {nights[-1]} if nights else set()
+        self._sel_taxons = {t for t, _ in list_taxons(agg)[:5]}
+        for sec in self._sections.values():
+            if sec.get("search"):
+                sec["search"].set("")
+        self._refresh_filters_ui()
+        self._redraw()
+
+    def _update_filters_summary(self):
+        """Résumé compact des filtres actifs (voir l'état sans dérouler)."""
+        if not hasattr(self, "filters_summary_lbl"):
+            return
+        casc = self._cascade()
+        rows = [
+            (self._sel_sites, len(list_sites(self._aggregated)), "sites"),
+            (self._sel_points, len(casc["points"]), "points"),
+            (self._sel_passages, len(casc["passages"]), "passages"),
+            (self._sel_nights, len(casc["nights"]), "nuits"),
+            (self._sel_taxons,
+             len(list_taxons(self._filtered_aggregated(skip_taxon=True))), "taxons"),
+        ]
+        parts = []
+        for sel, total, label in rows:
+            if not total:
+                continue
+            n = len(sel)
+            parts.append(f"{label} : {'tous' if n >= total else n}")
+        self.filters_summary_lbl.configure(
+            text=("Actifs —  " + "   ·   ".join(parts)) if parts else "")
+
+    def _sync_headers(self):
+        """MAJ des compteurs d'en-tête des sections (n_sel) + du résumé, sans
+        reconstruire les listes — appelé après un clic de case."""
+        sel = {"sites": self._sel_sites, "points": self._sel_points,
+               "passages": self._sel_passages, "nights": self._sel_nights,
+               "taxons": self._sel_taxons}
+        for key, sec in self._sections.items():
+            total = sec.get("n_total", 0)
+            self._update_section_header(key, min(len(sel[key]), total), total)
+        self._update_filters_summary()
 
     # =========================================================================
     # UI : canvas (droite)
@@ -360,10 +490,16 @@ class ActivityPanel(ctk.CTkFrame):
         self._render_passages()
         self._render_nights()
         self._render_taxons()
+        self._update_filters_summary()
 
     def _render_sites(self):
+        sites = list_sites(self._aggregated)
+        self._update_section_header("sites", len(self._sel_sites & set(sites)),
+                                    len(sites))
+        shown = filter_items(sites, self._section_query("sites"),
+                             label_fn=lambda s: f"#{s}")
         self._render_checkbox_box(
-            self.sites_box, list_sites(self._aggregated), self._sel_sites,
+            self.sites_box, shown, self._sel_sites,
             on_toggle=self._on_site_toggle,
             select_all_cb=lambda v: self._set_filter_all("sites", v),
             label_fn=lambda s: f"#{s}",
@@ -373,6 +509,7 @@ class ActivityPanel(ctk.CTkFrame):
         # Points limités aux sites sélectionnés ; purge des points orphelins.
         pts = self._cascade()["points"]
         self._sel_points &= set(pts)
+        self._update_section_header("points", len(self._sel_points), len(pts))
         self._render_checkbox_box(
             self.points_box, pts, self._sel_points,
             on_toggle=self._on_point_toggle,
@@ -382,6 +519,7 @@ class ActivityPanel(ctk.CTkFrame):
     def _render_passages(self):
         pas = self._cascade()["passages"]
         self._sel_passages &= set(pas)
+        self._update_section_header("passages", len(self._sel_passages), len(pas))
         self._render_checkbox_box(
             self.passages_box, pas, self._sel_passages,
             on_toggle=self._on_passage_toggle,
@@ -392,89 +530,81 @@ class ActivityPanel(ctk.CTkFrame):
     def _render_nights(self):
         nights = self._cascade()["nights"]
         self._sel_nights &= set(nights)
+        self._update_section_header("nights", len(self._sel_nights), len(nights))
+        shown = filter_items(list(reversed(nights)), self._section_query("nights"))
+        # Raccourci « Dernière nuit » en plus de Tout/Aucun.
         self._render_checkbox_box(
-            self.nights_box, list(reversed(nights)), self._sel_nights,
+            self.nights_box, shown, self._sel_nights,
             on_toggle=self._on_night_toggle,
             select_all_cb=lambda v: self._set_filter_all("nights", v),
             mono=True,
+            actions=(("Dernière", self._select_last_night),) if nights else (),
         )
+
+    def _select_last_night(self):
+        nights = self._cascade()["nights"]
+        if nights:
+            self._sel_nights = {nights[-1]}
+            self._refresh_filters_ui()
+            self._redraw()
 
     def _render_taxons(self):
         # Taxons avec compteur respectant les autres filtres (sites/points/
         # passages/nuits). On NE purge PAS la sélection (un taxon réapparaît si
-        # on élargit les filtres).
-        for w in self.taxons_box.winfo_children():
-            w.destroy()
+        # on élargit les filtres). Plus de troncature à 50 : la recherche remplace.
         taxons_all = list_taxons(self._filtered_aggregated(skip_taxon=True),
                                     min_total=1)
-
-        actions2 = ctk.CTkFrame(self.taxons_box, fg_color="transparent")
-        actions2.grid(row=0, column=0, sticky="ew", padx=4, pady=(2, 4))
-        ctk.CTkButton(actions2, text="Top 5", width=58, height=22,
-                       font=ctk.CTkFont(size=10),
-                       fg_color=("gray85", "gray25"),
-                       text_color=("gray15", "gray90"),
-                       hover_color=("gray75", "gray35"),
-                       command=lambda: self._select_top_taxons(5)
-                       ).pack(side="left", padx=2)
-        ctk.CTkButton(actions2, text="Aucun", width=58, height=22,
-                       font=ctk.CTkFont(size=10),
-                       fg_color=("gray85", "gray25"),
-                       text_color=("gray15", "gray90"),
-                       hover_color=("gray75", "gray35"),
-                       command=lambda: self._select_all_taxons(False)
-                       ).pack(side="left", padx=2)
-
-        for i, (taxon, n) in enumerate(taxons_all[:50]):
-            var = ctk.BooleanVar(value=(taxon in self._sel_taxons))
-            cb = ctk.CTkCheckBox(
-                self.taxons_box,
-                text=f"{taxon}  ({n})",
-                variable=var,
-                font=ctk.CTkFont(size=11),
-                command=lambda t=taxon, v=var: self._on_taxon_toggle(t, v),
-            )
-            cb.grid(row=i + 1, column=0, sticky="w", padx=8, pady=1)
+        counts = dict(taxons_all)
+        codes = [t for t, _ in taxons_all]
+        self._update_section_header("taxons", len(self._sel_taxons & set(codes)),
+                                    len(codes))
+        shown = filter_items(codes, self._section_query("taxons"))
+        self._render_checkbox_box(
+            self.taxons_box, shown, self._sel_taxons,
+            on_toggle=self._on_taxon_toggle,
+            select_all_cb=None,
+            label_fn=lambda t: f"{t}  ({counts.get(t, 0)})",
+            actions=(("Top 5", lambda: self._select_top_taxons(5)),
+                     ("Aucun", lambda: self._select_all_taxons(False))),
+        )
 
     def _render_checkbox_box(self, box, items, selection,
-                               *, on_toggle, select_all_cb,
-                               label_fn=str, mono: bool = False):
-        """Repopule une box de cases à cocher avec actions Tout/Aucun."""
+                               *, on_toggle, select_all_cb=None,
+                               label_fn=str, mono: bool = False,
+                               actions: tuple = ()):
+        """Repopule une box de cases à cocher. ``select_all_cb`` → boutons
+        Tout/Aucun ; ``actions`` = ((libellé, callback), …) supplémentaires."""
         for w in box.winfo_children():
             w.destroy()
         if not items:
             ctk.CTkLabel(
-                box, text="(aucune valeur)",
+                box, text="(aucun résultat)",
                 font=ctk.CTkFont(size=10, slant="italic"),
                 text_color=("gray50", "gray60"),
             ).grid(row=0, column=0, sticky="w", padx=8, pady=8)
             return
-        actions = ctk.CTkFrame(box, fg_color="transparent")
-        actions.grid(row=0, column=0, sticky="ew", padx=4, pady=(2, 4))
-        ctk.CTkButton(actions, text="Tout", width=52, height=20,
-                       font=ctk.CTkFont(size=10),
-                       fg_color=("gray85", "gray25"),
-                       text_color=("gray15", "gray90"),
-                       hover_color=("gray75", "gray35"),
-                       command=lambda: select_all_cb(True),
-                       ).pack(side="left", padx=2)
-        ctk.CTkButton(actions, text="Aucun", width=52, height=20,
-                       font=ctk.CTkFont(size=10),
-                       fg_color=("gray85", "gray25"),
-                       text_color=("gray15", "gray90"),
-                       hover_color=("gray75", "gray35"),
-                       command=lambda: select_all_cb(False),
-                       ).pack(side="left", padx=2)
+        bar = ctk.CTkFrame(box, fg_color="transparent")
+        bar.grid(row=0, column=0, sticky="ew", padx=4, pady=(2, 4))
+        buttons: list = []
+        if select_all_cb is not None:
+            buttons += [("Tout", lambda: select_all_cb(True)),
+                        ("Aucun", lambda: select_all_cb(False))]
+        buttons += list(actions)
+        for label, cb in buttons:
+            ctk.CTkButton(bar, text=label, width=54, height=20,
+                           font=ctk.CTkFont(size=10),
+                           fg_color=("gray85", "gray25"),
+                           text_color=("gray15", "gray90"),
+                           hover_color=("gray75", "gray35"),
+                           command=cb).pack(side="left", padx=2)
 
         font = ctk.CTkFont(family="Consolas" if mono else None, size=11)
         for i, item in enumerate(items):
             var = ctk.BooleanVar(value=(item in selection))
-            cb = ctk.CTkCheckBox(
-                box, text=label_fn(item), variable=var,
-                font=font,
+            ctk.CTkCheckBox(
+                box, text=label_fn(item), variable=var, font=font,
                 command=lambda it=item, v=var: on_toggle(it, v),
-            )
-            cb.grid(row=i + 1, column=0, sticky="w", padx=8, pady=1)
+            ).grid(row=i + 1, column=0, sticky="w", padx=8, pady=1)
 
     def _set_filter_all(self, kind: str, select: bool):
         """Tout/Aucun générique pour les filtres sites/points/passages/nights."""
@@ -509,6 +639,7 @@ class ActivityPanel(ctk.CTkFrame):
         self._render_passages()
         self._render_nights()
         self._render_taxons()
+        self._sync_headers()
         self._redraw()
 
     def _on_point_toggle(self, point: str, var: ctk.BooleanVar):
@@ -519,6 +650,7 @@ class ActivityPanel(ctk.CTkFrame):
         self._render_passages()
         self._render_nights()
         self._render_taxons()
+        self._sync_headers()
         self._redraw()
 
     def _on_passage_toggle(self, passage: int, var: ctk.BooleanVar):
@@ -528,10 +660,12 @@ class ActivityPanel(ctk.CTkFrame):
             self._sel_passages.discard(passage)
         self._render_nights()
         self._render_taxons()
+        self._sync_headers()
         self._redraw()
 
     def _on_group_toggle(self):
         self._group_by_point = bool(self._group_by_point_var.get())
+        self._sync_headers()
         self._redraw()
 
     def _select_all_taxons(self, select: bool):
@@ -581,6 +715,7 @@ class ActivityPanel(ctk.CTkFrame):
         else:
             self._sel_nights.discard(night)
         self._render_taxons()   # les compteurs de taxons dépendent des nuits
+        self._sync_headers()
         self._redraw()
 
     def _on_taxon_toggle(self, taxon: str, var: ctk.BooleanVar):
@@ -588,6 +723,7 @@ class ActivityPanel(ctk.CTkFrame):
             self._sel_taxons.add(taxon)
         else:
             self._sel_taxons.discard(taxon)
+        self._sync_headers()
         self._redraw()
 
     def _on_bin_change(self, value: str):

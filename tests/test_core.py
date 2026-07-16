@@ -1659,6 +1659,32 @@ class TestCleanupMassDeleteGuard:
         assert len(list(data_k.glob("*.wav"))) < 6
 
 
+class TestFilterItems:
+    """Recherche des filtres graphes : insensible à la casse ET aux accents."""
+
+    def test_empty_query_returns_all(self):
+        from activity_graph import filter_items
+        items = ["Pippip", "Barbar", "Nyclei"]
+        assert filter_items(items, "") == items
+        assert filter_items(items, "   ") == items
+
+    def test_case_and_accent_insensitive(self):
+        from activity_graph import filter_items
+        items = ["Pipistrelle", "Sérotine", "Noctule"]
+        assert filter_items(items, "pip") == ["Pipistrelle"]
+        assert filter_items(items, "sero") == ["Sérotine"]   # requête sans accent
+        assert filter_items(items, "SÉRO") == ["Sérotine"]   # requête accentuée MAJ
+
+    def test_label_fn(self):
+        from activity_graph import filter_items
+        assert filter_items(["212097", "741131"], "#7",
+                            label_fn=lambda s: f"#{s}") == ["741131"]
+
+    def test_no_match(self):
+        from activity_graph import filter_items
+        assert filter_items(["a", "b"], "zzz") == []
+
+
 if __name__ == "__main__":
     # Permet de lancer directement : python tests/test_core.py
     import sys

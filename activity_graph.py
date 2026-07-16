@@ -27,6 +27,30 @@ from pathlib import Path
 from typing import Iterable
 
 
+# ---------------------------------------------------------------------------
+# Recherche dans les listes de filtres (logique pure → testable)
+# ---------------------------------------------------------------------------
+
+def _norm_search(s) -> str:
+    """Normalise pour la recherche : minuscules, sans accents."""
+    import unicodedata
+    txt = unicodedata.normalize("NFD", str(s or ""))
+    return "".join(c for c in txt if unicodedata.category(c) != "Mn").casefold()
+
+
+def filter_items(items, query, *, label_fn=str) -> list:
+    """Sous-ensemble d'``items`` dont le libellé contient ``query``.
+
+    Insensible à la casse **et aux accents**. Requête vide/blanche → tout.
+    Utilisé par les barres de recherche du panneau de filtres (nuits, taxons) :
+    évite de faire défiler des dizaines d'items à l'aveugle.
+    """
+    q = _norm_search(query).strip()
+    if not q:
+        return list(items)
+    return [it for it in items if q in _norm_search(label_fn(it))]
+
+
 # Regex extraction de l'heure depuis le nom de fichier
 _RE_FILENAME_TIMESTAMP = re.compile(
     r"_(\d{8})_(\d{2})(\d{2})(\d{2})(?:_\d+)?(?:\..+)?$"
