@@ -32,6 +32,8 @@ import csv
 from pathlib import Path
 from typing import Final
 
+from resources import resource_path
+
 
 GROUPS: Final = ("noise", "chiros", "orthos", "micromam", "oiseaux", "unknown")
 
@@ -92,7 +94,7 @@ SPECIAL: dict[str, str] = {
 # Chargement CSV officiel
 # ---------------------------------------------------------------------------
 
-_DEFAULT_CSV = Path(__file__).parent / "SpeciesListComplete.csv"
+_DEFAULT_CSV = resource_path("SpeciesListComplete.csv")
 
 # Cache : {code_lower: (fine_group, scientific_name, common_name_fr)}
 _OFFICIAL_TABLE: dict[str, tuple[str, str, str]] = {}

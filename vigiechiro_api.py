@@ -1,5 +1,5 @@
 """
-vigiechiro_api.py — client Python pour l'API Vigie-Chiro (lecture seule, v1a).
+vigiechiro_api.py — client Python **lecture + écriture** pour l'API Vigie-Chiro.
 
 Base URL : https://vigiechiro.herokuapp.com
 Source  : https://github.com/Scille/vigiechiro-api (backend Eve/Flask)
@@ -9,20 +9,17 @@ vide. Le token (32 caractères alphanumériques majuscules) est obtenu après
 login OAuth sur le portail, et accessible dans le localStorage du navigateur
 sous la clé ``auth-session-token``.
 
-Endpoints couverts (v1a read-only) :
-  - ping / me        : valide le token
-  - list_sites       : sites de l'utilisateur
-  - get_site         : détail d'un site
-  - list_protocoles  : protocoles disponibles
-  - list_participations : participations de l'utilisateur
-  - get_participation   : détail d'une participation (inclut l'état de traitement)
-  - download_file    : download direct d'un fichier via /fichiers/<id>/acces
-  - list_donnees     : observations (lignes tadarida) d'une participation
+Lecture :
+  - ping / me, list_sites / get_site, list_protocoles
+  - list_participations / get_participation (inclut l'état de traitement)
+  - download_file (/fichiers/<id>/acces), iter_donnees (observations Tadarida)
+  - iter_taxons (référentiel des taxons acceptés à l'envoi)
 
-Non couvert (viendra en v1b/c) :
-  - POST /sites/<id>/participations     (création)
-  - POST /fichiers, upload multipart S3 (upload WAV)
-  - POST /participations/<id>/compute   (déclencher Tadarida)
+Écriture :
+  - create_participation
+  - upload_wav (single + multipart S3), trigger_compute, wait_for_completion
+  - add_localite / update_site_localites (PUT avec ETag), POST /sites (carré STOC)
+  - push_observation : renvoie l'identification observateur (PATCH d'une donnée)
 
 Robustesse :
   - retry léger sur erreurs réseau transitoires
@@ -1609,13 +1606,16 @@ class VigieChiroClient:
 
 def _load_token_from_args_or_storage(arg_token: str | None) -> str:
     if arg_token:
-        return arg_token
+        # Déprécié : exposé dans l'historique shell / la liste des process.
+        from credentials import prompt_token
+        return prompt_token(arg_token)
     from credentials import load_token
     tok = load_token()
     if not tok:
         raise SystemExit(
-            "❌ aucun token. Utilise --token XXXX, ou enregistre-le d'abord avec :\n"
-            "   python vigiechiro_api.py save-token XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+            "❌ aucun token enregistré. Enregistre-le (saisie masquée) avec :\n"
+            "   python vigiechiro_api.py save-token\n"
+            "ou via la variable d'environnement VIGIECHIRO_TOKEN."
         )
     return tok
 
@@ -1649,8 +1649,14 @@ def main() -> int:
     p_obs.add_argument("--out", type=Path, default=None,
                        help="chemin de sortie (défaut : participation-<id>-observations.xlsx dans le dossier courant)")
 
-    p_save = sub.add_parser("save-token", help="enregistre un token dans le stockage sécurisé")
-    p_save.add_argument("token")
+    p_save = sub.add_parser(
+        "save-token",
+        help="enregistre un token dans le stockage sécurisé (saisie masquée)")
+    p_save.add_argument(
+        "token", nargs="?", default=None,
+        help="DÉPRÉCIÉ — laisse vide : le token sera demandé en saisie masquée "
+             "(ou via un pipe / la variable VIGIECHIRO_TOKEN). Le passer ici "
+             "l'expose dans l'historique du shell.")
 
     sub.add_parser("delete-token", help="efface le token du stockage sécurisé")
     sub.add_parser("storage", help="affiche le backend de stockage utilisé")
@@ -1665,8 +1671,8 @@ def main() -> int:
 
     # Commandes qui ne nécessitent pas de client
     if args.cmd == "save-token":
-        from credentials import save_token
-        backend = save_token(args.token)
+        from credentials import prompt_token, save_token
+        backend = save_token(prompt_token(args.token))
         print(f"✓ token enregistré ({backend})")
         return 0
     if args.cmd == "delete-token":

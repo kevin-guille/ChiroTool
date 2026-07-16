@@ -22,7 +22,9 @@ from __future__ import annotations
 import csv
 from pathlib import Path
 
-_DEFAULT = Path(__file__).with_name("taxons_vigiechiro.csv")
+from resources import resource_path
+
+_DEFAULT = resource_path("taxons_vigiechiro.csv")
 
 
 def load_taxon_index(path=None) -> dict:

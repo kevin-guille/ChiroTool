@@ -1572,6 +1572,93 @@ class TestTaxonIndex:
         assert load_taxon_index(tmp_path / "nope.csv") == {}
 
 
+class TestTokenPrompt:
+    """H2 — saisie du token sans l'exposer dans l'historique shell."""
+
+    def test_env_variable(self, monkeypatch):
+        from credentials import prompt_token, ENV_TOKEN
+        monkeypatch.setenv(ENV_TOKEN, "  ENVTOKEN123  ")
+        assert prompt_token() == "ENVTOKEN123"        # trim + priorité env
+
+    def test_arg_is_deprecated_but_works(self, monkeypatch):
+        from credentials import prompt_token, ENV_TOKEN
+        monkeypatch.delenv(ENV_TOKEN, raising=False)
+        with pytest.warns(UserWarning):               # avertit de l'exposition
+            assert prompt_token("ARGTOKEN") == "ARGTOKEN"
+
+    def test_interactive_masked_fallback(self, monkeypatch):
+        from credentials import prompt_token, ENV_TOKEN
+        monkeypatch.delenv(ENV_TOKEN, raising=False)
+        # pas d'arg, pas d'env → saisie masquée (injectée pour le test)
+        assert prompt_token(_input=lambda: "TYPEDTOKEN") == "TYPEDTOKEN"
+
+
+class TestResourcePath:
+    """resource_path : les CSV embarqués sont trouvés (dev + exe PyInstaller)."""
+
+    def test_bundled_csvs_resolve(self):
+        from resources import resource_path
+        for name in ("SpeciesListComplete.csv", "activity_ref_PF.csv",
+                     "taxons_vigiechiro.csv"):
+            assert resource_path(name).is_file(), name
+
+    def test_reference_loaders_still_work(self):
+        # les loaders passent maintenant par resource_path → doivent charger
+        from activity_reference import load_reference
+        from taxon_index import load_taxon_index
+        assert load_reference()          # non vide
+        assert load_taxon_index()
+
+
+class TestCleanupMassDeleteGuard:
+    """Chemin destructif : garde-fou mass-delete (préserve les WAV par défaut)."""
+
+    _HEADERS = ["nom du fichier", "temps_debut", "temps_fin", "frequence_mediane",
+                "tadarida_taxon", "tadarida_probabilite", "tadarida_taxon_autre",
+                "observateur_taxon", "observateur_probabilite",
+                "validateur_taxon", "validateur_probabilite"]
+
+    def _session(self, tmp_path, name, filenames, taxon, proba):
+        import openpyxl
+        session = tmp_path / name
+        data_k = session / "Data_k"
+        data_k.mkdir(parents=True)
+        for fn in filenames:
+            (data_k / fn).write_bytes(b"RIFFxxxxWAVE")
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.append(self._HEADERS)
+        for fn in filenames:
+            ws.append([fn, 1.0, 2.0, 45.0, taxon, proba, "", "", "", "", ""])
+        wb.save(session / "participation-abc-observations.xlsx")
+        return session, data_k
+
+    _THR = {"chiros": 0.5, "orthos": 0.5, "micromam": 0.5, "oiseaux": 0.5}
+
+    def test_blocked_by_default_preserves_wavs(self, tmp_path):
+        from cleanup import cleanup_session
+        names = [f"f{i}.wav" for i in range(6)]
+        session, data_k = self._session(tmp_path, "20250903_site212097_Z3_Pass2_enr07",
+                                         names, "pippip", 0.10)   # chiros sous le seuil
+        out = cleanup_session(session, thresholds=self._THR, disabled=set(),
+                              silent_policy="delete", dry_run=False,
+                              allow_mass_delete=False)
+        assert out.get("errors")                      # suppression refusée
+        assert out.get("n_deleted") == 0
+        assert len(list(data_k.glob("*.wav"))) == 6   # WAV intacts
+
+    def test_allowed_executes_deletion(self, tmp_path):
+        from cleanup import cleanup_session
+        names = [f"g{i}.wav" for i in range(6)]
+        session, data_k = self._session(tmp_path, "20250903_site212097_Z3_Pass2_enr08",
+                                         names, "pippip", 0.10)
+        out = cleanup_session(session, thresholds=self._THR, disabled=set(),
+                              silent_policy="delete", dry_run=False,
+                              allow_mass_delete=True)   # override explicite
+        assert out.get("n_deleted", 0) >= 1
+        assert len(list(data_k.glob("*.wav"))) < 6
+
+
 if __name__ == "__main__":
     # Permet de lancer directement : python tests/test_core.py
     import sys

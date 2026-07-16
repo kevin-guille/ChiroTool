@@ -34,6 +34,8 @@ from __future__ import annotations
 import csv
 from pathlib import Path
 
+from resources import resource_path
+
 CLASS_FAIBLE = "Faible"
 CLASS_MOYENNE = "Moyenne"
 CLASS_FORTE = "Forte"
@@ -44,7 +46,7 @@ CITATION = ("Bas, Kerbiriou, Roemer & Julien 2020 — référentiel Vigie-Chiro 
             "Point Fixe (contacts/nuit)")
 UNITE = "contacts/nuit"
 
-_DEFAULT_REF = Path(__file__).with_name("activity_ref_PF.csv")
+_DEFAULT_REF = resource_path("activity_ref_PF.csv")
 _CONFIANCE_FIABLE = {"tres bonne", "bonne"}
 
 # --- Régions métropolitaines : département (2 premiers chiffres du n° site

@@ -16,14 +16,62 @@ Jamais de token envoyé ailleurs que vers vigiechiro.herokuapp.com.
 from __future__ import annotations
 
 import base64
+import getpass
 import json
 import os
+import sys
+import warnings
 from pathlib import Path
 from typing import Final
 
 
 SERVICE_NAME: Final = "ChiroTool/VigieChiro"
 ACCOUNT_NAME: Final = "token"
+ENV_TOKEN: Final = "VIGIECHIRO_TOKEN"
+
+
+def prompt_token(arg_token: str | None = None, *, _input=None) -> str:
+    """Obtient un token **sans le laisser traîner dans l'historique shell**.
+
+    Un token passé en argument (``save-token XXXX`` / ``--token XXXX``) reste
+    visible dans l'historique du shell, la liste des process et certains logs
+    d'audit : c'est le mode déprécié, il émet un avertissement.
+
+    Ordre de résolution :
+      1. ``arg_token`` — **déprécié** (avertit) ;
+      2. variable d'environnement ``VIGIECHIRO_TOKEN`` ;
+      3. **stdin** si l'entrée est un pipe (``echo TOKEN | ... save-token``) ;
+      4. saisie **interactive masquée** (``getpass``).
+
+    ``_input`` : injection pour les tests (remplace getpass).
+    """
+    if arg_token:
+        warnings.warn(
+            "Token passé en argument : il est exposé (historique shell, liste "
+            "des process). Préférez la saisie interactive, un pipe, ou la "
+            f"variable d'environnement {ENV_TOKEN}.",
+            stacklevel=2)
+        return arg_token.strip()
+
+    env = os.environ.get(ENV_TOKEN)
+    if env and env.strip():
+        return env.strip()
+
+    try:
+        piped = not sys.stdin.isatty()
+    except (AttributeError, ValueError):
+        piped = False
+    if piped:
+        try:
+            data = (sys.stdin.read() or "").strip()
+        except (OSError, ValueError):
+            data = ""      # stdin non lisible (ex. sortie capturée) → saisie interactive
+        if data:
+            return data
+
+    ask = _input or (lambda: getpass.getpass(
+        "Token Vigie-Chiro (saisie masquée) : "))
+    return (ask() or "").strip()
 
 
 def _dpapi(protect: bool, data: bytes) -> bytes | None:
