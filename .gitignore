@@ -72,5 +72,6 @@ docs/_chk.png
 docs/_v.png
 
 # Rapports d'audit/revue (locaux, jamais publies)
-*_REVIEW.md
-*_AUDIT.md
+*REVIEW*.md
+*AUDIT*.md
+GROK*.md

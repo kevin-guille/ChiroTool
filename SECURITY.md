@@ -11,6 +11,21 @@ les fichiers du projet ni dans les logs.
 d'écran ou un fichier de log partagé. Si vous pensez l'avoir exposé,
 **régénérez-le** depuis le portail Vigie-Chiro.
 
+### Saisir le token en ligne de commande
+
+Si vous utilisez la CLI, **évitez de mettre le token directement dans la
+commande** : il resterait visible dans l'historique du shell et la liste des
+processus. Préférez, dans cet ordre :
+
+- la **saisie interactive masquée** : `python vigiechiro_api.py save-token`
+  (le token est demandé sans s'afficher à l'écran) ;
+- un **pipe** : `echo VOTRE_TOKEN | python vigiechiro_api.py save-token` ;
+- la **variable d'environnement** `VIGIECHIRO_TOKEN`.
+
+Passer le token en argument (`save-token VOTRE_TOKEN` ou `--token VOTRE_TOKEN`)
+reste possible mais **déconseillé** : l'application affiche alors un
+avertissement pour vous le rappeler.
+
 ## Données sensibles
 
 Avant de partager une capture, un log ou un fichier d'exemple, masquez :
