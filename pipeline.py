@@ -260,6 +260,10 @@ def run_phase_prep(session: Path, meta: SessionMeta, dry_run: bool,
     if r.get("errors"):
         out["error"] = f"rename a échoué : {r['errors']}"
         return out
+    # Renommage de DOSSIER échoué mais WAV OK : non bloquant, on remonte le
+    # message et on poursuit le TE×10 sur le dossier réel (final_session_path).
+    if r.get("warnings"):
+        out.setdefault("warnings", []).extend(r["warnings"])
     final = Path(r.get("final_session_path") or session)
 
     # 1.b : TE×10 — progress fin tranche par fichier traité

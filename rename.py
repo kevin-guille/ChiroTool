@@ -29,6 +29,7 @@ et les séries observées dans les WAV, via suivi.py)
 from __future__ import annotations
 
 import argparse
+import gc
 import os
 import shutil
 import sys
@@ -358,11 +359,33 @@ def rename_session(
         if target.exists():
             out["warnings"].append(f"dossier cible {target} existe déjà, pas de renommage")
         else:
-            try:
-                session.rename(target)
-                final_path = target
-            except OSError as e:
-                out["errors"].append(f"échec renommage dossier : {e}")
+            # Sous Windows, un handle encore ouvert sur un fichier du dossier
+            # (scan de l'app, indexeur de recherche, antivirus) fait échouer le
+            # renommage du DOSSIER, alors même que les WAV, eux, viennent d'être
+            # renommés sans problème. On force un ramasse-miettes et on retente
+            # brièvement pour laisser ces handles se libérer.
+            err = None
+            for attempt in range(4):
+                try:
+                    session.rename(target)
+                    final_path = target
+                    err = None
+                    break
+                except OSError as e:
+                    err = e
+                    gc.collect()
+                    time.sleep(0.3 * (attempt + 1))
+            if err is not None:
+                # NON fatal : les WAV sont renommés, le TE×10 peut tourner sur le
+                # dossier tel quel. On le signale clairement sans bloquer la nuit.
+                out["folder_rename_failed"] = str(err)
+                out["warnings"].append(
+                    f"Le DOSSIER n'a pas pu être renommé en « {canonical_dir} » "
+                    f"({err}). Les fichiers WAV sont bien renommés et le traitement "
+                    f"continue sur le dossier actuel. Cause fréquente : l'explorateur "
+                    f"Windows, un antivirus ou l'application qui garde le dossier "
+                    f"ouvert. Fermez ces fenêtres et relancez « Préparer » (--force) "
+                    f"pour lui donner son nom définitif.")
     elif rename_folder and session.name != canonical_dir and dry_run:
         out["planned_folder_rename"] = str(session.parent / canonical_dir)
 

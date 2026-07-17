@@ -1685,6 +1685,44 @@ class TestFilterItems:
         assert filter_items(["a", "b"], "zzz") == []
 
 
+class TestFolderRenameNonFatal:
+    """Issue #2 — le renommage du DOSSIER échoue (handle Windows / antivirus) mais
+    les WAV sont renommés : ça ne doit PLUS bloquer la nuit, juste avertir."""
+
+    def test_folder_rename_failure_is_non_fatal(self, tmp_path, monkeypatch):
+        from datetime import datetime
+        from pathlib import Path
+        from naming import SessionMeta
+        import rename as rename_mod
+        from rename import rename_session
+
+        sess = tmp_path / "20260519_raw"
+        sess.mkdir()
+        for t in ("203704", "203711"):
+            (sess / f"SMU05451_20260519_{t}.wav").write_bytes(b"RIFFxxxxWAVE")
+        meta = SessionMeta(date_debut=datetime(2026, 5, 19), n_site_tadarida="212097",
+                           n_point_fixe="Z6", n_passage=2, n_enregistreur=7,
+                           n_serie="SMU05451", nom_contrat="T")
+
+        real_rename = Path.rename
+
+        def fake_rename(self, target):
+            if Path(self) == sess:               # échoue UNIQUEMENT sur le dossier
+                raise OSError(32, "handle ouvert (simulé)")
+            return real_rename(self, target)
+        monkeypatch.setattr(Path, "rename", fake_rename)
+        monkeypatch.setattr(rename_mod.time, "sleep", lambda *a: None)  # pas d'attente
+
+        out = rename_session(sess, meta, dry_run=False, rename_folder=True)
+
+        assert out["executed"] == 2                    # les 2 WAV sont renommés
+        assert not out.get("errors")                    # échec dossier = NON fatal
+        assert out.get("folder_rename_failed")          # mais signalé
+        assert any("DOSSIER" in w for w in out.get("warnings", []))
+        assert out["final_session_path"] == str(sess)   # on garde le chemin réel
+        assert list(sess.glob("Car212097-2026-Pass2-Z6-SMU05451_*.wav"))  # WAV canoniques
+
+
 if __name__ == "__main__":
     # Permet de lancer directement : python tests/test_core.py
     import sys
