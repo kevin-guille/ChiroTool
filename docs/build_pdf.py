@@ -101,6 +101,7 @@ _CAPTURE_FILES = {
     7: "07-wizard-metadonnees", 8: "08-progression",
     9: "09-wizard-participation", 10: "10-prefs-nettoyage",
     11: "11-recap-nettoyage", 12: "12-mode-batch", 13: "13-registre",
+    14: "14-validation", 15: "15-synthesis",
 }
 
 

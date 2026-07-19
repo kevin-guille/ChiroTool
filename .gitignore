@@ -75,3 +75,14 @@ docs/_v.png
 *REVIEW*.md
 *AUDIT*.md
 GROK*.md
+
+# Notes internes de communication / promotion (locales, jamais publiees)
+docs/*promo*.md
+docs/*-notes.md
+docs/post-reseaux.md
+
+# Rushes video (lourds, donnees reelles a l ecran, jamais publies)
+docs/Videos/
+
+# Captures brutes avant anonymisation (donnees reelles, jamais publiees)
+docs/_captures_raw/

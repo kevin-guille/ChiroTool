@@ -8,7 +8,7 @@
 
 ![Icône ChiroTool](captures/icon_256.png)
 
-**Version 0.4** · Tutoriel utilisateur
+**Version 0.5** · Tutoriel utilisateur
 
 </div>
 
@@ -23,12 +23,13 @@
 5. [Comprendre l'interface](#5--comprendre-linterface)
 6. [Traiter une nuit, étape par étape](#6--traiter-une-nuit-étape-par-étape)
 7. [Traiter plusieurs nuits d'un coup (mode Batch)](#7--traiter-plusieurs-nuits-dun-coup-mode-batch)
-8. [Valider les sons (avec ChiroSurf)](#8--valider-les-sons-avec-chirosurf)
-9. [Visualiser l'activité des espèces](#9--visualiser-lactivité-des-espèces)
-10. [Travailler en équipe](#10--travailler-en-équipe)
-11. [Questions fréquentes & dépannage](#11--questions-fréquentes--dépannage)
-12. [Limites connues](#12--limites-connues)
-13. [Crédits & licence](#13--crédits--licence)
+8. [Valider les sons et remonter vos identifications](#8--valider-les-sons-et-remonter-vos-identifications)
+9. [La synthèse d'une nuit et les niveaux d'activité](#9--la-synthèse-dune-nuit-et-les-niveaux-dactivité)
+10. [Visualiser l'activité des espèces](#10--visualiser-lactivité-des-espèces)
+11. [Travailler en équipe](#11--travailler-en-équipe)
+12. [Questions fréquentes & dépannage](#12--questions-fréquentes--dépannage)
+13. [Limites connues](#13--limites-connues)
+14. [Crédits & licence](#14--crédits--licence)
 
 ---
 
@@ -79,11 +80,19 @@ WAV envoyés à Vigie-Chiro, comme d'habitude).
    └──────────────────────────────────────────────────┘
                           │
                           ▼
-   Résultats : tableur d'observations propre,
-   graphes d'activité, suivi de campagne centralisé
+   ┌──────────────────────────────────────────────────┐
+   │  🔍 VALIDER      vos identifications d'expert     │
+   │       └──► ⬆ remontée vers Vigie-Chiro (1 clic)   │
+   └──────────────────────────────────────────────────┘
+                          │
+                          ▼
+   Résultats : tableur d'observations propre, synthèse
+   avec niveaux d'activité, graphes, suivi de campagne
 ```
 
-Trois boutons, dans l'ordre. C'est tout.
+**Trois boutons, dans l'ordre** — puis la validation, qui est la seule étape où
+votre expertise est irremplaçable. Et depuis la v0.5, vos identifications
+repartent vers le portail national en un clic.
 
 ---
 
@@ -192,12 +201,29 @@ campagne. Une pastille de couleur indique l'état de chaque nuit :
 
 **③ Le panneau de détail (à droite)** — 6 onglets :
 
-- **Vue session** : les infos de la nuit sélectionnée + les boutons d'action
+- **Vue session** : les infos de la nuit sélectionnée + la barre d'actions
 - **Registre** : toutes vos nuits, toutes campagnes confondues (suivi global)
 - **Historique** : la chronologie des opérations faites sur une nuit
 - **Carte** : vos points sur fond OpenStreetMap / IGN
 - **Dashboard** : statistiques transverses de vos campagnes
 - **Activité** : les graphes d'activité par tranche horaire
+
+### La barre d'actions
+
+En bas de la **Vue session**, une barre unique regroupe tout ce que vous pouvez
+faire sur la nuit sélectionnée :
+
+> **▶ Préparer** · **☁ Upload** · **🧹 Nettoyer** · **🔍 Valider** ·
+> **✎ Métadonnées** · **📍 Carte** · **📊 Synthèse** · **⋯ Détails**
+
+Les libellés sont volontairement courts : **passez la souris sur un bouton** pour
+lire ce qu'il fait exactement.
+
+Deux repères visuels vous guident :
+
+- **L'étape à faire maintenant** est en **bleu et en gras**.
+- Les étapes **pas encore possibles** sont **grisées** (inutile de chercher à
+  nettoyer une nuit qui n'a pas encore été analysée).
 
 ---
 
@@ -227,8 +253,7 @@ Dans ChiroTool, vérifiez que le dossier de travail est le bon, puis cliquez sur
 
 Cliquez sur votre nuit : son détail s'affiche à droite.
 
-> 📸 **[Capture 06 — Vue session avec les 3 boutons d'action : Préparer, Upload,
-> Nettoyer]**
+> 📸 **[Capture 06 — Vue session : progression du pipeline et barre d'actions]**
 
 ### Étape 2 — Préparer (renommage + expansion temporelle)
 
@@ -267,14 +292,22 @@ Une **barre de progression** vous indique l'avancement en temps réel.
 
 Cliquez sur **« ▶ Upload + Tadarida »**.
 
-Un **assistant de participation** s'ouvre, déjà **pré-rempli** au maximum
-(météo depuis le Summary.txt, matériel depuis votre parc, dates…) :
+Un **assistant de participation** s'ouvre. Il pré-remplit ce qu'il **sait
+réellement** : la météo si votre `Summary.txt` la contient, le matériel depuis
+votre parc, les dates depuis les enregistrements.
 
 > 📸 **[Capture 09 — Assistant « Nouvelle participation Vigie-Chiro »]**
 
-- **Conditions météo** : températures, vent (menu déroulant), couverture nuageuse
-- **Matériel** : détecteur, micro, hauteur (pré-remplis depuis votre parc)
+- **Conditions météo** : températures, vent, couverture nuageuse
+- **Matériel** : détecteur, micro, hauteur
 - Complétez ce qui manque, puis **« Valider »**.
+
+> ⚠️ **Ce que ChiroTool ne fait volontairement pas** : inventer une valeur à votre
+> place. Les champs qu'il ne peut pas déduire affichent **« — à renseigner — »**
+> et l'assistant **refuse de valider** tant qu'ils sont vides. C'est délibéré :
+> ces données partent sur le portail national **à votre nom**, comme si vous les
+> aviez mesurées. Un vent « nul » pré-coché par défaut et jamais relu, c'est une
+> fausse donnée dans la base — donc rien n'est pré-coché au hasard.
 
 ChiroTool enchaîne alors **trois phases automatiques** :
 
@@ -307,8 +340,26 @@ Nettoyage) pour décider quels WAV garder :
 - Les **validations humaines** (si vous avez déjà validé via ChiroSurf) sont
   **prioritaires** sur les seuils.
 
-Un **garde-fou** vous protège : si plus de 80 % des WAV allaient être supprimés
-(seuil mal réglé, mauvais tableur…), ChiroTool bloque et vous alerte.
+#### Rien n'est supprimé sans que vous l'ayez vu
+
+Le nettoyage efface des WAV : c'est irréversible. ChiroTool procède donc
+**toujours en deux temps**.
+
+1. **Simulation** — une fenêtre « Analyse du nettoyage » calcule ce qui *serait*
+   supprimé, **sans rien toucher**.
+2. **Récapitulatif chiffré** — vous voyez exactement :
+
+   > *« 182 / 255 WAV seront supprimés (~712 Mo). Cette action est irréversible.
+   > Continuer ? »*
+
+   Le bouton par défaut est **Non** : une validation distraite ne supprime rien.
+
+3. **Suppression** — seulement après votre confirmation explicite.
+
+> 🛡️ **Double garde-fou** : si plus de **80 %** des WAV allaient disparaître
+> (seuil mal réglé, mauvais tableur…), une **seconde confirmation** distincte est
+> demandée. C'est le cas légitime d'une nuit très bruitée — mais aussi le
+> symptôme classique d'une erreur de réglage.
 
 À la fin, un **récapitulatif visuel** s'affiche : volume avant/après, espace
 disque libéré, et la possibilité de supprimer aussi les WAV bruts d'origine
@@ -344,14 +395,13 @@ côté serveur. Au retour, relancez « Upload » sur les nuits concernées (ou u
 
 ---
 
-## 8 · Valider les sons (avec ChiroSurf)
+## 8 · Valider les sons et remonter vos identifications
 
 L'identification de Tadarida est automatique : pour fiabiliser vos données, vous
 voudrez sûrement **valider manuellement** les contacts importants (espèces
 patrimoniales, identifications douteuses…).
 
-1. Sur une nuit dont le tableur est récupéré, cliquez sur **« 🔍 Valider la
-   nuit… »**.
+1. Sur une nuit dont le tableur est récupéré, cliquez sur **« 🔍 Valider »**.
 2. Un tableau filtrable des contacts s'affiche.
 3. Sélectionnez un contact, puis :
    - Utilisez les **raccourcis clavier** `O` / `P` / `S` pour indiquer votre
@@ -360,9 +410,74 @@ patrimoniales, identifications douteuses…).
      **ChiroSurf** (à condition d'avoir indiqué le chemin de ChiroSurf dans
      Préférences → Outils externes).
 4. Vos validations sont sauvegardées dans un nouveau tableur suffixé de vos
-   initiales (ex : `…_KG.xlsx`). Un bandeau **« ● modifications non
+   initiales (ex : `…_AB.xlsx`). Un bandeau **« ● modifications non
    enregistrées »** (titre + bouton *Enregistrer* orangé) vous rappelle de
    sauvegarder ; il disparaît après enregistrement.
+
+> 📸 **[Capture 14 — Vue de validation : la saisie guidée (✓ connu), le bouton
+> « Monter au genre » pour les sons incertains, et « Envoyer » qui remonte vos
+> identifications vers Vigie-Chiro.]**
+
+### Saisir une espèce : le champ vous guide
+
+Quand vous tapez un taxon, ChiroTool **propose les espèces au fur et à mesure**
+(par code ou par nom français : tapez `orei`, vous obtenez les Oreillards).
+
+Un indicateur vous dit si le code est **accepté par le serveur** Vigie-Chiro :
+
+| Indicateur | Signification |
+|---|---|
+| ✓ connu | Le code existe côté Vigie-Chiro, il pourra être envoyé |
+| ⚠ inconnu | Le code n'est pas reconnu par le portail — il **ne partira pas** |
+
+> 💡 C'est utile : le portail n'accepte qu'une **partie** des codes produits par
+> Tadarida. Vous le voyez maintenant *au moment de la saisie*, plus au moment de
+> l'envoi.
+
+### Un son incertain entre deux espèces ? Montez au genre
+
+Cas classique : Oreillard roux ou Oreillard gris, impossible de trancher.
+Plutôt que de forcer une espèce, sélectionnez la ligne et cliquez sur
+**« ↑ Monter au genre (incertain) »** : ChiroTool bascule sur *Oreillard sp.*
+Idem pour les Murins (*Myotis sp.*) et les Pipistrelles (*Pipistrellus sp.*).
+
+Le bouton ne propose que les genres réellement reconnus par le portail : pour une
+espèce sans ambiguïté possible (la Barbastelle, seule de son genre en France), il
+vous le dira.
+
+### ⬆ Remonter vos identifications vers Vigie-Chiro
+
+**C'est la grande nouveauté de la v0.5.** Vos validations ne restent plus dans
+votre coin : elles repartent sur le portail national, sans aucune re-saisie web.
+
+- **Sélectionnez des lignes** → le bouton devient *« ⬆ Envoyer la sélection (N) »*
+- **Ne sélectionnez rien** → il devient *« ⬆ Envoyer tout (M) »*
+
+Une **pastille** dans la colonne de gauche vous indique l'état de chaque contact :
+
+| Pastille | État |
+|---|---|
+| ○ gris | Validé, pas encore envoyé |
+| ● vert | Envoyé à Vigie-Chiro |
+| ● orange | Modifié depuis l'envoi — à renvoyer |
+| ● rouge | Échec de l'envoi |
+
+*(Passez la souris sur une pastille pour lire sa signification.)*
+
+En bas, un compteur suit l'avancement : **« ⬆ 12 / 15 identifications envoyées »**.
+Le Registre affiche aussi, par nuit, ce qui reste à remonter.
+
+> 💡 **Une identification n'est envoyable qu'avec un taxon ET une confiance** —
+> c'est ce qu'exige le portail.
+
+> 🌍 **Pourquoi ça compte** : en pratique, la quasi-totalité des observateurs
+> garde ses identifications pour soi. Or ce sont précisément ces validations
+> humaines qui améliorent l'apprentissage de Tadarida et le référentiel national.
+> Les remonter ne vous coûte qu'un clic et profite à toute la communauté.
+
+> ⚠️ **Effacer une identification déjà envoyée** ne la retire pas du serveur (une
+> donnée ne se supprime pas côté observateur). ChiroTool vous le signale au lieu
+> de faire disparaître la pastille en silence.
 
 > ⚡ **Validation en lot** : sélectionnez **plusieurs lignes** (Ctrl+clic, ou
 > Maj+clic pour une plage), puis appliquez une espèce d'un coup (champ *Taxon* +
@@ -382,7 +497,65 @@ patrimoniales, identifications douteuses…).
 
 ---
 
-## 9 · Visualiser l'activité des espèces
+## 9 · La synthèse d'une nuit et les niveaux d'activité
+
+Sur une nuit dont le tableur est récupéré, le bouton **« 📊 Synthèse »** ouvre le
+récapitulatif par espèce : combien de contacts, combien de fichiers, et surtout
+**quel niveau d'activité**.
+
+> 📸 **[Capture 15 — Synthèse d'une nuit : le niveau d'activité par espèce
+> (colonne de droite) et le sélecteur « Milieu » qui affine le référentiel.]**
+
+### Ce que vous lisez
+
+En haut : **« X contacts détectés · Y identifiés (validés) · Z espèces de chiros »**.
+Une case **« Identifications validées seulement »** permet de ne compter que
+**vos** validations, en ignorant les propositions automatiques de Tadarida.
+
+Pour chaque espèce, une colonne **Activité** indique :
+
+| Classe | Lecture |
+|---|---|
+| Faible | sous le quart des nuits de référence |
+| Moyenne | dans la norme |
+| Forte | parmi le quart haut |
+| Très forte | parmi les 2 % de nuits les plus actives |
+
+### D'où viennent ces seuils
+
+Du **référentiel national Vigie-Chiro**, construit sur des milliers de nuits du
+même protocole. ChiroTool situe votre nombre de contacts dans la distribution de
+référence **de cette espèce**, et en déduit la classe.
+
+Le contexte est **déduit automatiquement** : la **saison** depuis la date de la
+nuit, la **région** depuis votre n° de site. Vous pouvez affiner avec le menu
+**« Milieu »** (forêt, agricole, urbain…) qui correspond au **contexte général
+autour du point**. Si une déclinaison est trop peu échantillonnée pour être
+fiable, ChiroTool **revient tout seul** au référentiel national et l'indique.
+
+> 📊 Le référentiel utilisé est affiché en bas de la fenêtre (ex. *« été ·
+> Occitanie »*), et l'export CSV le reprend — pour que votre rapport soit traçable.
+
+### ⚠️ Trois choses à ne jamais oublier
+
+1. **On ne compare pas les contacts entre espèces.** Un Grand rhinolophe
+   s'entend à ~5 m, une Noctule à plus de 100 m. 20 contacts de Barbastelle et
+   600 de Pipistrelle commune peuvent tous deux être « Forte » — c'est normal.
+   **Raisonnez espèce par espèce.**
+2. **Une classe d'activité n'est pas un niveau d'enjeu.** Une activité « faible »
+   ne veut pas dire un enjeu faible : une espèce rare et discrète reste un enjeu
+   majeur. Activité et patrimonialité sont deux lectures distinctes.
+3. **C'est une aide à l'interprétation**, valable si le protocole est respecté
+   (matériel conforme, micro < 6 m, métropole, bonne saison) — pas un verdict.
+   L'expertise du chiroptérologue reste souveraine.
+
+> **Référentiel** : Bas Y., Kerbiriou C., Roemer C. & Julien J.-F. (2020),
+> *Bat reference scale of activity levels* (Team-Chiro / MNHN). Unité : contacts
+> par nuit. Merci de citer cette source si vous reprenez ces niveaux dans un rapport.
+
+---
+
+## 10 · Visualiser l'activité des espèces
 
 L'onglet **« Activité »** transforme vos tableurs d'observations en **graphes
 d'activité horaire** — parfait pour un rapport ou une analyse.
@@ -391,12 +564,21 @@ d'activité horaire** — parfait pour un rapport ou une analyse.
 
 *Exemple : activité de trois espèces sur une nuit, par tranche de 30 minutes.*
 
-À gauche, des **filtres** permettent de cibler précisément :
+À gauche, un panneau de **filtres** permet de cibler précisément :
 
 - **Sites** (carrés STOC) et **Points** (Z1, Z2…)
 - **Passages** (Pass1, Pass2…)
 - **Nuits** (une seule, ou plusieurs à cumuler)
 - **Taxons** (espèces et groupes)
+
+Chaque section se **replie** et affiche son état (`8 / 42`), pour garder le
+panneau lisible même sur une grosse campagne. Les listes longues (nuits, taxons)
+ont une **barre de recherche** : tapez `pip`, vous trouvez. Un bouton
+**« Réinitialiser »** remet tout à zéro, et un résumé en haut rappelle les
+filtres actifs.
+
+Les filtres sont **en cascade** : choisir un site restreint les points
+disponibles, puis les passages, puis les nuits.
 
 Deux modes :
 
@@ -412,7 +594,7 @@ Cliquez sur **« 💾 Exporter PNG »** pour obtenir une image propre du graphe
 
 ---
 
-## 10 · Travailler en équipe
+## 11 · Travailler en équipe
 
 ChiroTool est pensé pour les structures où **plusieurs personnes** font du
 terrain.
@@ -469,7 +651,7 @@ de la grille nationale STOC 2×2 km) correspondant :
 
 ---
 
-## 11 · Questions fréquentes & dépannage
+## 12 · Questions fréquentes & dépannage
 
 **« L'application affiche un avertissement Windows au lancement. »**
 C'est normal (logiciel libre non signé). Cliquez sur « Informations
@@ -517,7 +699,7 @@ diagnostiquer.
 
 ---
 
-## 12 · Limites connues
+## 13 · Limites connues
 
 ChiroTool couvre la grande majorité des cas, mais pas (encore) tout :
 
@@ -535,7 +717,7 @@ ChiroTool couvre la grande majorité des cas, mais pas (encore) tout :
 
 ---
 
-## 13 · Crédits & licence
+## 14 · Crédits & licence
 
 **ChiroTool** est un projet **libre et open-source**.
 

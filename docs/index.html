@@ -5,37 +5,27 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
 <title>ChiroTool — Automatiser le traitement Vigie-Chiro Point Fixe (chiroptères)</title>
-<meta name="description" content="ChiroTool est un logiciel libre et gratuit qui automatise de A à Z le traitement des enregistrements ultrason de chauves-souris pour le protocole Vigie-Chiro Point Fixe (MNHN) : renommage, expansion temporelle, upload, analyse Tadarida et nettoyage, depuis une seule fenêtre.">
-<meta name="keywords" content="ChiroTool, Vigie-Chiro, Point Fixe, chiroptères, chauves-souris, Tadarida, Kaleidoscope, expansion temporelle, bioacoustique, ultrasons, MNHN, logiciel libre, open source, Kevin Guille">
+<meta name="description" content="ChiroTool v0.5 automatise le traitement des nuits chiroptères Vigie-Chiro Point Fixe (MNHN) : renommage, TE×10, upload, Tadarida, nettoyage sécurisé, validation et registre. Logiciel libre pour bureaux d'études et naturalistes.">
+<meta name="keywords" content="ChiroTool, Vigie-Chiro, Point Fixe, chiroptères, chauves-souris, Tadarida, Kaleidoscope, expansion temporelle, bioacoustique, ultrasons, MNHN, logiciel libre, open source, bureau d'études, Kevin Guille">
 <meta name="author" content="Kevin Guille">
 <link rel="canonical" href="https://kevin-guille.github.io/ChiroTool/">
-
-<!-- ===================================================================== -->
-<!-- VÉRIFICATION MOTEURS DE RECHERCHE                                      -->
-<!-- Google Search Console : décommente la ligne ci-dessous et colle ta     -->
-<!-- valeur (méthode « balise HTML »).                                      -->
-<!-- <meta name="google-site-verification" content="COLLE_TA_VALEUR_ICI">   -->
-<!-- Bing Webmaster Tools : idem.                                           -->
-<!-- <meta name="msvalidate.01" content="COLLE_TA_VALEUR_ICI">              -->
-<!-- ===================================================================== -->
 
 <!-- Open Graph / réseaux sociaux -->
 <meta property="og:type" content="website">
 <meta property="og:locale" content="fr_FR">
-<meta property="og:title" content="ChiroTool — le traitement Vigie-Chiro Point Fixe automatisé">
-<meta property="og:description" content="Logiciel libre et gratuit : renommage, expansion temporelle, upload, analyse Tadarida et nettoyage des nuits chiroptères, en quelques clics.">
+<meta property="og:title" content="ChiroTool v0.5 — le traitement Vigie-Chiro Point Fixe automatisé">
+<meta property="og:description" content="Logiciel libre pour naturalistes et BE : renommage, TE×10, upload, Tadarida, nettoyage avec garde-fous, validation et registre de campagne — en une seule application.">
 <meta property="og:url" content="https://kevin-guille.github.io/ChiroTool/">
 <meta property="og:image" content="https://kevin-guille.github.io/ChiroTool/captures/05-fenetre-principale.png">
 <meta property="og:site_name" content="ChiroTool">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="ChiroTool — le traitement Vigie-Chiro Point Fixe automatisé">
-<meta name="twitter:description" content="Logiciel libre et gratuit pour les chiroptérologues : toute la chaîne Vigie-Chiro Point Fixe, en quelques clics.">
+<meta name="twitter:title" content="ChiroTool v0.5 — traitement Vigie-Chiro Point Fixe automatisé">
+<meta name="twitter:description" content="Toute la chaîne Point Fixe en une app locale : pour les chiroptérologues, associations et bureaux d'études.">
 <meta name="twitter:image" content="https://kevin-guille.github.io/ChiroTool/captures/05-fenetre-principale.png">
 
 <link rel="icon" type="image/png" href="captures/icon_256.png">
 <link rel="apple-touch-icon" href="captures/icon_256.png">
 
-<!-- Données structurées (SEO / GEO : moteurs classiques + IA) -->
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -46,15 +36,19 @@
       "operatingSystem": "Windows",
       "applicationCategory": "ScientificApplication",
       "applicationSubCategory": "Bioacoustique / traitement Vigie-Chiro",
-      "softwareVersion": "0.4.1",
-      "description": "Logiciel libre et gratuit qui automatise de A à Z le traitement des enregistrements ultrason de chauves-souris pour le protocole Vigie-Chiro Point Fixe (MNHN) : renommage au format officiel, expansion temporelle (TE×10), création de participation et upload via l'API Vigie-Chiro, suivi de l'analyse Tadarida, nettoyage par seuils de confiance, graphes d'activité et registre de campagne.",
+      "softwareVersion": "0.5.0",
+      "description": "Logiciel libre qui automatise le traitement des enregistrements ultrason de chauves-souris pour le protocole Vigie-Chiro Point Fixe (MNHN) : renommage, expansion temporelle TE×10, participation et upload API, suivi Tadarida, nettoyage avec garde-fous, envoi des identifications, graphes d'activité, synthèse et registre de campagne.",
       "url": "https://kevin-guille.github.io/ChiroTool/",
-      "downloadUrl": "https://github.com/kevin-guille/ChiroTool/releases/latest",
+      "downloadUrl": "https://github.com/kevin-guille/ChiroTool/releases",
       "softwareHelp": "https://kevin-guille.github.io/ChiroTool/ChiroTool-Tutoriel.pdf",
       "license": "https://opensource.org/licenses/MIT",
       "inLanguage": "fr",
       "isAccessibleForFree": true,
-      "screenshot": "https://kevin-guille.github.io/ChiroTool/captures/05-fenetre-principale.png",
+      "screenshot": [
+        "https://kevin-guille.github.io/ChiroTool/captures/05-fenetre-principale.png",
+        "https://kevin-guille.github.io/ChiroTool/captures/11-recap-nettoyage.png",
+        "https://kevin-guille.github.io/ChiroTool/captures/13-registre.png"
+      ],
       "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" },
       "author": {
         "@type": "Person",
@@ -75,121 +69,302 @@
 
 <style>
   :root{
-    --night:#0e1b33; --night-2:#16284a; --blue:#3b82f6; --blue-d:#2563eb;
-    --ink:#1a2233; --muted:#5b6679; --line:#e4e8f0; --bg:#ffffff; --bg-soft:#f6f8fc;
-    --ok:#16a34a; --max:1080px;
+    --night:#0b1426;
+    --night-2:#12203a;
+    --night-3:#1a2f55;
+    --blue:#3b82f6;
+    --blue-d:#2563eb;
+    --blue-soft:rgba(37,99,235,.12);
+    --ink:#1a2233;
+    --muted:#5b6679;
+    --line:#e4e8f0;
+    --bg:#ffffff;
+    --bg-soft:#f5f7fb;
+    --ok:#16a34a;
+    --ok-soft:#ecfdf3;
+    --warn-soft:#fff7ed;
+    --max:1120px;
+    --radius:14px;
+    --shadow:0 18px 50px rgba(11,20,38,.12);
+    --shadow-lg:0 28px 70px rgba(0,0,0,.42);
   }
   *{box-sizing:border-box}
   html{scroll-behavior:smooth}
-  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-       color:var(--ink);background:var(--bg);line-height:1.6;-webkit-font-smoothing:antialiased}
+  body{
+    margin:0;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    color:var(--ink);
+    background:var(--bg);
+    line-height:1.65;
+    -webkit-font-smoothing:antialiased;
+  }
   a{color:var(--blue-d);text-decoration:none}
   a:hover{text-decoration:underline}
+  img{max-width:100%;height:auto}
   .wrap{max-width:var(--max);margin:0 auto;padding:0 22px}
-  h1,h2,h3{line-height:1.2;color:var(--ink);margin:0 0 .4em}
-  h2{font-size:1.75rem;margin-top:0}
+  h1,h2,h3{line-height:1.2;color:var(--ink);margin:0 0 .45em;letter-spacing:-.02em}
+  h2{font-size:clamp(1.55rem,2.4vw,1.95rem)}
   p{margin:0 0 1em}
 
   /* Nav */
-  nav{position:sticky;top:0;z-index:20;background:rgba(14,27,51,.92);backdrop-filter:blur(8px);
-      border-bottom:1px solid rgba(255,255,255,.08)}
-  nav .wrap{display:flex;align-items:center;gap:14px;height:60px}
-  nav .brand{display:flex;align-items:center;gap:10px;color:#fff;font-weight:700;font-size:1.1rem}
-  nav .brand img{width:30px;height:30px;border-radius:7px}
+  nav{
+    position:sticky;top:0;z-index:30;
+    background:rgba(11,20,38,.88);
+    backdrop-filter:blur(12px);
+    border-bottom:1px solid rgba(255,255,255,.08);
+  }
+  nav .wrap{display:flex;align-items:center;gap:12px;height:64px}
+  nav .brand{
+    display:flex;align-items:center;gap:10px;
+    color:#fff;font-weight:700;font-size:1.08rem;text-decoration:none;
+  }
+  nav .brand:hover{text-decoration:none;opacity:.95}
+  nav .brand img{width:32px;height:32px;border-radius:8px}
+  nav .brand .ver{
+    font-size:.72rem;font-weight:700;letter-spacing:.04em;
+    color:#9ec0ff;background:rgba(59,130,246,.2);
+    border:1px solid rgba(147,197,253,.25);
+    padding:2px 8px;border-radius:999px;margin-left:2px;
+  }
   nav .spacer{flex:1}
-  nav a.link{color:#cdd7e8;font-size:.95rem}
+  nav .links{display:flex;align-items:center;gap:16px}
+  nav a.link{color:#cdd7e8;font-size:.92rem;font-weight:500}
   nav a.link:hover{color:#fff;text-decoration:none}
-  .btn{display:inline-block;background:var(--blue-d);color:#fff;padding:10px 18px;border-radius:9px;
-       font-weight:600;border:1px solid transparent;transition:transform .08s,background .15s}
+  .btn{
+    display:inline-flex;align-items:center;justify-content:center;gap:8px;
+    background:var(--blue-d);color:#fff;padding:10px 18px;border-radius:10px;
+    font-weight:600;border:1px solid transparent;
+    transition:transform .1s ease,background .15s ease,box-shadow .15s ease;
+    box-shadow:0 6px 16px rgba(37,99,235,.28);
+  }
   .btn:hover{background:#1d4ed8;text-decoration:none;transform:translateY(-1px)}
-  .btn.ghost{background:transparent;border-color:rgba(255,255,255,.25);color:#fff}
+  .btn.ghost{
+    background:transparent;border-color:rgba(255,255,255,.28);color:#fff;
+    box-shadow:none;
+  }
   .btn.ghost:hover{background:rgba(255,255,255,.08)}
-  .btn.lg{padding:14px 26px;font-size:1.05rem}
+  .btn.outline{
+    background:#fff;color:var(--blue-d);border-color:var(--line);
+    box-shadow:none;
+  }
+  .btn.outline:hover{border-color:#bfdbfe;background:#f8fbff}
+  .btn.lg{padding:14px 24px;font-size:1.02rem}
+  .btn.sm{padding:8px 14px;font-size:.9rem;box-shadow:none}
 
   /* Hero */
-  header.hero{background:linear-gradient(160deg,var(--night) 0%,var(--night-2) 60%,#1d3461 100%);
-              color:#fff;padding:64px 0 54px;position:relative;overflow:hidden}
-  header.hero:before{content:"";position:absolute;inset:0;
-     background:radial-gradient(700px 300px at 80% -10%,rgba(59,130,246,.35),transparent 60%);}
-  .hero-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:40px;align-items:center;position:relative}
-  .hero h1{color:#fff;font-size:2.55rem;letter-spacing:-.5px}
-  .hero .tag{font-size:1.3rem;color:#d6e2f7;margin-bottom:.4em;font-weight:600}
-  .hero p.lead{color:#b9c6dd;font-size:1.08rem;max-width:34em}
-  .hero .cta{display:flex;gap:14px;flex-wrap:wrap;margin-top:26px}
-  .hero .free{margin-top:16px;color:#9fb2d0;font-size:.92rem}
-  .hero-shot{border-radius:12px;box-shadow:0 24px 60px rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.12);width:100%;display:block}
-  .bat{font-size:2.3rem;line-height:1}
+  header.hero{
+    background:linear-gradient(155deg,var(--night) 0%,var(--night-2) 48%,var(--night-3) 100%);
+    color:#fff;padding:72px 0 64px;position:relative;overflow:hidden;
+  }
+  header.hero:before{
+    content:"";position:absolute;inset:0;
+    background:
+      radial-gradient(720px 320px at 85% -5%,rgba(59,130,246,.38),transparent 60%),
+      radial-gradient(480px 260px at 10% 100%,rgba(22,163,74,.12),transparent 55%);
+  }
+  .hero-grid{
+    display:grid;grid-template-columns:1.05fr .95fr;gap:44px;
+    align-items:center;position:relative;
+  }
+  .pill{
+    display:inline-flex;align-items:center;gap:8px;
+    background:rgba(255,255,255,.08);
+    border:1px solid rgba(255,255,255,.14);
+    color:#d7e4fb;font-size:.86rem;font-weight:600;
+    padding:6px 12px;border-radius:999px;margin-bottom:18px;
+  }
+  .pill .dot{
+    width:8px;height:8px;border-radius:50%;background:#4ade80;
+    box-shadow:0 0 0 4px rgba(74,222,128,.18);
+  }
+  .hero h1{color:#fff;font-size:clamp(2rem,4vw,2.7rem);margin-bottom:.35em}
+  .hero .tag{font-size:1.15rem;color:#d6e2f7;margin-bottom:.7em;font-weight:600}
+  .hero p.lead{color:#b7c6de;font-size:1.06rem;max-width:36em}
+  .hero .cta{display:flex;gap:12px;flex-wrap:wrap;margin-top:28px}
+  .hero .meta{
+    display:flex;flex-wrap:wrap;gap:10px 18px;margin-top:20px;
+    color:#93a7c7;font-size:.9rem;
+  }
+  .hero .meta span{display:inline-flex;align-items:center;gap:6px}
+  .hero-shot-wrap{
+    position:relative;
+    border-radius:16px;
+    box-shadow:var(--shadow-lg);
+    border:1px solid rgba(255,255,255,.12);
+    overflow:hidden;
+    background:#0f1c33;
+  }
+  .hero-shot{width:100%;display:block;vertical-align:middle}
+  .hero-badge{
+    position:absolute;left:14px;bottom:14px;
+    background:rgba(11,20,38,.82);backdrop-filter:blur(8px);
+    border:1px solid rgba(255,255,255,.14);
+    color:#e8eef9;font-size:.82rem;font-weight:600;
+    padding:8px 12px;border-radius:10px;
+  }
 
   /* Sections */
-  section{padding:60px 0;border-bottom:1px solid var(--line)}
+  section{padding:68px 0;border-bottom:1px solid var(--line)}
   section.soft{background:var(--bg-soft)}
-  .lead-c{max-width:42em}
-  .eyebrow{text-transform:uppercase;letter-spacing:.12em;font-size:.8rem;color:var(--blue-d);font-weight:700;margin-bottom:10px}
+  .lead-c{max-width:44em;color:#3d4a60}
+  .eyebrow{
+    text-transform:uppercase;letter-spacing:.12em;font-size:.78rem;
+    color:var(--blue-d);font-weight:800;margin-bottom:10px;
+  }
+  .section-head{max-width:44em;margin-bottom:28px}
 
-  /* Avant / après */
-  .cmp{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:24px}
-  .card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:22px}
-  .card.before{background:#fff7f6;border-color:#f3d9d4}
-  .card.after{background:#f3faf5;border-color:#cfe9d8}
-  .card h3{font-size:1.05rem;margin-bottom:.6em}
-  .card ul{margin:0;padding-left:1.1em}
-  .card li{margin-bottom:.35em;color:#374151}
-  .card.before li::marker{content:"✕  "}
-  .card.after li::marker{content:"✓  "}
-  .card.after li::marker{color:var(--ok)}
+  /* Audience chips */
+  .chips{display:flex;flex-wrap:wrap;gap:10px;margin:18px 0 0}
+  .chip{
+    background:var(--blue-soft);color:#1e40af;border:1px solid #dbeafe;
+    font-size:.88rem;font-weight:600;padding:8px 14px;border-radius:999px;
+  }
+
+  /* Compare */
+  .cmp{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:8px}
+  .card{
+    background:#fff;border:1px solid var(--line);border-radius:var(--radius);
+    padding:24px;box-shadow:0 8px 24px rgba(15,23,42,.03);
+  }
+  .card.before{background:#fff8f7;border-color:#f3d9d4}
+  .card.after{background:var(--ok-soft);border-color:#bbf7d0}
+  .card h3{font-size:1.05rem;margin-bottom:.75em}
+  .card ul{margin:0;padding-left:1.15em}
+  .card li{margin-bottom:.4em;color:#374151}
+  .card.before li::marker{content:"✕  ";color:#dc2626}
+  .card.after li::marker{content:"✓  ";color:var(--ok)}
 
   /* Stats */
-  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:8px}
-  .stat{background:#fff;border:1px solid var(--line);border-radius:12px;padding:22px;text-align:center}
-  .stat .n{font-size:1.9rem;font-weight:800;color:var(--blue-d);display:block;line-height:1.1}
-  .stat .l{font-size:.92rem;color:var(--muted)}
-  .note{font-size:.85rem;color:var(--muted);margin-top:14px}
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+  .stat{
+    background:#fff;border:1px solid var(--line);border-radius:var(--radius);
+    padding:22px 16px;text-align:center;
+    box-shadow:0 8px 24px rgba(15,23,42,.03);
+  }
+  .stat .n{font-size:1.75rem;font-weight:800;color:var(--blue-d);display:block;line-height:1.15}
+  .stat .l{font-size:.9rem;color:var(--muted);margin-top:6px;display:block}
+  .note{font-size:.86rem;color:var(--muted);margin-top:16px}
+
+  /* What's new v0.5 */
+  .news-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+  .news{
+    display:grid;grid-template-columns:auto 1fr;gap:14px;
+    background:#fff;border:1px solid var(--line);border-radius:var(--radius);
+    padding:18px 18px 16px;
+    box-shadow:0 8px 24px rgba(15,23,42,.03);
+  }
+  .news .ic{
+    width:42px;height:42px;border-radius:12px;
+    display:flex;align-items:center;justify-content:center;
+    background:var(--blue-soft);font-size:1.25rem;
+  }
+  .news h3{font-size:1rem;margin:0 0 .25em}
+  .news p{margin:0;font-size:.92rem;color:#475065}
+  .banner-v{
+    display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px;
+    margin-bottom:22px;padding:16px 18px;
+    border-radius:var(--radius);
+    background:linear-gradient(120deg,#eff6ff,#f0fdf4);
+    border:1px solid #dbeafe;
+  }
+  .banner-v strong{color:#1e3a8a}
+  .banner-v span{color:#3d4a60;font-size:.95rem}
 
   /* Features */
-  .feat{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:10px}
-  .feat .f{background:#fff;border:1px solid var(--line);border-radius:12px;padding:22px}
-  .feat .f .ic{font-size:1.6rem}
-  .feat .f h3{font-size:1.05rem;margin:.5em 0 .3em}
-  .feat .f p{font-size:.95rem;color:#475065;margin:0}
+  .feat{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  .feat .f{
+    background:#fff;border:1px solid var(--line);border-radius:var(--radius);
+    padding:22px;transition:transform .12s ease,box-shadow .12s ease;
+  }
+  .feat .f:hover{transform:translateY(-2px);box-shadow:var(--shadow)}
+  .feat .f .ic{font-size:1.5rem}
+  .feat .f h3{font-size:1.02rem;margin:.55em 0 .3em}
+  .feat .f p{font-size:.93rem;color:#475065;margin:0}
 
   /* Steps */
-  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:10px}
-  .step{position:relative;background:#fff;border:1px solid var(--line);border-radius:12px;padding:24px}
-  .step .num{width:38px;height:38px;border-radius:50%;background:var(--blue-d);color:#fff;font-weight:800;
-             display:flex;align-items:center;justify-content:center;margin-bottom:14px}
-  .step h3{font-size:1.1rem}
-  .step p{font-size:.95rem;color:#475065;margin:0}
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  .step{
+    position:relative;background:#fff;border:1px solid var(--line);
+    border-radius:var(--radius);padding:24px;
+  }
+  .step .num{
+    width:40px;height:40px;border-radius:50%;background:var(--blue-d);color:#fff;
+    font-weight:800;display:flex;align-items:center;justify-content:center;margin-bottom:14px;
+  }
+  .step h3{font-size:1.08rem}
+  .step p{font-size:.94rem;color:#475065;margin:0}
+
+  /* Audience cards */
+  .aud{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  .aud .a{
+    background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:24px;
+  }
+  .aud .a h3{font-size:1.05rem;margin-bottom:.4em}
+  .aud .a p{font-size:.94rem;color:#475065;margin:0}
 
   /* Gallery */
-  .gal{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:10px}
-  .gal figure{margin:0}
-  .gal img{width:100%;border-radius:10px;border:1px solid var(--line);display:block;background:#fff}
-  .gal figcaption{font-size:.85rem;color:var(--muted);margin-top:7px;text-align:center}
+  .gal{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  .gal figure{
+    margin:0;background:#fff;border:1px solid var(--line);border-radius:var(--radius);
+    overflow:hidden;box-shadow:0 8px 24px rgba(15,23,42,.03);
+  }
+  .gal img{width:100%;display:block;background:#f1f5f9;aspect-ratio:16/10;object-fit:cover;object-position:top}
+  .gal figcaption{font-size:.85rem;color:var(--muted);padding:10px 12px 12px;text-align:center}
+
+  /* Recorders */
+  .table-wrap{overflow:auto;border:1px solid var(--line);border-radius:var(--radius);background:#fff}
+  table{width:100%;border-collapse:collapse;font-size:.95rem}
+  th,td{padding:14px 16px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:#f8fafc;font-size:.82rem;text-transform:uppercase;letter-spacing:.06em;color:#475569}
+  tr:last-child td{border-bottom:0}
+
+  /* Disclaimer */
+  .disclaimer{
+    margin-top:22px;padding:14px 16px;border-radius:12px;
+    background:var(--warn-soft);border:1px solid #fed7aa;color:#9a3412;font-size:.92rem;
+  }
 
   /* Download */
-  .dl{background:linear-gradient(160deg,var(--night),#1d3461);color:#fff;text-align:center}
+  .dl{
+    background:linear-gradient(160deg,var(--night),var(--night-3));
+    color:#fff;text-align:center;border-bottom:0;
+  }
   .dl h2{color:#fff}
   .dl p{color:#c4d1e8}
-  .dl .cta{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin:24px 0 8px}
-  .dl .small{font-size:.86rem;color:#9fb2d0;max-width:40em;margin:14px auto 0}
+  .dl .cta{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin:26px 0 10px}
+  .dl .small{font-size:.88rem;color:#9fb2d0;max-width:42em;margin:16px auto 0}
+  .dl .small a{color:#dbeafe}
+  .dl .checks{
+    display:flex;flex-wrap:wrap;justify-content:center;gap:10px 18px;
+    margin-top:18px;color:#b7c6de;font-size:.9rem;
+  }
 
   /* Footer */
-  footer{background:#0b1426;color:#aebcd4;padding:42px 0;font-size:.93rem}
-  footer .wrap{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:28px}
-  footer h4{color:#fff;font-size:.95rem;margin:0 0 .7em}
+  footer{background:#070e1a;color:#aebcd4;padding:48px 0 28px;font-size:.93rem}
+  footer .wrap{display:grid;grid-template-columns:1.5fr 1fr 1fr;gap:28px}
+  footer h4{color:#fff;font-size:.95rem;margin:0 0 .75em}
   footer a{color:#cdd7e8}
-  footer .brand{display:flex;align-items:center;gap:10px;color:#fff;font-weight:700;margin-bottom:8px}
-  footer .brand img{width:26px;height:26px;border-radius:6px}
-  footer .legal{grid-column:1/-1;border-top:1px solid rgba(255,255,255,.1);padding-top:18px;margin-top:6px;
-                color:#7e8db0;font-size:.85rem}
+  footer p{margin:0 0 .5em}
+  footer .brand{
+    display:flex;align-items:center;gap:10px;color:#fff;font-weight:700;margin-bottom:10px;
+  }
+  footer .brand img{width:28px;height:28px;border-radius:7px}
+  footer .legal{
+    grid-column:1/-1;border-top:1px solid rgba(255,255,255,.1);
+    padding-top:18px;margin-top:10px;color:#7e8db0;font-size:.85rem;
+  }
 
-  @media (max-width:860px){
-    .hero-grid{grid-template-columns:1fr;gap:28px}
-    .hero h1{font-size:2.05rem}
-    .cmp,.stats,.feat,.steps,.gal{grid-template-columns:1fr}
+  @media (max-width:920px){
+    .hero-grid,.cmp,.feat,.steps,.gal,.aud,.news-grid{grid-template-columns:1fr}
     .stats{grid-template-columns:1fr 1fr}
+    .feat .f:nth-child(n){/* keep stack */}
     footer .wrap{grid-template-columns:1fr}
-    nav a.link.hide-sm{display:none}
+    nav .links .hide-sm{display:none}
+    .hero{padding:52px 0 48px}
+  }
+  @media (max-width:560px){
+    .stats{grid-template-columns:1fr}
+    nav .btn.sm{padding:8px 12px}
   }
 </style>
 </head>
@@ -197,59 +372,86 @@
 
 <nav>
   <div class="wrap">
-    <span class="brand"><img src="captures/icon_256.png" alt="Logo ChiroTool">ChiroTool</span>
+    <a class="brand" href="#">
+      <img src="captures/icon_256.png" alt="Logo ChiroTool">
+      ChiroTool
+      <span class="ver">v0.5</span>
+    </a>
     <span class="spacer"></span>
-    <a class="link hide-sm" href="#pourquoi">Pourquoi</a>
-    <a class="link hide-sm" href="#fonctions">Fonctions</a>
-    <a class="link hide-sm" href="#apercu">Aperçu</a>
-    <a class="link" href="https://github.com/kevin-guille/ChiroTool">GitHub</a>
-    <a class="btn" href="#telecharger">Télécharger</a>
+    <div class="links">
+      <a class="link hide-sm" href="#pourquoi">Pourquoi</a>
+      <a class="link hide-sm" href="#nouveautes">v0.5</a>
+      <a class="link hide-sm" href="#fonctions">Fonctions</a>
+      <a class="link hide-sm" href="#apercu">Aperçu</a>
+      <a class="link hide-sm" href="#public">Pour qui</a>
+      <a class="link" href="https://github.com/kevin-guille/ChiroTool">GitHub</a>
+      <a class="btn sm" href="#telecharger">Télécharger</a>
+    </div>
   </div>
 </nav>
 
 <header class="hero">
   <div class="wrap hero-grid">
     <div>
-      <div class="bat">🦇</div>
+      <div class="pill"><span class="dot"></span> v0.5 — prête pour la campagne</div>
       <h1>Le traitement de vos nuits chiroptères, automatisé de A à Z.</h1>
       <p class="tag">Logiciel libre pour le protocole Vigie-Chiro Point Fixe (MNHN).</p>
-      <p class="lead">Renommage, expansion temporelle, upload, analyse Tadarida et nettoyage :
-        ChiroTool fait toute la chaîne à votre place, depuis une seule fenêtre. Vous gardez la
-        main sur ce qui compte — la validation scientifique des espèces.</p>
+      <p class="lead">
+        Renommage, expansion temporelle, upload, analyse Tadarida, nettoyage sécurisé,
+        validation et registre&nbsp;: ChiroTool regroupe toute la chaîne dans
+        <strong>une application locale et portable</strong>. Vous gardez la main sur
+        ce qui compte — la validation scientifique des espèces.
+      </p>
       <div class="cta">
         <a class="btn lg" href="#telecharger">⬇ Télécharger ChiroTool</a>
-        <a class="btn lg ghost" href="https://github.com/kevin-guille/ChiroTool">Voir le code (GitHub)</a>
+        <a class="btn lg ghost" href="ChiroTool-Tutoriel.pdf">📖 Tutoriel PDF</a>
       </div>
-      <p class="free">Gratuit · Open-source (MIT) · Portable Windows · Aucune installation</p>
+      <div class="meta">
+        <span>✦ Gratuit · MIT</span>
+        <span>✦ Portable Windows</span>
+        <span>✦ Données locales</span>
+        <span>✦ Tests CI automatiques</span>
+      </div>
     </div>
     <div>
-      <img class="hero-shot" src="captures/05-fenetre-principale.png"
-           alt="Fenêtre principale de ChiroTool : liste des nuits à gauche, détail de la session à droite">
+      <div class="hero-shot-wrap">
+        <img class="hero-shot" src="captures/05-fenetre-principale.png"
+             alt="Fenêtre principale de ChiroTool : liste des nuits et détail de session">
+        <div class="hero-badge">Interface v0.5 · campagne multi-sites</div>
+      </div>
     </div>
   </div>
 </header>
 
 <section id="pourquoi">
   <div class="wrap">
-    <div class="eyebrow">Pourquoi ChiroTool</div>
-    <h2>La corvée du Point Fixe, en quelques clics.</h2>
-    <p class="lead-c">Si vous faites du Point Fixe Vigie-Chiro, vous connaissez le rituel : pour
-      <em>chaque</em> nuit, renommer les fichiers, appliquer l'expansion temporelle, créer une
-      participation sur le portail, uploader les WAV, attendre le mail Tadarida, télécharger le
-      tableur, puis trier les contacts à la main dans Excel. Sur une campagne de dizaines de
-      contrats, cela représente des journées entières de manipulations répétitives et sujettes aux
-      erreurs.</p>
+    <div class="section-head">
+      <div class="eyebrow">Pourquoi ChiroTool</div>
+      <h2>La corvée du Point Fixe, en une seule application.</h2>
+      <p class="lead-c">
+        Sur une nuit Point Fixe, le parcours manuel enchaîne renommage, TE×10, portail,
+        upload de centaines de WAV, attente Tadarida, tableur et nettoyage.
+        Sur une campagne de dizaines de contrats, ce sont des journées perdues —
+        et des erreurs faciles.
+      </p>
+      <div class="chips">
+        <span class="chip">Bureaux d’études</span>
+        <span class="chip">Associations naturalistes</span>
+        <span class="chip">Observateurs Point Fixe</span>
+      </div>
+    </div>
+
     <div class="cmp">
       <div class="card before">
         <h3>Avant — le workflow manuel</h3>
         <ul>
           <li>LupasRename pour renommer les WAV</li>
-          <li>Kaleidoscope pour l'expansion temporelle</li>
+          <li>Kaleidoscope pour l’expansion temporelle</li>
           <li>Portail web pour créer la participation</li>
-          <li>Upload manuel, fichier par fichier</li>
+          <li>Upload manuel, fragile sur les grosses nuits</li>
           <li>Attente du mail Tadarida</li>
           <li>Tri des contacts à la main dans Excel</li>
-          <li>Tableur de suivi mis à jour à la main</li>
+          <li>Suivi de campagne dispersé</li>
         </ul>
       </div>
       <div class="card after">
@@ -257,102 +459,283 @@
         <ul>
           <li>Renommage automatique au format Vigie-Chiro</li>
           <li>TE×10 intégré, validé bit-à-bit</li>
-          <li>Création de participation via l'API</li>
-          <li>Upload parallèle (plus rapide)</li>
-          <li>Suivi automatique de l'analyse</li>
-          <li>Nettoyage automatique par seuils de confiance</li>
-          <li>Registre de campagne centralisé</li>
+          <li>Participation + upload via l’API (reprise)</li>
+          <li>Suivi automatique de l’analyse Tadarida</li>
+          <li>Nettoyage avec aperçu et garde-fous</li>
+          <li>Validation, graphes, synthèse d’activité</li>
+          <li>Registre multi-sites centralisé</li>
         </ul>
+      </div>
+    </div>
+
+    <div class="disclaimer">
+      ⚠️ <strong>Outil indépendant</strong> — ChiroTool utilise l’API publique Vigie-Chiro
+      mais <strong>n’est pas un outil officiel du MNHN</strong>. Vos fichiers restent sur
+      votre poste ; le token ne quitte pas votre machine hors appels API légitimes.
+    </div>
+  </div>
+</section>
+
+<section class="soft">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="eyebrow">Le gain de temps</div>
+      <h2>Trois actions, dans l’ordre. C’est tout.</h2>
+    </div>
+    <div class="stats">
+      <div class="stat"><span class="n">A→Z</span><span class="l">chaîne complète automatisée</span></div>
+      <div class="stat"><span class="n">3 clics</span><span class="l">Préparer · Upload · Nettoyer</span></div>
+      <div class="stat"><span class="n">3–5×</span><span class="l">upload parallèle</span></div>
+      <div class="stat"><span class="n">100&nbsp;%</span><span class="l">local · gratuit · open-source</span></div>
+    </div>
+    <p class="note">
+      Estimations indicatives selon le matériel et la connexion. Plus la campagne est grande,
+      plus l’automatisation fait économiser de temps — et d’erreurs de saisie.
+    </p>
+  </div>
+</section>
+
+<section id="nouveautes">
+  <div class="wrap">
+    <div class="banner-v">
+      <div>
+        <strong>Nouveautés v0.5</strong>
+        <span> — consolidée pour la production de campagne : sécurité, cleanup, validation et UX.</span>
+      </div>
+      <a class="btn outline sm" href="https://github.com/kevin-guille/ChiroTool/releases">Voir les releases →</a>
+    </div>
+
+    <div class="section-head">
+      <div class="eyebrow">Ce qui change pour vous</div>
+      <h2>Plus fiable sur le terrain, plus sûr sur le bureau.</h2>
+      <p class="lead-c">
+        La v0.5 met l’accent sur ce qui freine vraiment les campagnes&nbsp;:
+        secrets, suppressions de masse, métadonnées publiées, et lisibilité des résultats.
+      </p>
+    </div>
+
+    <div class="news-grid">
+      <div class="news">
+        <div class="ic">🔐</div>
+        <div>
+          <h3>Token sécurisé</h3>
+          <p>Stockage Credential Manager / DPAPI ; saisie CLI masquée (plus de secret dans l’historique shell).</p>
+        </div>
+      </div>
+      <div class="news">
+        <div class="ic">🧹</div>
+        <div>
+          <h3>Nettoyage massif renforcé</h3>
+          <p>Simulation chiffrée → confirmation → garde anti mass-delete. Zéro suppression « surprise » de WAV.</p>
+        </div>
+      </div>
+      <div class="news">
+        <div class="ic">📤</div>
+        <div>
+          <h3>Envoi des identifications</h3>
+          <p>Remontée observateur vers Vigie-Chiro (sidecar, synchro, indicateur dans le registre).</p>
+        </div>
+      </div>
+      <div class="news">
+        <div class="ic">📊</div>
+        <div>
+          <h3>Synthèse &amp; graphes refondus</h3>
+          <p>Niveaux d’activité (référentiel national), filtres, recherche et sections repliables.</p>
+        </div>
+      </div>
+      <div class="news">
+        <div class="ic">🧭</div>
+        <div>
+          <h3>UX avant-publication</h3>
+          <p>Métadonnées non devinées, confirmations safe, barre d’actions lisible, multi-écran.</p>
+        </div>
+      </div>
+      <div class="news">
+        <div class="ic">✅</div>
+        <div>
+          <h3>CI automatique</h3>
+          <p>Tests pytest sur chaque push : non-régression du moteur métier avant diffusion.</p>
+        </div>
       </div>
     </div>
   </div>
 </section>
 
-<section class="soft">
+<section id="fonctions" class="soft">
   <div class="wrap">
-    <div class="eyebrow">Le gain de temps</div>
-    <h2>Trois boutons, dans l'ordre. C'est tout.</h2>
-    <div class="stats">
-      <div class="stat"><span class="n">A→Z</span><span class="l">chaîne complète automatisée</span></div>
-      <div class="stat"><span class="n">3 clics</span><span class="l">Préparer · Upload · Nettoyer</span></div>
-      <div class="stat"><span class="n">3–5×</span><span class="l">upload parallèle</span></div>
-      <div class="stat"><span class="n">100 %</span><span class="l">local · gratuit · open-source</span></div>
+    <div class="section-head">
+      <div class="eyebrow">Fonctionnalités</div>
+      <h2>Tout ce dont une campagne a besoin.</h2>
     </div>
-    <p class="note">Estimations indicatives selon le matériel et la connexion. Le gain réel dépend du
-      nombre de nuits : plus la campagne est grande, plus l'automatisation fait économiser de temps.</p>
-  </div>
-</section>
-
-<section id="fonctions">
-  <div class="wrap">
-    <div class="eyebrow">Fonctionnalités</div>
-    <h2>Tout ce dont une campagne a besoin.</h2>
     <div class="feat">
       <div class="f"><div class="ic">🏷️</div><h3>Renommage normé</h3>
-        <p>Détection des métadonnées (site, point, passage, série) et renommage au format Vigie-Chiro officiel. Compatible Wildlife (SM2/3/4/Mini Bat), Passive/Bat Recorder et AudioMoth.</p></div>
-      <div class="f"><div class="ic">⏱️</div><h3>Expansion temporelle</h3>
-        <p>TE×10 intégré, reproduisant Kaleidoscope bit-à-bit. Zéro perte, accéléré par une extension Rust optionnelle.</p></div>
+        <p>Métadonnées détectées (site, point, passage, série) et noms au format Vigie-Chiro. Wildlife, Passive/Bat Recorder, AudioMoth expandé.</p></div>
+      <div class="f"><div class="ic">⏱️</div><h3>Expansion TE×10</h3>
+        <p>Intégrée, reproduisant Kaleidoscope bit-à-bit. Accélération Rust optionnelle, fallback Python transparent.</p></div>
       <div class="f"><div class="ic">☁️</div><h3>Upload &amp; Tadarida</h3>
-        <p>Création de participation, upload parallèle et suivi de l'analyse Tadarida via l'API Vigie-Chiro.</p></div>
+        <p>Participation API, upload parallèle avec reprise, suivi de l’analyse et récupération des résultats.</p></div>
       <div class="f"><div class="ic">🧹</div><h3>Nettoyage par seuils</h3>
-        <p>Tri automatique des contacts par seuils de confiance, avec garde-fou anti-suppression massive.</p></div>
-      <div class="f"><div class="ic">📊</div><h3>Graphes d'activité</h3>
-        <p>Courbes d'activité horaire par espèce, exportables en PNG pour vos rapports.</p></div>
+        <p>Seuils par groupe (chiros, orthos, micromam, oiseaux), aperçu chiffré et garde-fou mass-delete.</p></div>
+      <div class="f"><div class="ic">🔍</div><h3>Validation &amp; envoi</h3>
+        <p>Contacts filtrables, ChiroSurf, taxons, envoi des identifications vers le portail.</p></div>
+      <div class="f"><div class="ic">📈</div><h3>Graphes &amp; synthèse</h3>
+        <p>Activité horaire, niveaux de référence (saison / région / habitat), exports pour rapports.</p></div>
       <div class="f"><div class="ic">🗂️</div><h3>Registre de campagne</h3>
-        <p>Suivi global multi-campagnes, synchronisation API, export CSV — idéal en équipe.</p></div>
-      <div class="f"><div class="ic">🗺️</div><h3>Carte &amp; points</h3>
-        <p>Visualisez vos points sur fond OpenStreetMap, créez un carré ou rejoignez celui d'un autre observateur.</p></div>
-      <div class="f"><div class="ic">🔍</div><h3>Validation des sons</h3>
-        <p>Vue de validation filtrable avec raccourcis clavier et ouverture directe dans ChiroSurf.</p></div>
+        <p>Suivi multi-sites / multi-contrats, export CSV/xlsx — idéal en équipe et pour le reporting.</p></div>
+      <div class="f"><div class="ic">🗺️</div><h3>Carte &amp; carrés STOC</h3>
+        <p>Points sur OSM, création de carré, ajout sur un carré existant (y compris d’un autre observateur).</p></div>
       <div class="f"><div class="ic">🔒</div><h3>Local &amp; portable</h3>
-        <p>Un seul .exe, aucune installation. Vos données restent chez vous.</p></div>
+        <p>Un .exe, aucune installation. Mode portable (clé USB) ou config utilisateur. Données chez vous.</p></div>
     </div>
   </div>
 </section>
 
-<section class="soft">
+<section>
   <div class="wrap">
-    <div class="eyebrow">Comment ça marche</div>
-    <h2>Du dossier brut au tableur propre.</h2>
+    <div class="section-head">
+      <div class="eyebrow">Comment ça marche</div>
+      <h2>Du dossier brut au tableur propre.</h2>
+    </div>
     <div class="steps">
       <div class="step"><div class="num">1</div><h3>Préparer</h3>
-        <p>Déposez vos dossiers de nuits, scannez, cliquez « Préparer » : renommage + expansion temporelle.</p></div>
+        <p>Déposez vos dossiers de nuits, scannez, cliquez «&nbsp;Préparer&nbsp;» : renommage + expansion temporelle.</p></div>
       <div class="step"><div class="num">2</div><h3>Upload + Tadarida</h3>
-        <p>L'assistant pré-remplit la participation (météo, matériel). ChiroTool uploade, suit l'analyse et récupère le tableur.</p></div>
-      <div class="step"><div class="num">3</div><h3>Nettoyer</h3>
-        <p>Application de vos seuils de confiance, récapitulatif avant/après, suivi mis à jour. La nuit passe au vert.</p></div>
+        <p>L’assistant pré-remplit la participation. ChiroTool uploade, suit l’analyse et récupère les observations.</p></div>
+      <div class="step"><div class="num">3</div><h3>Nettoyer &amp; valider</h3>
+        <p>Aperçu des suppressions, seuils de confiance, validation des contacts, envoi des identifications.</p></div>
     </div>
   </div>
 </section>
 
-<section id="apercu">
+<section id="apercu" class="soft">
   <div class="wrap">
-    <div class="eyebrow">Aperçu</div>
-    <h2>L'application en images.</h2>
-    <div class="gal">
-      <figure><img src="captures/06-vue-session.png" alt="Vue d'une session avec les boutons Préparer, Upload et Nettoyer"><figcaption>Vue session : les 3 actions</figcaption></figure>
-      <figure><img src="captures/09-wizard-participation.png" alt="Assistant de création de participation Vigie-Chiro"><figcaption>Assistant participation pré-rempli</figcaption></figure>
-      <figure><img src="captures/11-recap-nettoyage.png" alt="Récapitulatif du nettoyage avec graphe avant/après"><figcaption>Récapitulatif du nettoyage</figcaption></figure>
-      <figure><img src="captures/13-registre.png" alt="Onglet Registre, suivi de campagne groupé par contrat"><figcaption>Registre de campagne</figcaption></figure>
-      <figure><img src="captures/exemple-graphe-activite.png" alt="Graphe d'activité horaire de trois espèces sur une nuit"><figcaption>Graphe d'activité horaire</figcaption></figure>
-      <figure><img src="captures/05-fenetre-principale.png" alt="Fenêtre principale de ChiroTool"><figcaption>Fenêtre principale</figcaption></figure>
+    <div class="section-head">
+      <div class="eyebrow">Aperçu</div>
+      <h2>L’application en images.</h2>
     </div>
+    <div class="gal">
+      <figure>
+        <img src="captures/06-vue-session.png" alt="Vue d'une session avec les boutons Préparer, Upload et Nettoyer">
+        <figcaption>Vue session — les 3 actions</figcaption>
+      </figure>
+      <figure>
+        <img src="captures/09-wizard-participation.png" alt="Assistant de création de participation Vigie-Chiro">
+        <figcaption>Assistant participation</figcaption>
+      </figure>
+      <figure>
+        <img src="captures/11-recap-nettoyage.png" alt="Récapitulatif du nettoyage avec aperçu avant suppression">
+        <figcaption>Récapitulatif du nettoyage</figcaption>
+      </figure>
+      <figure>
+        <img src="captures/13-registre.png" alt="Onglet Registre, suivi de campagne">
+        <figcaption>Registre de campagne</figcaption>
+      </figure>
+      <figure>
+        <img src="captures/exemple-graphe-activite.png" alt="Graphe d'activité horaire">
+        <figcaption>Graphe d’activité</figcaption>
+      </figure>
+      <figure>
+        <img src="captures/12-mode-batch.png" alt="Mode batch pour traiter plusieurs nuits">
+        <figcaption>Mode batch multi-nuits</figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<section id="public">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="eyebrow">Pour qui</div>
+      <h2>Pensé pour le terrain… et pour le livrable.</h2>
+      <p class="lead-c">
+        Que vous livriez un marché public ou que vous suiviez un réseau de points,
+        ChiroTool réduit la friction opérationnelle sans imposer le cloud.
+      </p>
+    </div>
+    <div class="aud">
+      <div class="a">
+        <h3>🏢 Bureaux d’études</h3>
+        <p>Chaîne reproductible, registre de campagne, exports pour rapports, moins de temps mort entre la SD et le rendu client.</p>
+      </div>
+      <div class="a">
+        <h3>🌿 Associations</h3>
+        <p>Outil libre, portable sur poste partagé, onboarding simple, tutoriel PDF pour former les bénévoles.</p>
+      </div>
+      <div class="a">
+        <h3>🦇 Observateurs</h3>
+        <p>Focus sur la validation des espèces : le reste de la mécanique Point Fixe est automatisé.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="soft" id="enregistreurs">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="eyebrow">Matériel</div>
+      <h2>Enregistreurs compatibles</h2>
+      <p class="lead-c">
+        Tout enregistreur dont les fichiers sont nommés
+        <code>…AAAAMMJJ_HHMMSS….wav</code>.
+      </p>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Famille</th><th>Modèles / notes</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Wildlife Acoustics</strong></td>
+            <td>SM2 / SM3 / SM4(BAT) / Mini Bat</td>
+          </tr>
+          <tr>
+            <td><strong>Autres horodatés</strong></td>
+            <td>Passive Recorder, Bat Recorder, etc.</td>
+          </tr>
+          <tr>
+            <td><strong>AudioMoth</strong></td>
+            <td>Fichiers <em>déjà expandés</em> via l’AudioMoth Configuration App
+              (<em>File → Expand</em>). ChiroTool assure ensuite renommage + TE×10
+              (alternative à Kaleidoscope pour l’AudioMoth).</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note">
+      Formats à noms non datés (ex. Peersonic, Pettersson D500x) : renommage préalable requis ;
+      pas encore pris en charge directement.
+    </p>
   </div>
 </section>
 
 <section id="telecharger" class="dl">
   <div class="wrap">
-    <div class="bat">🦇</div>
-    <h2>Téléchargez ChiroTool</h2>
-    <p>Logiciel portable Windows (≈ 34 Mo). Aucune installation, aucun droit administrateur requis.</p>
+    <div class="pill" style="margin:0 auto 18px"><span class="dot"></span> Prêt pour la saison Point Fixe</div>
+    <h2>Téléchargez ChiroTool v0.5</h2>
+    <p>
+      Logiciel portable Windows (≈&nbsp;34&nbsp;Mo). Aucune installation,
+      aucun droit administrateur. Traitez une nuit test dès ce soir.
+    </p>
     <div class="cta">
-      <a class="btn lg" href="https://github.com/kevin-guille/ChiroTool/releases/latest">⬇ Dernière version (.exe)</a>
+      <a class="btn lg" href="https://github.com/kevin-guille/ChiroTool/releases">⬇ Dernière version (.exe)</a>
       <a class="btn lg ghost" href="ChiroTool-Tutoriel.pdf">📖 Tutoriel complet (PDF)</a>
+      <a class="btn lg ghost" href="https://github.com/kevin-guille/ChiroTool">Code source</a>
     </div>
-    <p class="small">Au premier lancement, Windows SmartScreen peut afficher un avertissement (logiciel
-      libre non signé) : cliquez sur « Informations complémentaires » puis « Exécuter quand même ».
-      Le code source est entièrement ouvert et vérifiable sur
-      <a href="https://github.com/kevin-guille/ChiroTool">GitHub</a>.</p>
+    <div class="checks">
+      <span>✓ Gratuit &amp; MIT</span>
+      <span>✓ Open source</span>
+      <span>✓ Données locales</span>
+      <span>✓ CI &amp; tests moteur</span>
+    </div>
+    <p class="small">
+      Au premier lancement, Windows SmartScreen peut afficher un avertissement
+      (logiciel libre non signé)&nbsp;: cliquez sur «&nbsp;Informations complémentaires&nbsp;»
+      puis «&nbsp;Exécuter quand même&nbsp;». Le code est entièrement ouvert et vérifiable sur
+      <a href="https://github.com/kevin-guille/ChiroTool">GitHub</a>.
+      Retours et idées bienvenus via les
+      <a href="https://github.com/kevin-guille/ChiroTool/issues">issues</a>.
+    </p>
   </div>
 </section>
 
@@ -360,26 +743,33 @@
   <div class="wrap">
     <div>
       <div class="brand"><img src="captures/icon_256.png" alt="">ChiroTool</div>
-      <p>Outil libre d'automatisation du protocole Vigie-Chiro Point Fixe (MNHN),
-         à destination des chiroptérologues, bureaux d'études et associations naturalistes.</p>
+      <p>
+        Outil libre d’automatisation du protocole Vigie-Chiro Point Fixe (MNHN),
+        pour les chiroptérologues, bureaux d’études et associations naturalistes.
+      </p>
     </div>
     <div>
       <h4>Le projet</h4>
-      <p><a href="https://github.com/kevin-guille/ChiroTool">Code source (GitHub)</a><br>
-         <a href="https://github.com/kevin-guille/ChiroTool/releases/latest">Télécharger</a><br>
-         <a href="ChiroTool-Tutoriel.pdf">Tutoriel PDF</a><br>
-         <a href="https://github.com/kevin-guille/ChiroTool/issues">Signaler un bug</a></p>
+      <p>
+        <a href="https://github.com/kevin-guille/ChiroTool">Code source (GitHub)</a><br>
+        <a href="https://github.com/kevin-guille/ChiroTool/releases">Télécharger</a><br>
+        <a href="ChiroTool-Tutoriel.pdf">Tutoriel PDF</a><br>
+        <a href="https://github.com/kevin-guille/ChiroTool/blob/main/README.md">README</a><br>
+        <a href="https://github.com/kevin-guille/ChiroTool/issues">Signaler un bug</a>
+      </p>
     </div>
     <div>
       <h4>Crédits</h4>
-      <p>Auteur : <a href="https://fr.linkedin.com/in/kevin-guille-764b6a150">Kevin Guille</a><br>
-         Soutien : <a href="https://www.acer-campestre.fr/">Acer Campestre</a><br>
-         Protocole : <a href="https://www.vigienature.fr/fr/chauves-souris">Vigie-Chiro / MNHN</a><br>
-         Licence : MIT</p>
+      <p>
+        Auteur : <a href="https://fr.linkedin.com/in/kevin-guille-764b6a150">Kevin Guille</a><br>
+        Soutien : <a href="https://www.acer-campestre.fr/">Acer Campestre</a><br>
+        Protocole : <a href="https://www.vigienature.fr/fr/chauves-souris">Vigie-Chiro / MNHN</a><br>
+        Licence : MIT
+      </p>
     </div>
     <div class="legal">
-      ChiroTool est un outil tiers, libre et indépendant, qui utilise l'API publique Vigie-Chiro.
-      Ce n'est pas un outil officiel du MNHN. © 2026 Kevin Guille — Licence MIT.
+      ChiroTool est un outil tiers, libre et indépendant, qui utilise l’API publique Vigie-Chiro.
+      Ce n’est pas un outil officiel du MNHN. © 2026 Kevin Guille — Licence MIT.
     </div>
   </div>
 </footer>
