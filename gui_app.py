@@ -47,7 +47,14 @@ from gui_map import MapPanel
 from gui_tooltip import WidgetTooltip
 from gui_registry import RegistryPanel
 from gui_preferences import PreferencesDialog
-from gui_runner import RunDialog, run_cleanup, run_prep, run_upload_flow
+from gui_runner import (
+    RunDialog,
+    run_cleanup,
+    run_prep,
+    run_repair_apply,
+    run_repair_diagnose,
+    run_upload_flow,
+)
 from gui_validation import ValidationView, find_observations_xlsx
 from gui_synthesis import SynthesisView
 from gui_wizard import open_wizard
@@ -1362,7 +1369,10 @@ class ChiroToolApp(ctk.CTk):
             kw = dict(text=label, height=34,
                       state=("normal" if enabled else "disabled"), command=cmd)
             if accent:
-                kw.update(fg_color=accent, hover_color="#1158c7", text_color="white")
+                # hover plus sombre pour les accents non-bleus (ex. orange repair)
+                hover = "#c0392b" if str(accent).lower() in ("#e67e22", "e67e22") \
+                    else "#1158c7"
+                kw.update(fg_color=accent, hover_color=hover, text_color="white")
             elif is_primary and enabled:
                 kw["font"] = ctk.CTkFont(size=13, weight="bold")
             else:
@@ -1384,6 +1394,28 @@ class ChiroToolApp(ctk.CTk):
              "Purge des contacts sous les seuils de confiance "
              "(aperçu du volume avant toute suppression)",
              is_primary=(next_step == "cleanup"), enabled=can_cleanup)
+
+        # Réparation d'état : surtout utile en ⏳ (participation connue sans
+        # xlsx) ou dès qu'une participation_id existe. Toujours visible après
+        # TE×10 (diagnostic possible) ; mis en avant en orange si pending.
+        pending = bool(getattr(s, "flag_pending_fetch", False))
+        has_part = self._session_has_participation_id(s)
+        show_repair = pending or has_part or bool(s.flag_te10_done)
+        if show_repair:
+            repair_tip = (
+                "Compare l'état local (Data_k, flags, xlsx) avec le serveur "
+                "Vigie-Chiro pour cette nuit uniquement. Diagnostic d'abord, "
+                "puis confirmation avant toute modification."
+            )
+            if pending:
+                repair_tip = (
+                    "⏳ Participation connue mais xlsx absent — diagnostique "
+                    "et réaligne l'état avec le serveur (une nuit)."
+                )
+            _btn("🔧 Vérifier / Réparer", lambda: self._run_repair(s),
+                 repair_tip,
+                 accent=("#e67e22" if pending else None),
+                 is_primary=pending)
 
         has_obs = find_observations_xlsx(s.path) is not None
         if has_obs:
@@ -1526,6 +1558,218 @@ class ChiroToolApp(ctk.CTk):
         worker = run_prep(s.path, meta, dry_run=False, force=False)
         RunDialog(self, title=f"Préparation — {s.name}",
                   worker=worker, on_done=self._after_phase_done)
+
+    @staticmethod
+    def _session_has_participation_id(s: SessionState) -> bool:
+        """True si le manifest porte un vigiechiro_participation_id."""
+        try:
+            from manifest import Manifest
+            m = Manifest.load(s.path)
+            return bool(m and m.meta and m.meta.get("vigiechiro_participation_id"))
+        except Exception:
+            return False
+
+    def _run_repair(self, s: SessionState):
+        """Flux sûr : diagnostic dry-run → rapport → confirmations → apply.
+
+        Une seule nuit. Aucune modification tant que l'utilisateur n'a pas
+        confirmé explicitement les actions dangereuses (trigger, fetch).
+        """
+        token = load_token()
+        if not token:
+            if messagebox.askyesno(
+                "Token Vigie-Chiro manquant",
+                "Aucun token API enregistré.\n"
+                "Ouvrir les préférences pour en ajouter un ?"):
+                self._on_settings()
+            return
+
+        # Phase 1 — diagnostic seul (apply=False), toujours affiché d'abord.
+        dry = run_repair_diagnose(s.path, token)
+
+        def _after_diag(result, session_state=s):
+            try:
+                dry_dialog.destroy()
+            except Exception:
+                pass
+            self._confirm_and_apply_repair(session_state, token, result or {})
+
+        dry_dialog = RunDialog(
+            self,
+            title=f"Diagnostic — {s.name}",
+            worker=dry,
+            on_done=_after_diag,
+        )
+
+    def _confirm_and_apply_repair(
+        self, s: SessionState, token: str, diag: dict,
+    ):
+        """Après dry-run : montre le rapport et demande confirmation par action."""
+        if diag.get("error") and not diag.get("participation_id"):
+            messagebox.showerror(
+                "Diagnostic impossible",
+                diag.get("error")
+                or "\n".join(diag.get("errors") or ["Erreur inconnue"]),
+            )
+            return
+
+        suggested = list(diag.get("suggested_actions") or [])
+        formatted = diag.get("_formatted") or ""
+        if not formatted:
+            try:
+                from repair import format_repair_report
+                formatted = format_repair_report(diag)
+            except Exception:
+                formatted = str(diag)
+
+        # Rien à faire
+        if suggested == ["noop"] or (
+            not any(a != "noop" for a in suggested)
+        ):
+            messagebox.showinfo(
+                "État cohérent",
+                f"Session : {s.name}\n\n"
+                f"{formatted}\n\n"
+                "Aucune correction nécessaire.",
+            )
+            return
+
+        # Synthèse courte + invitation à lire le journal du diagnostic
+        missing_n = len(diag.get("missing_on_server") or [])
+        etat = diag.get("traitement_etat") or "(vide)"
+        cov = "100 %" if diag.get("coverage_ok") else f"incomplète ({missing_n} manquant(s))"
+        summary = (
+            f"Session : {s.name}\n\n"
+            f"Couverture WAV : {cov}\n"
+            f"État Tadarida  : {etat}\n"
+            f"xlsx local     : {'oui' if diag.get('has_xlsx') else 'non'}\n\n"
+            f"Actions proposées :\n"
+        )
+        from repair import ACTION_NOOP, action_label
+        for a in suggested:
+            if a == ACTION_NOOP:
+                continue
+            summary += f"  • {action_label(a)}\n"
+        summary += (
+            "\nLe détail complet est dans la fenêtre de diagnostic.\n\n"
+            "Continuer vers les confirmations (aucune modification tant que "
+            "tu n'as pas validé) ?"
+        )
+        if not messagebox.askyesno(
+            "Diagnostic — continuer ?",
+            summary,
+            default=messagebox.YES,
+        ):
+            return
+
+        # Confirmations par action dangereuse / utile
+        allow_trigger = False
+        confirm_trigger = False
+        allow_fetch = False
+        want_apply = False
+
+        if "set_uploaded_true" in suggested:
+            if messagebox.askyesno(
+                "Aligner le flag « uploadé » ?",
+                "Tous les WAV de Data_k/ sont présents sur le serveur, mais le "
+                "manifest local n'a pas le flag « uploadé ».\n\n"
+                "Mettre à jour le flag (et le registre) pour cette nuit ?",
+                default=messagebox.YES,
+            ):
+                want_apply = True
+            else:
+                # L'utilisateur refuse set_uploaded : on peut quand même
+                # fetch/trigger s'il accepte plus bas. Le core applique
+                # set_uploaded dès qu'il est suggéré en apply=True…
+                # → on ne lance apply que pour les actions acceptées.
+                # Si seul set_uploaded était suggéré et refusé → stop.
+                pass
+
+        if "resume_upload_missing" in suggested:
+            messagebox.showinfo(
+                "WAV manquants sur le serveur",
+                f"{missing_n} fichier(s) de Data_k/ absents côté Vigie-Chiro.\n\n"
+                "La réparation ne relance pas l'upload automatiquement "
+                "(éviter les envois massifs silencieux).\n\n"
+                "Utilise le bouton « ☁ Upload » : seuls les manquants seront "
+                "renvoyés (reprise automatique).",
+            )
+            # Pas de want_apply forcé : trigger interdit de toute façon
+
+        if "fetch_xlsx" in suggested:
+            if messagebox.askyesno(
+                "Télécharger les observations ?",
+                "L'analyse Tadarida est terminée côté serveur, mais le tableur "
+                "d'observations n'est pas présent localement.\n\n"
+                "Télécharger le xlsx maintenant pour cette nuit ?",
+                default=messagebox.YES,
+            ):
+                allow_fetch = True
+                want_apply = True
+            else:
+                allow_fetch = False
+
+        if "trigger_compute" in suggested:
+            # Double confirmation, défaut Non (action serveur coûteuse)
+            if messagebox.askyesno(
+                "Relancer l'analyse Tadarida ?",
+                "La couverture WAV est complète, mais l'analyse ne semble pas "
+                "lancée (ou a échoué) côté serveur.\n\n"
+                "⚠ Cela envoie un POST /compute sur Vigie-Chiro pour CETTE nuit "
+                "uniquement.\n\n"
+                "Relancer Tadarida ?",
+                default=messagebox.NO,
+                icon=messagebox.WARNING,
+            ):
+                # 2e confirmation consciente (style mass-delete)
+                if messagebox.askyesno(
+                    "Confirmer le lancement Tadarida",
+                    f"Session : {s.name}\n"
+                    f"Participation : {diag.get('participation_id') or '?'}\n\n"
+                    "Confirme explicitement le lancement de l'analyse.\n"
+                    "Évite de le faire si l'analyse tourne déjà sur le portail.",
+                    default=messagebox.NO,
+                    icon=messagebox.WARNING,
+                ):
+                    allow_trigger = True
+                    confirm_trigger = True
+                    want_apply = True
+
+        if not want_apply:
+            # resume_upload : message d'orientation déjà affiché, pas d'erreur
+            if "resume_upload_missing" not in suggested or any(
+                a in suggested for a in ("set_uploaded_true", "fetch_xlsx",
+                                         "trigger_compute")
+            ):
+                messagebox.showinfo(
+                    "Réparation annulée",
+                    "Aucune action acceptée. L'état local n'a pas été modifié.",
+                )
+            return
+
+        # Registry ciblé (même workspace) — pas de pull multi-nuits
+        registry = None
+        try:
+            if getattr(self, "registry_panel", None) is not None:
+                registry = getattr(self.registry_panel, "registry", None)
+        except Exception:
+            registry = None
+
+        worker = run_repair_apply(
+            s.path,
+            token,
+            allow_trigger=allow_trigger,
+            confirm_trigger=confirm_trigger,
+            allow_fetch=allow_fetch,
+            registry=registry,
+            registry_session_id=s.name,
+        )
+        RunDialog(
+            self,
+            title=f"Réparation — {s.name}",
+            worker=worker,
+            on_done=self._after_phase_done,
+        )
 
     def _run_upload(self, s: SessionState):
         token = load_token()

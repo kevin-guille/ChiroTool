@@ -519,3 +519,84 @@ def run_upload_flow(session_path: Path, meta, token: str,
         return r_fetch
 
     return worker
+
+
+def run_repair_diagnose(session_path: Path, token: str):
+    """Worker RunDialog : diagnostic dry-run d'une session (aucune écriture)."""
+    from repair import diagnose_and_repair_session, format_repair_report
+
+    def worker(log, progress=None):
+        log(f"Session : {session_path}")
+        log("")
+        log("=== Diagnostic (dry-run) — aucune modification ===")
+        log("")
+        report = diagnose_and_repair_session(
+            session_path, token=token, apply=False,
+        )
+        text = format_repair_report(report)
+        for line in text.splitlines():
+            log(line)
+        log("")
+        # Le rapport structuré est renvoyé pour la suite du flux UI
+        # (confirmations + apply). Pas d'erreur fatale si juste des notes.
+        out = dict(report)
+        out["_formatted"] = text
+        if report.get("errors") and not report.get("participation_id"):
+            out["error"] = "; ".join(report["errors"])
+        return out
+
+    return worker
+
+
+def run_repair_apply(
+    session_path: Path,
+    token: str,
+    *,
+    allow_trigger: bool = False,
+    confirm_trigger: bool = False,
+    allow_fetch: bool = True,
+    registry=None,
+    registry_session_id: str | None = None,
+):
+    """Worker RunDialog : applique la réparation selon les confirmations UI."""
+    from repair import diagnose_and_repair_session, format_repair_report
+
+    def worker(log, progress=None):
+        log(f"Session : {session_path}")
+        log("")
+        log("=== Réparation (apply) ===")
+        log(f"  allow_trigger   = {allow_trigger}")
+        log(f"  confirm_trigger = {confirm_trigger}")
+        log(f"  allow_fetch     = {allow_fetch}")
+        log("")
+        report = diagnose_and_repair_session(
+            session_path,
+            token=token,
+            apply=True,
+            allow_trigger=allow_trigger,
+            confirm_trigger=confirm_trigger,
+            allow_fetch=allow_fetch,
+            registry=registry,
+            registry_session_id=registry_session_id,
+            progress=progress,
+        )
+        text = format_repair_report(report)
+        for line in text.splitlines():
+            log(line)
+        log("")
+        if report.get("applied_actions"):
+            log(f"✓ Appliqué : {', '.join(report['applied_actions'])}")
+        else:
+            log("Aucune action appliquée (tout déjà cohérent, ou refusé).")
+        out = dict(report)
+        out["_formatted"] = text
+        if report.get("errors"):
+            # Erreurs non fatales possibles (ex. registry) : signaler sans
+            # bloquer le callback de refresh si des actions ont réussi.
+            if not report.get("applied_actions"):
+                out["error"] = "; ".join(report["errors"])
+            else:
+                out["warnings"] = list(report.get("errors") or [])
+        return out
+
+    return worker

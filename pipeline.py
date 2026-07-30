@@ -506,12 +506,14 @@ def run_phase_upload(session: Path, meta: SessionMeta, dry_run: bool,
     data_k = session / "Data_k"
     if not data_k.is_dir():
         return {"phase": "upload", "error": f"Data_k/ introuvable : {data_k}"}
-    wavs = sorted(data_k.glob("*.wav"))
-    out["steps"].append({"step": "list_wavs", "n": len(wavs)})
+    local_all = sorted(data_k.glob("*.wav"))
+    wavs = list(local_all)
+    n_local = len(local_all)
+    out["steps"].append({"step": "list_wavs", "n": n_local})
 
     if dry_run:
         out["steps"].append({"step": "upload_wavs", "dry_run": True,
-                             "would_upload": len(wavs)})
+                             "would_upload": n_local})
     else:
         client = VigieChiroClient(token)
         uploaded: list[str] = []
@@ -542,20 +544,31 @@ def run_phase_upload(session: Path, meta: SessionMeta, dry_run: bool,
                     "remaining": len(wavs),
                 })
         if not wavs:
-            # Tout est déjà uploadé → on saute direct au trigger_compute
-            # (qui est idempotent côté serveur).
+            # Tout est déjà sur le serveur → trigger_compute uniquement.
+            # Toujours passer par record_action (jamais flags[] à la main) :
+            # - succès trigger → status=ok → flags.uploaded=True
+            # - échec trigger → status=error → flag NON posé (reprise /
+            #   repair possible), erreur remontée dans out["error"].
             print("  ✓ tous les WAV sont déjà sur le serveur", flush=True)
-            out["steps"].append({"step": "upload_wavs", "uploaded": 0,
-                                  "failed": [], "all_already_present": True})
-            try:
-                client.trigger_compute(part_id)
-                out["steps"].append({"step": "trigger_compute",
-                                      "participation_id": part_id})
-            except Exception as e:
-                print(f"  ⚠ trigger_compute : {e}", flush=True)
-            m.flags["uploaded"] = True
-            m.save(session)
-            return out
+            out["steps"].append({
+                "step": "upload_wavs",
+                "uploaded": 0,
+                "failed": [],
+                "all_already_present": True,
+                "already_present": n_local,
+            })
+            return _finish_upload_with_trigger(
+                client, m, session, out,
+                part_id=part_id,
+                stats={
+                    "n_wavs": n_local,
+                    "uploaded_now": 0,
+                    "already_present": n_local,
+                    "failed": 0,
+                    "all_already_present": True,
+                },
+                notes_prefix=f"{n_local} déjà présents (reprise)",
+            )
 
         # Parallélisation : sur 500 WAV × 3 MB, l'upload séquentiel cumule
         # ~3 RTT/WAV en latence (POST /fichiers + PUT S3 + POST finalize) et
@@ -654,50 +667,120 @@ def run_phase_upload(session: Path, meta: SessionMeta, dry_run: bool,
             # On enregistre quand même l'action en 'partial' pour la traçabilité
             m.record_action("upload", status="partial",
                             params={"participation_id": part_id},
-                            stats={"n_wavs": len(wavs),
+                            stats={"n_wavs": n_local,
                                    "uploaded_now": len(uploaded),
+                                   "already_present": n_local - len(wavs),
                                    "failed": len(failed)},
                             notes=f"{len(failed)} échecs — compute non déclenché",
                             tool_version=TOOL_VERSION)
             m.save(session)
             log_to_campaign(session, phase="upload", action="upload_wavs",
                             status="partial",
-                            stats={"n_wavs": len(wavs),
+                            stats={"n_wavs": n_local,
                                    "uploaded": len(uploaded),
                                    "failed": len(failed)},
                             tool_version=TOOL_VERSION)
             return out
 
-        client.trigger_compute(part_id)
-        out["steps"].append({"step": "trigger_compute", "participation_id": part_id})
-
-        upload_status = "ok"
         n_skipped = len(already_uploaded.intersection(
-            set(w.name for w in sorted(data_k.glob("*.wav")))))
-        stats_upload = {
-            "n_wavs": len(wavs) + n_skipped,
-            "uploaded_now": len(uploaded),
-            "already_present": n_skipped,
-            "failed": len(failed),
-        }
+            {w.name for w in local_all}))
         notes_bits = []
         if n_skipped:
             notes_bits.append(f"{n_skipped} déjà présents (reprise)")
-        if failed:
-            notes_bits.append(f"{len(failed)} échecs")
-        notes = " · ".join(notes_bits) if notes_bits else None
-        m.record_action("upload",
-                        status=upload_status,
-                        params={"participation_id": part_id},
-                        stats=stats_upload,
-                        notes=notes,
-                        tool_version=TOOL_VERSION)
-        m.save(session)
-        log_to_campaign(session, phase="upload", action="upload_wavs",
-                        status=upload_status,
-                        stats=stats_upload,
-                        tool_version=TOOL_VERSION)
+        return _finish_upload_with_trigger(
+            client, m, session, out,
+            part_id=part_id,
+            stats={
+                "n_wavs": n_local,
+                "uploaded_now": len(uploaded),
+                "already_present": n_skipped,
+                "failed": 0,
+            },
+            notes_prefix=" · ".join(notes_bits) if notes_bits else None,
+        )
 
+    return out
+
+
+def _finish_upload_with_trigger(
+    client,
+    m: Manifest,
+    session: Path,
+    out: dict,
+    *,
+    part_id: str,
+    stats: dict,
+    notes_prefix: str | None = None,
+) -> dict:
+    """Lance ``trigger_compute`` puis journalise l'action ``upload``.
+
+    Facteur commun entre la branche « all_already_present » et le chemin
+    nominal (upload frais OK). Garantit :
+      - pas de ``flags["uploaded"]=True`` hors ``record_action(..., status="ok")``
+      - échec de trigger → status=error, flag non posé, ``out["error"]`` renseigné
+      - traçabilité campaign_log + steps
+    """
+    trigger_err: str | None = None
+    try:
+        client.trigger_compute(part_id)
+        out["steps"].append({
+            "step": "trigger_compute",
+            "participation_id": part_id,
+        })
+    except Exception as e:
+        trigger_err = str(e)
+        print(f"  ⚠ trigger_compute : {e}", flush=True)
+        out["steps"].append({
+            "step": "trigger_compute",
+            "participation_id": part_id,
+            "error": trigger_err,
+        })
+
+    stats = dict(stats)
+    stats["trigger_ok"] = trigger_err is None
+    if trigger_err is not None:
+        stats["trigger_error"] = trigger_err
+
+    if trigger_err is None:
+        notes = notes_prefix
+        m.record_action(
+            "upload",
+            status="ok",
+            params={"participation_id": part_id},
+            stats=stats,
+            notes=notes,
+            tool_version=TOOL_VERSION,
+        )
+        m.save(session)
+        log_to_campaign(
+            session, phase="upload", action="upload_wavs",
+            status="ok", stats=stats, tool_version=TOOL_VERSION,
+        )
+        return out
+
+    # Fichiers sur le serveur mais compute non lancé : ne PAS marquer
+    # uploaded (is_done reste False → relance Upload ou repair possible).
+    notes_parts = [p for p in (notes_prefix, f"trigger_compute échoué : {trigger_err}") if p]
+    notes = " · ".join(notes_parts)
+    m.record_action(
+        "upload",
+        status="error",
+        params={"participation_id": part_id},
+        stats=stats,
+        notes=notes,
+        tool_version=TOOL_VERSION,
+    )
+    m.save(session)
+    log_to_campaign(
+        session, phase="upload", action="upload_wavs",
+        status="error", stats=stats, notes=notes,
+        tool_version=TOOL_VERSION,
+    )
+    out["error"] = (
+        f"Les WAV sont sur le serveur, mais le lancement de l'analyse "
+        f"Tadarida a échoué : {trigger_err}. "
+        f"Relance « Upload + Tadarida » ou « 🔧 Vérifier / Réparer »."
+    )
     return out
 
 
