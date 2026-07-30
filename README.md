@@ -91,6 +91,7 @@ La **v0.5** consolide ChiroTool pour une utilisation en production de campagne :
 - **Expansion temporelle TE×10** intégrée, validée *bit-à-bit* (remplace Kaleidoscope)
 - **Participation + upload** via l’API (workers parallèles, reprise, trigger compute)
 - **Suivi Tadarida** et récupération des observations
+- **Vérifier / Réparer** une nuit (diagnostic API + disque, alignement d’état, fetch / trigger avec confirmation)
 - **Nettoyage par seuils** (chiros / orthos / micromammifères / oiseaux) avec aperçu et garde-fous
 
 ### Après l’analyse
@@ -98,6 +99,7 @@ La **v0.5** consolide ChiroTool pour une utilisation en production de campagne :
 - **Validation des contacts** (raccourcis, ChiroSurf, taxons, envoi des identifications)
 - **Graphes d’activité** et **synthèse** avec niveaux de référence
 - **Registre de campagne** multi-sites (SQLite, export CSV / xlsx)
+- **Export portable de sessions** (clé USB / partage : Data_k ± Data + métadonnées)
 - **Carte OSM** : carrés STOC, création de point, points sur carré d’un autre observateur
 
 ### Robustesse

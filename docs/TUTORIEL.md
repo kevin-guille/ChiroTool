@@ -196,7 +196,7 @@ campagne. Une pastille de couleur indique l'état de chaque nuit :
 |---|---|
 | 🔴 rouge | Brut (rien n'a encore été fait) |
 | 🟡 jaune | En cours de traitement |
-| 🟠 orange ⏳ | Upload interrompu, **à reprendre** |
+| 🟠 orange ⏳ | Participation connue mais tableur d'observations pas encore local — **à reprendre** (Upload, ou **🔧 Vérifier / Réparer**) |
 | 🟢 vert | Nuit complètement traitée |
 
 **③ Le panneau de détail (à droite)** — 6 onglets :
@@ -213,8 +213,8 @@ campagne. Une pastille de couleur indique l'état de chaque nuit :
 En bas de la **Vue session**, une barre unique regroupe tout ce que vous pouvez
 faire sur la nuit sélectionnée :
 
-> **▶ Préparer** · **☁ Upload** · **🧹 Nettoyer** · **🔍 Valider** ·
-> **✎ Métadonnées** · **📍 Carte** · **📊 Synthèse** · **⋯ Détails**
+> **▶ Préparer** · **☁ Upload** · **🔧 Vérifier / Réparer** · **🧹 Nettoyer** ·
+> **🔍 Valider** · **✎ Métadonnées** · **📍 Carte** · **📊 Synthèse** · **⋯ Détails**
 
 Les libellés sont volontairement courts : **passez la souris sur un bouton** pour
 lire ce qu'il fait exactement.
@@ -322,6 +322,29 @@ ChiroTool enchaîne alors **trois phases automatiques** :
 > 💡 **Si vous avez fermé l'app** : il suffira de re-cliquer « Upload + Tadarida »
 > plus tard. ChiroTool détecte que la participation existe déjà, ne ré-uploade
 > rien d'inutile, et récupère directement le résultat.
+
+#### Connexion instable, analyse forcée sur le web, pastille ⏳ bloquée
+
+Parfois l'upload s'interrompt, ou vous avez **lancé l'analyse Tadarida à la main**
+sur le portail Vigie-Chiro alors que ChiroTool n'a pas encore le tableur local.
+La pastille reste **orange ⏳** et l'état d'avancement ne se met pas à jour tout
+seul.
+
+1. Ouvrez la nuit concernée (une seule nuit à la fois).
+2. Cliquez sur **« 🔧 Vérifier / Réparer »** (bouton orange quand la nuit est en ⏳).
+3. ChiroTool **diagnostique d'abord** (aucune modification) : couverture des WAV
+   local ↔ serveur, état Tadarida, présence du xlsx, flags du manifest.
+4. Un résumé s'affiche. Selon le cas, vous pourrez **confirmer explicitement** :
+   - aligner le flag « uploadé » si tous les WAV sont déjà sur le serveur ;
+   - **télécharger le xlsx** si l'analyse est terminée côté serveur ;
+   - **relancer Tadarida** (double confirmation — uniquement si la couverture est
+     complète et que le compute n'est pas déjà en cours / terminé).
+5. Si des WAV manquent encore sur le serveur, l'outil vous renvoie vers
+   **« ☁ Upload »** (reprise automatique des manquants) plutôt que de lancer une
+   analyse partielle.
+
+> 🛡️ **Une nuit à la fois** — pour ne pas saturer les serveurs. Ne remplace pas
+> l'édition manuelle du JSON du manifest (à éviter).
 
 ### Étape 4 — Nettoyer
 
@@ -620,6 +643,31 @@ Bouton **« 📤 Exporter »** → **CSV** : vous obtenez un fichier complet (38
 colonnes) avec toutes vos nuits. Chaque membre de l'équipe peut exporter le sien,
 et un responsable peut les fusionner pour avoir la **vue d'ensemble de la
 campagne** (qui a fait quoi, où, combien de nuits restent).
+
+Les autres formats du même menu (**Registre .db**, **Excel**) restent disponibles
+pour sauvegarder ou croiser le suivi.
+
+### Emporter des nuits sur une clé USB (sons traités + métadonnées)
+
+Cas typique : vous voulez emmener **uniquement le Data_k** (WAV déjà en TE×10)
+et les métadonnées sur une clé ou un disque, en laissant les **bruts Data/**
+(lourds) sur le PC principal.
+
+1. Onglet **Registre** → **« 📤 Exporter »** → **« 🌙 Sessions (USB) »**.
+2. Cochez le(s) **contrat(s)** et les **nuits** voulues.
+3. Options audio :
+   - **Data_k (TE×10)** — coché par défaut (recommandé pour le partage) ;
+   - **Data (bruts)** — décoché par défaut ;
+   - les **métadonnées** (manifest, xlsx d'observations, Summary, etc.) sont
+     **toujours** incluses.
+4. Lisez l'**estimation de volume**, choisissez le dossier de destination
+   (clé USB…), confirmez.
+5. Un journal de copie s'affiche. À la fin, un dossier
+   `ChiroTool_export_AAAAMMJJ_HHMMSS/` contient une arborescence **relative**
+   rejouable : un scan ChiroTool sur l'autre poste retrouve les pastilles d'état.
+
+> 💡 Pour un partage « léger » : Data_k **oui**, Data **non**. Pour une archive
+> complète de la nuit, cochez les deux.
 
 ### Partager le matériel
 
