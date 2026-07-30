@@ -929,19 +929,34 @@ class RegistryPanel(ctk.CTkFrame):
         choice = _ask_format(
             self,
             title="Exporter",
-            prompt="Dans quel format veux-tu exporter le registre ?",
+            prompt="Que veux-tu exporter ?",
             options=[
+                ("Sessions  (USB)", "sessions", "🌙"),
                 ("Registre  (.db)", "db", "📦"),
                 ("Excel  (.xlsx)", "xlsx", "📊"),
-                ("CSV  (suivi équipe)", "csv", "📋"),
+                ("CSV  (équipe)", "csv", "📋"),
             ],
         )
-        if choice == "db":
+        if choice == "sessions":
+            self._export_sessions_wizard()
+        elif choice == "db":
             self._export_db()
         elif choice == "xlsx":
             self._export_xlsx()
         elif choice == "csv":
             self._export_csv()
+
+    def _export_sessions_wizard(self):
+        """Ouvre l'assistant d'export portable (Data / Data_k + métadonnées)."""
+        try:
+            from gui_export_wizard import open_export_sessions_wizard
+            open_export_sessions_wizard(
+                self.winfo_toplevel(),
+                registry=self.registry,
+                workspace=self.workspace,
+            )
+        except Exception as e:
+            messagebox.showerror("Export sessions", str(e))
 
     def _export_csv(self):
         """Export CSV complet avec toutes les colonnes (suivi équipe)."""
