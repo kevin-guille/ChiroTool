@@ -8,6 +8,8 @@ Couverture :
   - cleanup      : decide_contact (toutes les branches)
   - manifest     : save/load idempotence, flags, Action(status)
   - registry     : upsert, thread-safety, batch commit, migration
+  - repair       : coverage pure, suggestions, dry-run/apply, garde-fous
+  - export_sessions : plan/run, options Data/Data_k, dry-run, structure
 
 Ces modules sont les plus "à risque" : une régression y corrompt des
 données (renommage incohérent, cleanup trop aggressif, etc.). Tests
@@ -289,6 +291,252 @@ class TestManifest:
         assert m.is_done("customstep") is False
         m.record_action("customstep", status="ok", tool_version="test")
         assert m.is_done("customstep") is True
+
+
+# =========================================================================
+# export_sessions — plan + run (portable Data/Data_k + meta)
+# =========================================================================
+
+class TestExportSessions:
+    def _make_session(self, root: Path, name: str, *, with_data=True,
+                      with_data_k=True, sibling_data_k=False):
+        """Crée une mini-session sous root/<campagne>/<name>/."""
+        camp = root / "MonContrat"
+        session = camp / name
+        session.mkdir(parents=True)
+        (session / "_session_manifest.json").write_text(
+            '{"schema_version": 1, "flags": {"uploaded": true}}', encoding="utf-8")
+        (session / "participation-abc-observations.xlsx").write_bytes(b"PK\x03\x04xlsx")
+        (session / "participation-abc-observations.sync.json").write_text(
+            '{"entries":[]}', encoding="utf-8")
+        (session / "_stats_before_cleanup.json").write_text("{}", encoding="utf-8")
+        (session / "SMU_Summary.txt").write_text(
+            "DATE,TIME,LAT,LON,TEMP\n", encoding="utf-8")
+        if with_data:
+            data = session / "Data"
+            data.mkdir()
+            (data / "raw1.wav").write_bytes(b"R" * 100)
+            (data / "raw2.wav").write_bytes(b"R" * 200)
+        if with_data_k and not sibling_data_k:
+            dk = session / "Data_k"
+            dk.mkdir()
+            (dk / "seg_000.wav").write_bytes(b"K" * 50)
+            (dk / "seg_001.wav").write_bytes(b"K" * 60)
+        if sibling_data_k:
+            sdk = camp / "Data_k" / name
+            sdk.mkdir(parents=True)
+            (sdk / "sib_000.wav").write_bytes(b"S" * 40)
+        chi = session / "ChiroSurf_nuits" / "nuit1"
+        chi.mkdir(parents=True)
+        (chi / "note.txt").write_text("surf", encoding="utf-8")
+        return session
+
+    def test_plan_meta_and_data_k_default(self, tmp_path):
+        from export_sessions import ExportSessionSpec, plan_export
+        session = self._make_session(tmp_path, "20250903_site212097_Z3_Pass2_enr07")
+        dest = tmp_path / "usb"
+        dest.mkdir()
+        plan = plan_export(
+            [ExportSessionSpec(session_path=session)],  # data_k=True, data=False
+            dest, stamp="20260101_120000",
+        )
+        kinds = {f.kind for f in plan.files}
+        assert "meta" in kinds
+        assert "data_k" in kinds
+        assert "data" not in kinds
+        assert "chirosurf" in kinds
+        rels = {f.rel_dst for f in plan.files}
+        assert any(r.endswith("_session_manifest.json") for r in rels)
+        assert any("/Data_k/" in r or r.endswith("Data_k/seg_000.wav")
+                   or "Data_k/seg_000.wav" in r for r in rels)
+        assert not any("/Data/" in r.replace("\\", "/") and "raw" in r for r in rels)
+        assert plan.estimated_bytes > 0
+        assert plan.dest_root.endswith("ChiroTool_export_20260101_120000")
+
+    def test_plan_include_data(self, tmp_path):
+        from export_sessions import ExportSessionSpec, plan_export
+        session = self._make_session(tmp_path, "sess_data")
+        plan = plan_export(
+            [ExportSessionSpec(session_path=session, include_data=True,
+                               include_data_k=False)],
+            tmp_path / "out", stamp="t1",
+        )
+        kinds = {f.kind for f in plan.files}
+        assert "data" in kinds
+        assert "data_k" not in kinds
+        assert any("Data/raw1.wav" in f.rel_dst.replace("\\", "/") for f in plan.files)
+
+    def test_plan_sibling_data_k_normalized(self, tmp_path):
+        """Source campagne/Data_k/<session>/ → export .../<session>/Data_k/."""
+        from export_sessions import ExportSessionSpec, plan_export
+        session = self._make_session(
+            tmp_path, "sess_sib", with_data_k=False, sibling_data_k=True,
+        )
+        plan = plan_export(
+            [ExportSessionSpec(session_path=session, include_data_k=True)],
+            tmp_path / "out", stamp="t2",
+        )
+        rels = [f.rel_dst.replace("\\", "/") for f in plan.files if f.kind == "data_k"]
+        assert rels
+        assert all("/Data_k/" in r for r in rels)
+        assert any(r.endswith("sib_000.wav") for r in rels)
+
+    def test_dry_run_writes_nothing(self, tmp_path):
+        from export_sessions import ExportSessionSpec, plan_export, run_export
+        session = self._make_session(tmp_path, "sess_dry")
+        dest = tmp_path / "usb"
+        dest.mkdir()
+        plan = plan_export(
+            [ExportSessionSpec(session_path=session)], dest, stamp="dry1",
+        )
+        root = Path(plan.dest_root)
+        res = run_export(plan, dry_run=True)
+        assert res["dry_run"] is True
+        assert res["n_copied"] == 0
+        assert not root.exists()  # rien créé en dry-run
+
+    def test_run_export_structure_and_manifest(self, tmp_path):
+        from export_sessions import ExportSessionSpec, plan_export, run_export
+        import json
+        session = self._make_session(tmp_path, "sess_run")
+        dest = tmp_path / "usb"
+        dest.mkdir()
+        plan = plan_export(
+            [ExportSessionSpec(session_path=session, include_data=False,
+                               include_data_k=True)],
+            dest, stamp="run1",
+        )
+        progress_calls = []
+
+        def prog(done, total, label):
+            progress_calls.append((done, total, label))
+
+        res = run_export(plan, dry_run=False, progress=prog)
+        assert res["n_errors"] == 0
+        assert res["n_copied"] > 0
+        root = Path(plan.dest_root)
+        assert (root / "EXPORT_README.txt").is_file()
+        assert (root / "export_manifest.json").is_file()
+        man = json.loads((root / "export_manifest.json").read_text(encoding="utf-8"))
+        assert man["schema"] == 1
+        assert man["totals"]["n_copied"] == res["n_copied"]
+        # Arborescence relative campagne/session
+        sess_dir = root / "MonContrat" / "sess_run"
+        assert (sess_dir / "_session_manifest.json").is_file()
+        assert (sess_dir / "Data_k" / "seg_000.wav").is_file()
+        assert not (sess_dir / "Data").exists()
+        assert (sess_dir / "ChiroSurf_nuits" / "nuit1" / "note.txt").is_file()
+        assert progress_calls  # progress appelé
+
+    def test_collision_session_names(self, tmp_path):
+        from export_sessions import ExportSessionSpec, plan_export
+        # Deux sessions même nom sous campagnes différentes → rel uniques
+        s1 = self._make_session(tmp_path / "a", "SameName")
+        # force même nom sous autre parent
+        camp2 = tmp_path / "b" / "AutreContrat"
+        s2 = camp2 / "SameName"
+        s2.mkdir(parents=True)
+        (s2 / "_session_manifest.json").write_text("{}", encoding="utf-8")
+        plan = plan_export(
+            [
+                ExportSessionSpec(session_path=s1, campaign="C1"),
+                ExportSessionSpec(session_path=s2, campaign="C1"),  # même campagne forcée
+            ],
+            tmp_path / "out", stamp="col",
+        )
+        rels = {s["rel_path"] for s in plan.sessions}
+        assert len(rels) == 2  # SameName et SameName_2
+
+    def test_wizard_group_helpers(self):
+        """Helpers du wizard (groupement contrats) sans ouvrir de GUI."""
+        from gui_export_wizard import _group_sessions, _session_label, _fmt_bytes
+        groups = _group_sessions([
+            {"nom_contrat": "Alpha", "date_debut": "2025-09-01",
+             "n_point_fixe": "Z1", "n_passage": 1, "canonical_name": "n1"},
+            {"campaign": "BetaCamp", "date_debut": "2025-08-01",
+             "n_point_fixe": "Z2", "n_passage": 2, "id": "n2"},
+        ])
+        assert "Alpha" in groups
+        assert "BetaCamp" in groups
+        lbl = _session_label(groups["Alpha"][0])
+        assert "Z1" in lbl and "Pass1" in lbl
+        assert "MB" in _fmt_bytes(2_000_000) or "KB" in _fmt_bytes(2_000_000)
+
+
+class TestFinishUploadWithTrigger:
+    """Branche all_already_present / trigger : toujours record_action, jamais
+    de flag posé en silence si le compute échoue."""
+
+    class _ClientOK:
+        def trigger_compute(self, pid):
+            return {"ok": True}
+
+    class _ClientFail:
+        def trigger_compute(self, pid):
+            raise RuntimeError("HTTP 503 compute down")
+
+    def test_trigger_ok_sets_uploaded_via_record_action(self, tmp_path):
+        from manifest import Manifest
+        from pipeline import _finish_upload_with_trigger
+
+        session = tmp_path / "sess_ok"
+        session.mkdir()
+        m = Manifest.load_or_create(session)
+        out: dict = {"phase": "upload", "steps": []}
+
+        result = _finish_upload_with_trigger(
+            self._ClientOK(), m, session, out,
+            part_id="pid1",
+            stats={"n_wavs": 3, "uploaded_now": 0, "already_present": 3,
+                   "failed": 0, "all_already_present": True},
+            notes_prefix="3 déjà présents (reprise)",
+        )
+
+        assert "error" not in result
+        assert any(s.get("step") == "trigger_compute" and not s.get("error")
+                   for s in result["steps"])
+        m2 = Manifest.load(session)
+        assert m2 is not None
+        assert m2.flags.get("uploaded") is True
+        assert m2.is_done("upload") is True
+        last = m2.last_action("upload")
+        assert last is not None
+        assert last.status == "ok"
+        assert last.stats.get("trigger_ok") is True
+        assert last.stats.get("all_already_present") is True
+        # Pas de mutation manuelle hors record_action : une seule action upload
+        assert sum(1 for a in m2.actions if a.type == "upload") == 1
+
+    def test_trigger_fail_no_uploaded_flag_error_surfaced(self, tmp_path):
+        from manifest import Manifest
+        from pipeline import _finish_upload_with_trigger
+
+        session = tmp_path / "sess_fail"
+        session.mkdir()
+        m = Manifest.load_or_create(session)
+        out: dict = {"phase": "upload", "steps": []}
+
+        result = _finish_upload_with_trigger(
+            self._ClientFail(), m, session, out,
+            part_id="pid2",
+            stats={"n_wavs": 5, "uploaded_now": 0, "already_present": 5,
+                   "failed": 0, "all_already_present": True},
+            notes_prefix="5 déjà présents (reprise)",
+        )
+
+        assert result.get("error")
+        assert "trigger" in result["error"].lower() or "Tadarida" in result["error"]
+        assert any(s.get("step") == "trigger_compute" and s.get("error")
+                   for s in result["steps"])
+        m2 = Manifest.load(session)
+        assert m2 is not None
+        assert m2.flags.get("uploaded") is False
+        assert m2.is_done("upload") is False   # relance / repair possibles
+        last = m2.last_action("upload")
+        assert last is not None
+        assert last.status == "error"
+        assert last.stats.get("trigger_ok") is False
+        assert "503" in (last.notes or "")
 
 
 # =========================================================================
@@ -1721,6 +1969,424 @@ class TestFolderRenameNonFatal:
         assert any("DOSSIER" in w for w in out.get("warnings", []))
         assert out["final_session_path"] == str(sess)   # on garde le chemin réel
         assert list(sess.glob("Car212097-2026-Pass2-Z6-SMU05451_*.wav"))  # WAV canoniques
+
+
+# =========================================================================
+# repair — diagnostic / alignement d'état (une nuit)
+# =========================================================================
+
+class TestRepairCoveragePure:
+    """Helpers purs : compute_coverage + suggest_actions."""
+
+    def test_coverage_full_match(self):
+        from repair import compute_coverage
+        cov = compute_coverage(["a.wav", "b.wav"], ["b.wav", "a.wav"])
+        assert cov["coverage_ok"] is True
+        assert cov["missing_on_server"] == []
+        assert cov["extra_on_server"] == []
+        assert cov["local_wav_count"] == 2
+        assert cov["server_wav_count"] == 2
+
+    def test_coverage_partial_missing(self):
+        from repair import compute_coverage
+        cov = compute_coverage(["a.wav", "b.wav", "c.wav"], ["a.wav"])
+        assert cov["coverage_ok"] is False
+        assert cov["missing_on_server"] == ["b.wav", "c.wav"]
+        assert cov["extra_on_server"] == []
+
+    def test_coverage_extra_on_server_still_ok(self):
+        """Des fichiers en trop côté serveur n'empêchent pas coverage_ok."""
+        from repair import compute_coverage
+        cov = compute_coverage(["a.wav"], ["a.wav", "ghost.wav"])
+        assert cov["coverage_ok"] is True
+        assert cov["extra_on_server"] == ["ghost.wav"]
+
+    def test_coverage_listing_failed(self):
+        from repair import compute_coverage
+        cov = compute_coverage(["a.wav"], ["a.wav"], listing_ok=False)
+        assert cov["coverage_ok"] is False
+        assert cov["listing_ok"] is False
+
+    def test_coverage_empty_local(self):
+        from repair import compute_coverage
+        cov = compute_coverage([], [])
+        assert cov["coverage_ok"] is False
+
+    def test_suggest_partial_resume_no_trigger(self):
+        from repair import (
+            suggest_actions, ACTION_RESUME_UPLOAD, ACTION_TRIGGER,
+            ACTION_SET_UPLOADED,
+        )
+        acts = suggest_actions(
+            coverage_ok=False,
+            listing_ok=True,
+            missing_on_server=["b.wav"],
+            traitement_etat=None,
+            has_xlsx=False,
+            flag_uploaded=False,
+            has_participation_id=True,
+        )
+        assert ACTION_RESUME_UPLOAD in acts
+        assert ACTION_TRIGGER not in acts
+        assert ACTION_SET_UPLOADED not in acts
+
+    def test_suggest_full_coverage_set_uploaded_and_trigger(self):
+        from repair import (
+            suggest_actions, ACTION_SET_UPLOADED, ACTION_TRIGGER, ACTION_FETCH,
+        )
+        acts = suggest_actions(
+            coverage_ok=True,
+            listing_ok=True,
+            missing_on_server=[],
+            traitement_etat="",
+            has_xlsx=False,
+            flag_uploaded=False,
+            has_participation_id=True,
+        )
+        assert ACTION_SET_UPLOADED in acts
+        assert ACTION_TRIGGER in acts
+        assert ACTION_FETCH not in acts
+
+    def test_suggest_termine_sans_xlsx(self):
+        from repair import suggest_actions, ACTION_FETCH, ACTION_TRIGGER
+        acts = suggest_actions(
+            coverage_ok=True,
+            listing_ok=True,
+            missing_on_server=[],
+            traitement_etat="TERMINE",
+            has_xlsx=False,
+            flag_uploaded=True,
+            has_participation_id=True,
+        )
+        assert ACTION_FETCH in acts
+        assert ACTION_TRIGGER not in acts  # déjà terminé
+
+    def test_suggest_en_cours_no_trigger(self):
+        from repair import suggest_actions, ACTION_TRIGGER, ACTION_SET_UPLOADED
+        acts = suggest_actions(
+            coverage_ok=True,
+            listing_ok=True,
+            missing_on_server=[],
+            traitement_etat="EN_COURS",
+            has_xlsx=False,
+            flag_uploaded=False,
+            has_participation_id=True,
+        )
+        assert ACTION_SET_UPLOADED in acts
+        assert ACTION_TRIGGER not in acts
+
+    def test_suggest_noop_when_aligned(self):
+        from repair import suggest_actions, ACTION_NOOP
+        acts = suggest_actions(
+            coverage_ok=True,
+            listing_ok=True,
+            missing_on_server=[],
+            traitement_etat="TERMINE",
+            has_xlsx=True,
+            flag_uploaded=True,
+            has_participation_id=True,
+        )
+        assert acts == [ACTION_NOOP]
+
+    def test_suggest_no_participation(self):
+        from repair import suggest_actions, ACTION_NOOP
+        acts = suggest_actions(
+            coverage_ok=False,
+            listing_ok=False,
+            missing_on_server=[],
+            traitement_etat=None,
+            has_xlsx=False,
+            flag_uploaded=False,
+            has_participation_id=False,
+        )
+        assert acts == [ACTION_NOOP]
+
+
+class TestRepairLocalFs:
+    def test_list_data_k_and_xlsx(self, tmp_path):
+        from repair import list_local_data_k_wavs, find_local_observations_xlsx
+        session = tmp_path / "sess"
+        dk = session / "Data_k"
+        dk.mkdir(parents=True)
+        (dk / "a.wav").write_bytes(b"x")
+        (dk / "b.WAV").write_bytes(b"x")
+        (dk / "note.txt").write_text("nope")
+        (session / "participation-abc-observations.xlsx").write_bytes(b"PK")
+        (session / "participation-abc-observations_cleanup.xlsx").write_bytes(b"PK")
+
+        names = list_local_data_k_wavs(session)
+        assert names == ["a.wav", "b.WAV"] or set(names) == {"a.wav", "b.WAV"}
+        xlsx = find_local_observations_xlsx(session)
+        assert xlsx is not None
+        assert "_cleanup" not in xlsx.name.lower()
+
+    def test_format_repair_report_readable(self):
+        from repair import format_repair_report
+        text = format_repair_report({
+            "session": "/tmp/s",
+            "participation_id": "abc",
+            "local_wav_count": 2,
+            "server_wav_count": 1,
+            "missing_on_server": ["b.wav"],
+            "extra_on_server": [],
+            "coverage_ok": False,
+            "listing_ok": True,
+            "traitement_etat": "EN_COURS",
+            "has_xlsx": False,
+            "local_flags": {"uploaded": False},
+            "suggested_actions": ["resume_upload_missing"],
+            "dry_run": True,
+        })
+        assert "Diagnostic" in text
+        assert "b.wav" in text
+        assert "EN_COURS" in text
+        assert "dry-run" in text
+
+
+class _FakeRepairClient:
+    """Client minimal injecté dans diagnose_and_repair_session."""
+
+    def __init__(self, *, etat="TERMINE", files=None, fail_list=False,
+                 fail_status=False, fail_trigger=False, fail_fetch=False):
+        self.etat = etat
+        self.files = list(files if files is not None else [])
+        self.fail_list = fail_list
+        self.fail_status = fail_status
+        self.fail_trigger = fail_trigger
+        self.fail_fetch = fail_fetch
+        self.trigger_calls = 0
+        self.fetch_calls = 0
+
+    def participation_status(self, participation_id: str) -> dict:
+        if self.fail_status:
+            raise RuntimeError("status boom")
+        return {"id": participation_id, "etat": self.etat, "date": None, "has_bilan": False}
+
+    def list_participation_files(self, participation_id: str) -> list[str]:
+        if self.fail_list:
+            raise RuntimeError("list boom")
+        return list(self.files)
+
+    def trigger_compute(self, participation_id: str) -> dict:
+        self.trigger_calls += 1
+        if self.fail_trigger:
+            raise RuntimeError("trigger boom")
+        return {"ok": True}
+
+    def download_observations_as_xlsx(self, participation_id, dst, on_progress=None):
+        self.fetch_calls += 1
+        if self.fail_fetch:
+            raise RuntimeError("fetch boom")
+        from pathlib import Path
+        dst = Path(dst)
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        dst.write_bytes(b"fake-xlsx")
+        if on_progress:
+            on_progress(1, 1)
+        return {"n_files": 1, "n_contacts": 0, "path": str(dst)}
+
+
+def _session_with_manifest(tmp_path, *, wavs, part_id="pid123", flags=None, xlsx=False):
+    from manifest import Manifest
+    session = tmp_path / "20250903_site212097_Z3_Pass2_enr07"
+    session.mkdir()
+    dk = session / "Data_k"
+    dk.mkdir()
+    for w in wavs:
+        (dk / w).write_bytes(b"RIFF")
+    m = Manifest.load_or_create(session)
+    m.set_meta(vigiechiro_participation_id=part_id)
+    if flags:
+        for k, v in flags.items():
+            m.flags[k] = v
+    m.save(session)
+    if xlsx:
+        (session / f"participation-{part_id}-observations.xlsx").write_bytes(b"PK")
+    return session
+
+
+class TestDiagnoseAndRepairSession:
+    def test_dry_run_no_file_modification(self, tmp_path):
+        from repair import diagnose_and_repair_session
+        from manifest import Manifest
+        session = _session_with_manifest(
+            tmp_path, wavs=["a.wav", "b.wav"], flags={"uploaded": False},
+        )
+        mtime_before = (session / "_session_manifest.json").stat().st_mtime_ns
+        client = _FakeRepairClient(etat="", files=["a.wav", "b.wav"])
+
+        report = diagnose_and_repair_session(
+            session, token=None, apply=False, client=client,
+        )
+
+        assert report["dry_run"] is True
+        assert report["coverage_ok"] is True
+        assert "set_uploaded_true" in report["suggested_actions"]
+        assert "trigger_compute" in report["suggested_actions"]
+        assert report["applied_actions"] == []
+        assert client.trigger_calls == 0
+        assert client.fetch_calls == 0
+        # Manifest inchangé
+        mtime_after = (session / "_session_manifest.json").stat().st_mtime_ns
+        assert mtime_after == mtime_before
+        m = Manifest.load(session)
+        assert m.flags.get("uploaded") is False
+
+    def test_partial_coverage_no_set_uploaded_no_trigger(self, tmp_path):
+        from repair import diagnose_and_repair_session
+        session = _session_with_manifest(
+            tmp_path, wavs=["a.wav", "b.wav", "c.wav"], flags={"uploaded": False},
+        )
+        client = _FakeRepairClient(etat="", files=["a.wav"])  # b,c manquants
+
+        report = diagnose_and_repair_session(
+            session, apply=True, client=client,
+            allow_trigger=True, confirm_trigger=True,
+        )
+
+        assert report["coverage_ok"] is False
+        assert report["missing_on_server"] == ["b.wav", "c.wav"]
+        assert "resume_upload_missing" in report["suggested_actions"]
+        assert "set_uploaded_true" not in report["suggested_actions"]
+        assert "trigger_compute" not in report["suggested_actions"]
+        assert client.trigger_calls == 0
+        assert "set_uploaded_true" not in report["applied_actions"]
+        # resume suggéré mais non exécuté
+        assert any(
+            s["action"] == "resume_upload_missing" for s in report["skipped_actions"]
+        )
+
+    def test_apply_set_uploaded_on_full_coverage(self, tmp_path):
+        from repair import diagnose_and_repair_session
+        from manifest import Manifest
+        session = _session_with_manifest(
+            tmp_path, wavs=["a.wav"], flags={"uploaded": False},
+        )
+        client = _FakeRepairClient(etat="EN_COURS", files=["a.wav"])
+
+        report = diagnose_and_repair_session(session, apply=True, client=client)
+
+        assert "set_uploaded_true" in report["applied_actions"]
+        assert client.trigger_calls == 0  # EN_COURS → pas de trigger
+        m = Manifest.load(session)
+        assert m.flags.get("uploaded") is True
+        types = [a.type for a in m.actions]
+        assert "repair" in types
+
+    def test_trigger_requires_double_confirmation(self, tmp_path):
+        from repair import diagnose_and_repair_session
+        session = _session_with_manifest(
+            tmp_path, wavs=["a.wav"], flags={"uploaded": True},
+        )
+        client = _FakeRepairClient(etat="", files=["a.wav"])
+
+        r1 = diagnose_and_repair_session(
+            session, apply=True, client=client, allow_trigger=True,
+            confirm_trigger=False,
+        )
+        assert client.trigger_calls == 0
+        assert any(s["action"] == "trigger_compute" for s in r1["skipped_actions"])
+
+        r2 = diagnose_and_repair_session(
+            session, apply=True, client=client, allow_trigger=False,
+            confirm_trigger=True,
+        )
+        assert client.trigger_calls == 0
+
+        r3 = diagnose_and_repair_session(
+            session, apply=True, client=client, allow_trigger=True,
+            confirm_trigger=True,
+        )
+        assert client.trigger_calls == 1
+        assert "trigger_compute" in r3["applied_actions"]
+
+    def test_termine_sans_xlsx_fetch(self, tmp_path):
+        from repair import diagnose_and_repair_session
+        session = _session_with_manifest(
+            tmp_path, wavs=["a.wav"], flags={"uploaded": True}, xlsx=False,
+        )
+        client = _FakeRepairClient(etat="TERMINE", files=["a.wav"])
+
+        report = diagnose_and_repair_session(
+            session, apply=True, client=client, allow_fetch=True,
+        )
+
+        assert "fetch_xlsx" in report["suggested_actions"]
+        assert "fetch_xlsx" in report["applied_actions"]
+        assert client.fetch_calls == 1
+        assert report["has_xlsx"] is True
+        xlsx = session / "participation-pid123-observations.xlsx"
+        assert xlsx.is_file()
+
+    def test_fetch_disabled(self, tmp_path):
+        from repair import diagnose_and_repair_session
+        session = _session_with_manifest(
+            tmp_path, wavs=["a.wav"], flags={"uploaded": True},
+        )
+        client = _FakeRepairClient(etat="TERMINE", files=["a.wav"])
+
+        report = diagnose_and_repair_session(
+            session, apply=True, client=client, allow_fetch=False,
+        )
+        assert client.fetch_calls == 0
+        assert any(s["action"] == "fetch_xlsx" for s in report["skipped_actions"])
+
+    def test_missing_participation_id(self, tmp_path):
+        from repair import diagnose_and_repair_session
+        from manifest import Manifest
+        session = tmp_path / "sess"
+        session.mkdir()
+        (session / "Data_k").mkdir()
+        Manifest.load_or_create(session).save(session)
+
+        report = diagnose_and_repair_session(session, apply=False, client=_FakeRepairClient())
+        assert report["participation_id"] is None
+        assert any("participation" in e.lower() for e in report["errors"])
+        assert report["suggested_actions"] == ["noop"]
+
+    def test_registry_update_targeted(self, tmp_path):
+        from repair import diagnose_and_repair_session
+        from registry import Registry
+
+        workspace = tmp_path / "ws"
+        workspace.mkdir()
+        session = _session_with_manifest(
+            tmp_path, wavs=["a.wav"], flags={"uploaded": False},
+        )
+        reg = Registry(workspace)
+        reg.upsert_session({
+            "id": session.name,
+            "path": str(session),
+            "canonical_name": session.name,
+            "uploaded": 0,
+            "analyzed": 0,
+        })
+        client = _FakeRepairClient(etat="TERMINE", files=["a.wav"])
+
+        report = diagnose_and_repair_session(
+            session, apply=True, client=client, registry=reg,
+            allow_fetch=True,
+        )
+        assert "set_uploaded_true" in report["applied_actions"]
+        row = reg.get_session(session.name)
+        assert row is not None
+        assert int(row["uploaded"]) == 1
+        assert int(row["analyzed"]) == 1  # xlsx fetché
+        assert row.get("api_etat") == "TERMINE"
+        reg.close()
+
+    def test_never_trigger_if_missing_even_with_confirm(self, tmp_path):
+        from repair import diagnose_and_repair_session
+        session = _session_with_manifest(
+            tmp_path, wavs=["a.wav", "b.wav"], flags={"uploaded": False},
+        )
+        client = _FakeRepairClient(etat="", files=["a.wav"])
+
+        diagnose_and_repair_session(
+            session, apply=True, client=client,
+            allow_trigger=True, confirm_trigger=True,
+        )
+        assert client.trigger_calls == 0
 
 
 if __name__ == "__main__":
