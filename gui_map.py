@@ -134,6 +134,167 @@ def _remember_external_site_id(site_id: str) -> None:
             _external_sites_path().write_text(json.dumps(ids), encoding="utf-8")
     except Exception:
         pass
+
+
+# -- Point actif (continuité carte → wizard meta) ---------------------------
+# Dernier point créé ou réutilisé sur la carte. Le wizard de métadonnées
+# s'en sert pour préremplir carré + point (y compris sites d'autres obs.,
+# absents de /moi/sites et donc de list_my_recent_points).
+
+ACTIVE_POINT_MAX_AGE_DAYS = 7
+
+
+def _active_point_path():
+    from gui_config import config_dir
+    return config_dir() / "active_point.json"
+
+
+def save_active_point(*, site_id: str, numero: str | None, point: str,
+                      lat: float | None = None, lon: float | None = None,
+                      is_mine: bool = True,
+                      source: str = "create") -> dict:
+    """Persiste le point de travail courant. Retourne le dict écrit."""
+    from datetime import datetime
+    import json
+
+    num = ""
+    if numero is not None and str(numero).strip():
+        digits = "".join(c for c in str(numero) if c.isdigit())
+        num = digits.zfill(6) if digits else str(numero).strip()
+
+    payload = {
+        "site_id": site_id or "",
+        "numero": num,
+        "point": (point or "").strip().upper(),
+        "lat": float(lat) if lat is not None else None,
+        "lon": float(lon) if lon is not None else None,
+        "is_mine": bool(is_mine),
+        "source": source if source in ("create", "reuse") else "create",
+        "selected_at": datetime.now().isoformat(timespec="seconds"),
+    }
+    _active_point_path().write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    return payload
+
+
+def load_active_point() -> dict | None:
+    """Charge le point actif, ou None si absent/invalide."""
+    try:
+        import json
+        p = _active_point_path()
+        if not p.is_file():
+            return None
+        data = json.loads(p.read_text(encoding="utf-8"))
+        if not isinstance(data, dict):
+            return None
+        if not (data.get("point") or data.get("numero")):
+            return None
+        return data
+    except Exception:
+        return None
+
+
+def active_point_is_fresh(ap: dict | None, *,
+                          max_age_days: int = ACTIVE_POINT_MAX_AGE_DAYS,
+                          now=None) -> bool:
+    """True si ``ap`` a un selected_at récent (défaut < 7 jours)."""
+    if not ap:
+        return False
+    ts = ap.get("selected_at") or ""
+    if not ts:
+        return False
+    try:
+        from datetime import datetime, timedelta
+        selected = datetime.fromisoformat(str(ts).replace("Z", ""))
+        ref = now if now is not None else datetime.now()
+        return (ref - selected) <= timedelta(days=max_age_days)
+    except Exception:
+        return False
+
+
+def should_prefill_from_active(
+    prefill_site: str | None,
+    prefill_point: str | None,
+    active: dict | None,
+    *,
+    max_age_days: int = ACTIVE_POINT_MAX_AGE_DAYS,
+    now=None,
+) -> bool:
+    """Décide si le wizard meta doit préremplir depuis active_point.
+
+    Non-breaking : si la session a déjà site ET point (guess dossier / Suivi /
+    manifest), on n'écrase pas. Sinon, un active_point frais comble les trous.
+    """
+    if not active_point_is_fresh(active, max_age_days=max_age_days, now=now):
+        return False
+    site_ok = bool(prefill_site and str(prefill_site).strip())
+    point_ok = bool(prefill_point and str(prefill_point).strip())
+    return not (site_ok and point_ok)
+
+
+def active_point_as_recent(ap: dict) -> dict:
+    """Normalise active_point vers le shape des entrées « Points récents »."""
+    return {
+        "numero": ap.get("numero") or "",
+        "site_id": ap.get("site_id") or "",
+        "point": ap.get("point") or "",
+        "lat": ap.get("lat"),
+        "lon": ap.get("lon"),
+        "updated": ap.get("selected_at") or "",
+        "is_mine": bool(ap.get("is_mine", True)),
+        "is_active": True,
+        "source": ap.get("source") or "create",
+    }
+
+
+def merge_recent_points(mine: list[dict], external: list[dict],
+                        active: dict | None, *,
+                        max_total: int = 20,
+                        max_age_days: int = ACTIVE_POINT_MAX_AGE_DAYS,
+                        now=None) -> list[dict]:
+    """Fusionne points API (miens + externes) avec le point actif en tête.
+
+    Déduplication par (numero, point) — l'entrée active gagne si conflit.
+    Les points non-frais hors active restent listés (récents API).
+    """
+    out: list[dict] = []
+    seen: set[tuple[str, str]] = set()
+
+    def _key(p: dict) -> tuple[str, str]:
+        num = str(p.get("numero") or "").strip()
+        digits = "".join(c for c in num if c.isdigit())
+        if digits:
+            num = digits.zfill(6)
+        pt = str(p.get("point") or "").strip().upper()
+        return (num, pt)
+
+    def _add(p: dict) -> None:
+        k = _key(p)
+        if not k[0] and not k[1]:
+            return
+        if k in seen:
+            return
+        seen.add(k)
+        out.append(p)
+
+    if active_point_is_fresh(active, max_age_days=max_age_days, now=now):
+        _add(active_point_as_recent(active))  # type: ignore[arg-type]
+
+    for p in mine or []:
+        row = dict(p)
+        row.setdefault("is_mine", True)
+        row.setdefault("is_active", False)
+        _add(row)
+
+    for p in external or []:
+        row = dict(p)
+        row["is_mine"] = False
+        row.setdefault("is_active", False)
+        _add(row)
+
+    return out[:max_total]
+
+
 _nominatim_lock = threading.Lock()
 _nominatim_last_call = [0.0]  # [ts] — mutable closure-friendly
 _nominatim_cache: dict[tuple, list[dict]] = {}  # (query_normalized, limit) → results
@@ -984,6 +1145,16 @@ class MapPanel(ctk.CTkFrame):
                 anchor="w", wraplength=330,
             ).grid(row=6, column=0, sticky="ew", padx=10, pady=(0, 12))
 
+        # Action : mémoriser ce point pour le wizard « Préparer » (meta)
+        ctk.CTkButton(
+            frame,
+            text="★  Utiliser pour la prochaine préparation",
+            height=32,
+            fg_color=("#2ea043", "#238636"),
+            hover_color=("#258038", "#1b6828"),
+            command=lambda s=site, p=pt: self._activate_point_for_prepare(s, p),
+        ).grid(row=7, column=0, sticky="ew", padx=10, pady=(4, 10))
+
         # Rendu robuste sur Windows : withdraw + configure + deiconify évite
         # les fenêtres fantômes à (0,0) en mode overrideredirect.
         try:
@@ -1016,6 +1187,45 @@ class MapPanel(ctk.CTkFrame):
                 self._point_popup_esc_id = None
 
         self.after(300, _attach_close_handlers)
+
+    def _activate_point_for_prepare(self, site: dict, pt: dict) -> None:
+        """Mémorise le point cliqué comme active_point (suite → wizard meta)."""
+        is_mine = bool(site.get("is_mine", True))
+        site_id = site.get("id") or ""
+        if site_id and not is_mine:
+            _remember_external_site_id(site_id)
+        try:
+            save_active_point(
+                site_id=site_id,
+                numero=site.get("numero"),
+                point=pt.get("nom") or "",
+                lat=pt.get("lat"), lon=pt.get("lon"),
+                is_mine=is_mine,
+                source="reuse",
+            )
+        except Exception as e:
+            messagebox.showerror(
+                "Point actif",
+                f"Impossible de mémoriser le point :\n{e}")
+            return
+        num = site.get("numero") or "?"
+        name = pt.get("nom") or "?"
+        self.status_lbl.configure(
+            text=(f"✓ Point #{num} · '{name}' actif — "
+                  f"dépose les WAV puis « Préparer »"),
+            text_color=("#2ea043", "#3fb950"),
+        )
+        messagebox.showinfo(
+            "Point actif",
+            f"Point « {name} » du carré #{num} est maintenant le point "
+            f"actif.\n\n"
+            f"Prochaine étape :\n"
+            f"  1. Dépose tes WAV dans un dossier de session\n"
+            f"  2. Scanner → sélectionner la session\n"
+            f"  3. « ▶ Préparer » — le carré et le point seront "
+            f"préremplis dans l'assistant de métadonnées.",
+        )
+        self._close_point_popup()
 
     def _resolve_contract_label(self, site: dict, pt: dict) -> str:
         """Retourne le libellé humain du site pour le header de la fiche."""
@@ -1774,12 +1984,14 @@ class MapPanel(ctk.CTkFrame):
 
     # -- Résolution / création de carré (nouveau flux v0.2) -----------------
 
-    def _build_target_site(self, raw_site: dict, points: list, numero) -> dict:
+    def _build_target_site(self, raw_site: dict, points: list, numero,
+                           *, is_mine: bool = True) -> dict:
         """Construit le dict 'site' attendu par AddPointWizard."""
         return {
             "id": raw_site.get("_id") or "",
             "numero": str(numero).zfill(6) if numero else None,
             "titre": raw_site.get("titre", ""),
+            "is_mine": bool(is_mine),
             "points": [
                 {"nom": p["nom"], "lat": p["lat"], "lon": p["lon"]}
                 for p in (points or []) if p.get("lat") is not None
@@ -1853,7 +2065,10 @@ class MapPanel(ctk.CTkFrame):
         numero = grille.get("numero")
 
         if res.get("exists"):
-            target = self._build_target_site(res["site"], res["points"], numero)
+            target = self._build_target_site(
+                res["site"], res["points"], numero,
+                is_mine=bool(res.get("is_mine")),
+            )
             # Aperçu visuel : dessine les points du carré (dont ceux des autres)
             self._draw_carre_points(res["points"], res.get("is_mine"))
             if not res.get("is_mine"):
@@ -1913,34 +2128,67 @@ class MapPanel(ctk.CTkFrame):
 
     def _on_add_point_confirmed(self, *, site_id: str, point_name: str,
                                   lat: float, lon: float,
-                                  reused: bool = False):
-        """Callback quand le wizard a validé et l'API a répondu OK.
+                                  reused: bool = False,
+                                  numero: str | None = None,
+                                  is_mine: bool | None = None):
+        """Callback quand le wizard a validé (création API) ou réutilisé un point.
 
-        - Cas création : on recharge les sites (le nouveau point apparaît).
-        - Cas réutilisation : pas besoin de rechargement (point déjà présent),
-          mais on ouvre la fiche récap du point pour que l'utilisateur voie
-          immédiatement l'historique et puisse continuer (créer une nuit
-          dessus, etc.). Avant ce fix, la confirmation se faisait sans
-          retour visuel autre qu'un message en bas de la carte → testeur
-          frustré qui pensait que rien ne s'était passé.
+        - Persiste toujours ``active_point`` (continuité → wizard meta).
+        - Mémorise les sites externes aussi en cas de *reuse* (bug P0 fix).
+        - Cas création : recharge les sites (le nouveau point apparaît).
+        - Cas réutilisation : ouvre la fiche récap du point.
         """
+        site_info = next(
+            (s for s in self._sites_cache if s.get("id") == site_id), None)
+
+        if numero is None and site_info:
+            numero = site_info.get("numero")
+        if is_mine is None and site_info is not None:
+            is_mine = bool(site_info.get("is_mine", True))
+        if is_mine is None:
+            # Fallback : présent dans le cache « miens » ?
+            own_ids = {
+                s.get("id") for s in self._sites_cache
+                if s.get("is_mine", True)
+            }
+            is_mine = bool(site_id and site_id in own_ids)
+
+        # Sites d'autres observateurs : re-fetch carte + wizard (create ET reuse)
+        if site_id and not is_mine:
+            _remember_external_site_id(site_id)
+
+        try:
+            save_active_point(
+                site_id=site_id or "",
+                numero=numero,
+                point=point_name,
+                lat=lat, lon=lon,
+                is_mine=bool(is_mine),
+                source="reuse" if reused else "create",
+            )
+        except Exception:
+            pass
+
+        num_disp = ""
+        if numero:
+            digits = "".join(c for c in str(numero) if c.isdigit())
+            num_disp = digits.zfill(6) if digits else str(numero)
+        where = f"#{num_disp} · " if num_disp else ""
+        suite = (
+            f"✓ Point {where}'{point_name}' actif — "
+            f"dépose les WAV puis « Préparer »"
+        )
+
         if not reused:
-            # Si le carré n'est pas l'un des miens (ajout d'un point sur le carré
-            # d'un autre observateur), on le mémorise pour qu'il soit re-fetché et
-            # reste visible sur la carte (sinon /moi/sites ne le renverrait pas).
-            own_ids = {s.get("id") for s in self._sites_cache}
-            if site_id and site_id not in own_ids:
-                _remember_external_site_id(site_id)
             self._sites_loaded = False
             self.load_sites_async()
             self.status_lbl.configure(
-                text=f"✓ Point '{point_name}' ajouté au site (rechargement…)",
+                text=suite + " (rechargement carte…)",
                 text_color=("#2ea043", "#3fb950"),
             )
             return
 
-        # Réutilisation : on cherche le site/point dans le cache et on ouvre
-        # la fiche récap, comme si l'utilisateur avait cliqué le marker.
+        # Réutilisation : fiche récap comme un clic marker
         target_site = None
         target_pt = None
         for site in self._sites_cache:
@@ -1952,26 +2200,30 @@ class MapPanel(ctk.CTkFrame):
                         break
                 if target_site:
                     break
+        # Hors cache (ex. point d'un autre obs. résolu à l'instant) : fiche mini
+        if target_site is None:
+            target_site = {
+                "id": site_id,
+                "numero": num_disp or numero,
+                "is_mine": bool(is_mine),
+                "points": [],
+            }
+            target_pt = {
+                "nom": point_name,
+                "lat": lat, "lon": lon,
+            }
         if target_site and target_pt:
-            # Centre la carte sur le point puis ouvre la fiche
             try:
                 self.map.set_position(float(target_pt["lat"]),
                                        float(target_pt["lon"]))
                 self.map.set_zoom(15)
             except Exception:
                 pass
-            # Léger délai pour laisser le mode add-point se cleanup avant
-            # d'ouvrir le popup (sinon le binding canvas le ferait fermer).
             self.after(150, lambda: self._show_point_popup(target_site, target_pt))
-            self.status_lbl.configure(
-                text=f"✓ Point '{point_name}' réutilisé — fiche affichée",
-                text_color=("#2ea043", "#3fb950"),
-            )
-        else:
-            self.status_lbl.configure(
-                text=f"✓ Point '{point_name}' réutilisé",
-                text_color=("#2ea043", "#3fb950"),
-            )
+        self.status_lbl.configure(
+            text=suite,
+            text_color=("#2ea043", "#3fb950"),
+        )
 
     # -- Focus programmable (appelé depuis la sidebar) ---------------------
 

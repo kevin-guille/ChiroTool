@@ -474,35 +474,45 @@ class AddPointWizard(ctk.CTkToplevel):
         msg = (
             f"Tu vas réutiliser le point '{pt['nom']}' du site "
             f"#{site.get('numero', '?')} (à {distance_m:.0f} m du clic).\n\n"
-            f"Aucune création de point ne sera faite côté Vigie-Chiro — "
-            f"sa fiche récapitulative s'affichera immédiatement après.\n\n"
-            f"Pour créer une nouvelle nuit (participation) sur ce point :\n"
-            f"  1. Dépose tes WAV dans <campagne>/<dossier_session>/\n"
-            f"  2. Clique « 🔄 Scanner » pour détecter la session\n"
-            f"  3. Sélectionne-la dans la sidebar puis clique\n"
-            f"     « ▶ Upload + Tadarida » — le point sera utilisé.\n\n"
+            f"Aucune création côté Vigie-Chiro. Ce point devient le "
+            f"« point actif » : à la prochaine préparation de session, "
+            f"le carré et le point seront préremplis.\n\n"
+            f"Ensuite :\n"
+            f"  1. Dépose tes WAV dans un dossier de session\n"
+            f"  2. « 🔄 Scanner » → sélectionne la session\n"
+            f"  3. « ▶ Préparer » (meta préremplies) puis Upload\n\n"
             f"Confirmer ?"
         )
         if not messagebox.askyesno("Réutiliser un point existant", msg):
             return
         # Signaler à l'appelant via on_confirm. reused=True pour que la carte
         # ouvre la fiche récap du point au lieu de juste un message statut.
+        kwargs = dict(
+            site_id=site["id"],
+            point_name=pt["nom"],
+            lat=pt["lat"], lon=pt["lon"],
+            reused=True,
+            numero=site.get("numero"),
+            is_mine=site.get("is_mine"),
+        )
         try:
             if self.on_confirm:
-                self.on_confirm(
-                    site_id=site["id"],
-                    point_name=pt["nom"],
-                    lat=pt["lat"], lon=pt["lon"],
-                    reused=True,
-                )
+                self.on_confirm(**kwargs)
         except TypeError:
-            # Compatibilité : si on_confirm n'accepte pas reused= (caller
-            # ancien), on retombe sur la signature historique.
+            # Compatibilité : signatures plus anciennes (sans reused / meta).
             try:
                 self.on_confirm(
                     site_id=site["id"], point_name=pt["nom"],
-                    lat=pt["lat"], lon=pt["lon"],
+                    lat=pt["lat"], lon=pt["lon"], reused=True,
                 )
+            except TypeError:
+                try:
+                    self.on_confirm(
+                        site_id=site["id"], point_name=pt["nom"],
+                        lat=pt["lat"], lon=pt["lon"],
+                    )
+                except Exception:
+                    pass
             except Exception:
                 pass
         except Exception:
@@ -552,6 +562,10 @@ class AddPointWizard(ctk.CTkToplevel):
             text_color=("gray40", "gray70"),
         )
 
+        site_id = site["id"]
+        site_numero = site.get("numero")
+        site_is_mine = site.get("is_mine")
+
         def _worker():
             try:
                 from vigiechiro_api import VigieChiroClient
@@ -560,13 +574,16 @@ class AddPointWizard(ctk.CTkToplevel):
                     raise RuntimeError("token API manquant")
                 client = VigieChiroClient(token)
                 client.add_localite(
-                    site["id"], name, lat, lon,
+                    site_id, name, lat, lon,
                     representatif=self.repr_var.get(),
                 )
             except Exception as e:
                 self.after(0, lambda: self._on_error(str(e)))
                 return
-            self.after(0, lambda: self._on_success(site["id"], name, lat, lon))
+            self.after(0, lambda: self._on_success(
+                site_id, name, lat, lon,
+                numero=site_numero, is_mine=site_is_mine,
+            ))
 
         threading.Thread(target=_worker, daemon=True).start()
 
@@ -576,15 +593,25 @@ class AddPointWizard(ctk.CTkToplevel):
         self.err_lbl.configure(text=f"✗  {msg}")
         self.status_lbl.configure(text="")
 
-    def _on_success(self, site_id: str, name: str, lat: float, lon: float):
+    def _on_success(self, site_id: str, name: str, lat: float, lon: float,
+                    *, numero: str | None = None, is_mine: bool | None = None):
         self.status_lbl.configure(
-            text=f"✓ Point '{name}' créé avec succès",
+            text=f"✓ Point '{name}' créé — actif pour la préparation",
             text_color=("#2ea043", "#3fb950"),
+        )
+        kwargs = dict(
+            site_id=site_id, point_name=name, lat=lat, lon=lon,
+            reused=False, numero=numero, is_mine=is_mine,
         )
         try:
             if self.on_confirm:
+                self.on_confirm(**kwargs)
+        except TypeError:
+            try:
                 self.on_confirm(
                     site_id=site_id, point_name=name, lat=lat, lon=lon)
+            except Exception:
+                pass
         except Exception:
             pass
         # Fermeture après court délai pour que l'utilisateur voie le succès
