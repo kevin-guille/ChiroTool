@@ -62,6 +62,8 @@ class SessionMetaWizard(ctk.CTkToplevel):
         self._build_ui()
         if prefill:
             self._fill_from(prefill)
+        # Continuité carte → meta : préremplit site/point si absents du guess
+        self._apply_active_point_prefill(prefill)
 
         self.protocol("WM_DELETE_WINDOW", self._on_cancel)
         self._load_recent_points_async()
@@ -92,16 +94,15 @@ class SessionMetaWizard(ctk.CTkToplevel):
         self._known_contrats = self._collect_known_contrats()
         self._known_sites = self._collect_known_sites()
 
-        # --- Points récents (compte Vigie-Chiro) : remplit carré + point en 1 clic ---
-        # Remplace l'ancienne dépendance au Suivi xlsx : plus besoin de noter le
-        # n° de carré sur un papier à la création du point.
+        # --- Points récents : compte VC + point actif carte + sites externes ---
+        # Le point actif (create/reuse sur la carte) comble le trou « autre obs ».
         self._recent_points: list[dict] = []
         self._recent_label_map: dict[str, dict] = {}
         rp = ctk.CTkFrame(form, fg_color=("#eef5ff", "#16263d"), corner_radius=8)
         rp.grid(row=0, column=0, columnspan=2, sticky="ew", padx=2, pady=(0, 10))
         rp.grid_columnconfigure(0, weight=1)
         ctk.CTkLabel(
-            rp, text="⭐  Points récents (ton compte Vigie-Chiro)",
+            rp, text="⭐  Points récents (compte + dernier choix carte)",
             font=ctk.CTkFont(size=12, weight="bold"), anchor="w",
         ).grid(row=0, column=0, sticky="ew", padx=10, pady=(8, 0))
         self._recent_menu = ctk.CTkOptionMenu(
@@ -110,8 +111,8 @@ class SessionMetaWizard(ctk.CTkToplevel):
         self._recent_menu.set("Chargement…")
         self._recent_menu.grid(row=1, column=0, sticky="ew", padx=10, pady=(2, 2))
         ctk.CTkLabel(
-            rp, text="Sélectionne un point → remplit le carré et le point "
-                     "automatiquement (commune résolue en arrière-plan).",
+            rp, text="Sélectionne un point → remplit le carré et le point. "
+                     "★ = dernier choix carte ; « autre obs. » = site partagé.",
             font=ctk.CTkFont(size=10), text_color=("gray40", "gray70"),
             anchor="w", justify="left", wraplength=520,
         ).grid(row=2, column=0, sticky="ew", padx=10, pady=(0, 8))
@@ -373,21 +374,103 @@ class SessionMetaWizard(ctk.CTkToplevel):
         except Exception:
             return False
 
+    def _apply_active_point_prefill(self, prefill: SessionMeta | None) -> None:
+        """Préremplit site/point depuis active_point si le guess est incomplet."""
+        try:
+            from gui_map import load_active_point, should_prefill_from_active
+            ap = load_active_point()
+        except Exception:
+            return
+        pre_site = (prefill.n_site_tadarida if prefill else None) or ""
+        pre_point = (prefill.n_point_fixe if prefill else None) or ""
+        # Respecte aussi ce qui aurait déjà été mis par _fill_from
+        cur_site = self.site_var.get().strip() if hasattr(self, "site_var") else ""
+        cur_point = self.point_var.get().strip() if hasattr(self, "point_var") else ""
+        site_for_decision = cur_site or pre_site
+        point_for_decision = cur_point or pre_point
+        if not should_prefill_from_active(site_for_decision, point_for_decision, ap):
+            return
+        assert ap is not None
+        if not cur_site and ap.get("numero"):
+            self.site_var.set(str(ap["numero"]))
+        if not cur_point and ap.get("point"):
+            self.point_var.set(str(ap["point"]))
+        try:
+            tag = "autre obs." if not ap.get("is_mine", True) else "carte"
+            self.err_lbl.configure(
+                text=(f"✓ Point actif ({tag}) : carré {ap.get('numero')} · "
+                      f"{ap.get('point')} — vérifie le passage."),
+                text_color=("#2ea043", "#3fb950"))
+        except Exception:
+            pass
+
     def _load_recent_points_async(self):
-        """Charge en arrière-plan les points récents du compte (+ communes)."""
+        """Charge points du compte + externes mémorisés + point actif."""
         try:
             from credentials import load_token
             token = load_token()
         except Exception:
             token = None
+
+        # Même sans token : afficher au moins le point actif local
         if not token:
-            self._set_recent_menu(["(token API requis — voir Préférences)"])
+            try:
+                from gui_map import load_active_point, merge_recent_points
+                ap = load_active_point()
+                pts = merge_recent_points([], [], ap)
+            except Exception:
+                pts = []
+            if pts:
+                self._on_recent_loaded(pts)
+            else:
+                self._set_recent_menu(
+                    ["(token API requis — ou choisis un point sur la carte)"])
             return
 
         def _worker():
+            mine: list[dict] = []
+            external: list[dict] = []
+            active = None
             try:
                 from vigiechiro_api import VigieChiroClient
-                pts = VigieChiroClient(token).list_my_recent_points(limit=15)
+                from gui_map import (
+                    load_active_point, merge_recent_points,
+                    _load_external_site_ids, _points_from_raw,
+                )
+                client = VigieChiroClient(token)
+                try:
+                    mine = client.list_my_recent_points(limit=15) or []
+                    for p in mine:
+                        p.setdefault("is_mine", True)
+                except Exception:
+                    mine = []
+
+                # Sites d'autres obs. mémorisés (create/reuse sur leur carré)
+                for ext_id in (_load_external_site_ids() or [])[:10]:
+                    try:
+                        raw = client.get_site_raw(ext_id)
+                    except Exception:
+                        continue
+                    if not raw:
+                        continue
+                    import re
+                    titre = raw.get("titre") or ""
+                    m = re.search(r"-(\d{5,6})\s*$", titre)
+                    numero = m.group(1).zfill(6) if m else ""
+                    updated = raw.get("_updated") or ""
+                    for pt in _points_from_raw(raw):
+                        external.append({
+                            "numero": numero,
+                            "site_id": raw.get("_id") or ext_id,
+                            "point": pt.get("nom"),
+                            "lat": pt.get("lat"),
+                            "lon": pt.get("lon"),
+                            "updated": updated,
+                            "is_mine": False,
+                        })
+
+                active = load_active_point()
+                pts = merge_recent_points(mine, external, active)
             except Exception:
                 pts = None
             self.after(0, lambda: self._on_recent_loaded(pts))
@@ -408,7 +491,13 @@ class SessionMetaWizard(ctk.CTkToplevel):
 
     def _label_for_recent(self, p: dict) -> str:
         base = f"{p.get('numero') or '?'} · {p.get('point') or '?'}"
-        if p.get("commune"):
+        if p.get("is_active"):
+            base = f"★ {base} · dernier choix carte"
+        elif p.get("is_mine") is False:
+            base += " · autre obs."
+        if p.get("commune") and not p.get("is_active"):
+            base += f" · {p['commune']}"
+        elif p.get("commune") and p.get("is_active"):
             base += f" · {p['commune']}"
         upd = (p.get("updated") or "")[:10]
         return f"{base}   ({upd})" if upd else base
@@ -441,8 +530,14 @@ class SessionMetaWizard(ctk.CTkToplevel):
         try:
             cur = self._recent_menu.get()
             self._recent_menu.configure(values=values)
+            # Si un point actif est en tête, le présélectionner pour le voir
+            active_label = next(
+                (self._label_for_recent(p) for p in self._recent_points
+                 if p.get("is_active")),
+                None,
+            )
             if cur not in values:
-                self._recent_menu.set(values[0])
+                self._recent_menu.set(active_label or values[0])
         except Exception:
             pass
 
@@ -454,10 +549,28 @@ class SessionMetaWizard(ctk.CTkToplevel):
             self.site_var.set(str(p["numero"]))
         if p.get("point"):
             self.point_var.set(str(p["point"]))
+        # Mémorise le choix explicite comme point actif (prochaine session)
         try:
+            from gui_map import save_active_point
+            save_active_point(
+                site_id=p.get("site_id") or "",
+                numero=p.get("numero"),
+                point=p.get("point") or "",
+                lat=p.get("lat"), lon=p.get("lon"),
+                is_mine=bool(p.get("is_mine", True)),
+                source="reuse",
+            )
+        except Exception:
+            pass
+        try:
+            origin = (
+                "dernier choix carte" if p.get("is_active")
+                else ("autre observateur" if p.get("is_mine") is False
+                      else "ton compte")
+            )
             self.err_lbl.configure(
                 text=f"✓ Carré {p.get('numero')} · point {p.get('point')} "
-                     f"sélectionné — renseigne le passage.",
+                     f"({origin}) — renseigne le passage.",
                 text_color=("#2ea043", "#3fb950"))
         except Exception:
             pass

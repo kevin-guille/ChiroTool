@@ -270,6 +270,9 @@ nuit (site, point, passage, enregistreur…) à partir du nom du dossier, du fic
 
 Dans cet assistant :
 
+- **Points récents** : liste vos points Vigie-Chiro, le **dernier choix sur la
+  carte** (badge ★) et les points d’**autres observateurs** que vous avez
+  réutilisés. Un clic remplit le carré et le point.
 - **Contrat** : le nom du projet (un bouton ▾ propose ceux déjà saisis)
 - **Date de début** : la date de pose (un bouton 📅 ouvre un calendrier)
 - **N° site Tadarida** : les 6 chiffres du carré
@@ -277,6 +280,12 @@ Dans cet assistant :
 - **Passage** : 1, 2…
 - **N° enregistreur** : choisissez-le dans la liste (il remplit automatiquement
   la série et le micro depuis votre parc « Mes matériels »)
+
+> 💡 **Astuce carte** : si vous créez ou réutilisez un point sur la carte (y
+> compris un point déjà posé par un collègue), il devient le *point actif*. Au
+> « Préparer » suivant, carré et point sont préremplis — plus besoin de les
+> retaper. Sur la fiche d’un marker : **« Utiliser pour la prochaine
+> préparation »**.
 
 Cliquez sur **« Valider »**.
 

@@ -1254,6 +1254,132 @@ class TestMapExternalSites:
 
 
 # =========================================================================
+# carte / wizard : point actif (continuité create|reuse → meta)
+# =========================================================================
+
+class TestActivePoint:
+    def test_save_load_roundtrip(self, tmp_path, monkeypatch):
+        import gui_map
+        monkeypatch.setattr(gui_map, "_active_point_path",
+                            lambda: tmp_path / "active_point.json")
+        assert gui_map.load_active_point() is None
+        saved = gui_map.save_active_point(
+            site_id="sid1", numero="381009", point="z1",
+            lat=45.1, lon=5.2, is_mine=False, source="reuse",
+        )
+        assert saved["point"] == "Z1"
+        assert saved["numero"] == "381009"
+        assert saved["is_mine"] is False
+        assert saved["source"] == "reuse"
+        assert saved["selected_at"]
+        loaded = gui_map.load_active_point()
+        assert loaded is not None
+        assert loaded["site_id"] == "sid1"
+        assert loaded["point"] == "Z1"
+        assert loaded["numero"] == "381009"
+        assert loaded["is_mine"] is False
+
+    def test_freshness_window(self, tmp_path, monkeypatch):
+        import gui_map
+        from datetime import datetime, timedelta
+        monkeypatch.setattr(gui_map, "_active_point_path",
+                            lambda: tmp_path / "active_point.json")
+        now = datetime(2026, 8, 3, 12, 0, 0)
+        gui_map.save_active_point(
+            site_id="x", numero="123456", point="A1",
+            is_mine=True, source="create",
+        )
+        ap = gui_map.load_active_point()
+        # Forcer selected_at pour le test
+        ap["selected_at"] = (now - timedelta(days=3)).isoformat(timespec="seconds")
+        assert gui_map.active_point_is_fresh(ap, now=now) is True
+        ap["selected_at"] = (now - timedelta(days=8)).isoformat(timespec="seconds")
+        assert gui_map.active_point_is_fresh(ap, now=now) is False
+        assert gui_map.active_point_is_fresh(None) is False
+
+    def test_should_prefill_priority(self):
+        """N'écrase pas un guess complet ; comble si site ou point manquant."""
+        import gui_map
+        from datetime import datetime, timedelta
+        now = datetime(2026, 8, 3, 12, 0, 0)
+        ap = {
+            "numero": "381009", "point": "Z1", "is_mine": False,
+            "selected_at": now.isoformat(timespec="seconds"),
+        }
+        # Session déjà complète → non
+        assert gui_map.should_prefill_from_active(
+            "111111", "A2", ap, now=now) is False
+        # Site seul → oui (point manquant)
+        assert gui_map.should_prefill_from_active(
+            "111111", None, ap, now=now) is True
+        # Rien → oui
+        assert gui_map.should_prefill_from_active(
+            None, None, ap, now=now) is True
+        # Actif trop vieux → non même sans meta
+        old = dict(ap)
+        old["selected_at"] = (now - timedelta(days=10)).isoformat(
+            timespec="seconds")
+        assert gui_map.should_prefill_from_active(
+            None, None, old, now=now) is False
+
+    def test_merge_recent_active_first_and_dedupe(self):
+        import gui_map
+        from datetime import datetime
+        now = datetime(2026, 8, 3, 12, 0, 0)
+        ap = {
+            "site_id": "ext1", "numero": "381009", "point": "Z1",
+            "is_mine": False, "source": "reuse",
+            "selected_at": now.isoformat(timespec="seconds"),
+            "lat": 45.0, "lon": 5.0,
+        }
+        mine = [
+            {"numero": "212097", "point": "A1", "is_mine": True,
+             "updated": "2026-07-01"},
+            # Doublon du point actif (même numero/point) — l'actif gagne
+            {"numero": "381009", "point": "Z1", "is_mine": True,
+             "updated": "2026-07-02"},
+        ]
+        external = [
+            {"numero": "381009", "point": "Z2", "is_mine": False,
+             "updated": "2026-06-01"},
+        ]
+        merged = gui_map.merge_recent_points(mine, external, ap, now=now)
+        assert merged[0].get("is_active") is True
+        assert merged[0]["numero"] == "381009"
+        assert merged[0]["point"] == "Z1"
+        # Pas de second 381009/Z1
+        keys = [(p["numero"], p["point"]) for p in merged]
+        assert keys.count(("381009", "Z1")) == 1
+        assert ("212097", "A1") in keys
+        assert ("381009", "Z2") in keys
+        # Entrées externes marquées
+        z2 = next(p for p in merged if p["point"] == "Z2")
+        assert z2["is_mine"] is False
+
+    def test_reuse_also_remembers_external(self, tmp_path, monkeypatch):
+        """Simule le fix P0 : reuse d'un site non-mien → external_sites + active."""
+        import gui_map
+        monkeypatch.setattr(gui_map, "_external_sites_path",
+                            lambda: tmp_path / "external_sites.json")
+        monkeypatch.setattr(gui_map, "_active_point_path",
+                            lambda: tmp_path / "active_point.json")
+        # Comme _on_add_point_confirmed pour un reuse externe
+        site_id = "foreign_site_id"
+        is_mine = False
+        if site_id and not is_mine:
+            gui_map._remember_external_site_id(site_id)
+        gui_map.save_active_point(
+            site_id=site_id, numero="381009", point="Z1",
+            lat=45.0, lon=5.0, is_mine=False, source="reuse",
+        )
+        assert "foreign_site_id" in gui_map._load_external_site_ids()
+        ap = gui_map.load_active_point()
+        assert ap["source"] == "reuse"
+        assert ap["is_mine"] is False
+        assert gui_map.should_prefill_from_active(None, None, ap) is True
+
+
+# =========================================================================
 # version : selection de la release (liste + /latest, anti-cache-obsolete)
 # =========================================================================
 

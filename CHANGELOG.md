@@ -18,6 +18,11 @@ Les versions publiées suivent le SemVer du fichier `version.py` / tags GitHub.
 
 ### Corrigé
 
+- **Point actif (carte → wizard meta)** : créer *ou* réutiliser un point
+  (y compris d’un autre observateur) le mémorise (`active_point.json` + sites
+  externes). L’assistant de métadonnées préremplit carré/point et propose le
+  choix en tête des « Points récents » (badge ★ / « autre obs. »). Corrige le
+  parcours bloquant signalé quand le renommage restait vide après reuse carte.
 - Branche upload « tous les WAV déjà sur le serveur » : plus de pose silencieuse
   du flag `uploaded` ; le résultat de `trigger_compute` est toujours journalisé
   via `record_action` ; en cas d’échec, le flag n’est pas posé (reprise /
