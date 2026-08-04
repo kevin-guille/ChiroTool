@@ -55,9 +55,10 @@ La **v0.6** répond à l’issue [#3](https://github.com/kevin-guille/ChiroTool/
 | 🔧 | **Vérifier / Réparer** une nuit (diag API + disque) | Reprise après upload partiel / force-launch web |
 | 💾 | **Export USB** de sessions (Data_k ± Data) | Partage collègue sans copier des To de bruts |
 | 🗺️ | **Pick carte** depuis les métadonnées (commune, 5 km) | Plus de saisie manuelle de carré / Zx |
-| 📍 | **FOCUS carte** (GPS manifest, points du projet) | « Voir sur la carte » recentre vraiment |
+| 📍 | **FOCUS carte** (pin rose, GPS manifest) + recharger = tous sites | « Voir sur la carte » recentre vraiment |
 | 🌊 | **ChiroSurf nuits** (`chirosurf/Nuit{n}_…csv`) | Méthode 10 %→75 % nuit par nuit |
 | 📊 | Synthèse **`_Vu`** + filtre **proba Tadarida min** | Lecture activité après validation ChiroSurf |
+| 🔧 | **Vérifier / Réparer** (journal détaillé, token 401, nettoyage) | Diagnostic copiable pour les issues |
 
 👉 Détail : [Changelog](CHANGELOG.md) · [SPEC](docs/SPEC_v06_parcours.md) · [Releases](https://github.com/kevin-guille/ChiroTool/releases)
 
@@ -97,10 +98,11 @@ La **v0.6** répond à l’issue [#3](https://github.com/kevin-guille/ChiroTool/
 ### Après l’analyse
 
 - **Validation des contacts** (raccourcis, ouverture WAV dans ChiroSurf, taxons, envoi des identifications)
-- **Graphes d’activité** et **synthèse** avec niveaux de référence (national / région / milieu)
+- **ChiroSurf multi-nuits** : scission lazy `chirosurf/Nuit{n}_…csv` (nuit biologique) pour la méthode 10 %→75 %
+- **Graphes d’activité** et **synthèse** (référentiels national / région / milieu, filtre proba Tadarida, source `_Vu`)
 - **Registre de campagne** multi-sites (SQLite, export CSV / xlsx)
-- **Export portable de sessions** (clé USB / partage : Data_k ± Data + métadonnées)
-- **Carte OSM** : carrés STOC, création / réutilisation de point (y compris autre observateur), continuité vers les métadonnées
+- **Export portable de sessions** (clé USB / partage : Data_k ± Data + métadonnées + `chirosurf/` si présent)
+- **Carte OSM** : pick depuis les meta (5 km), FOCUS session, carrés STOC, create/reuse (y compris autre observateur)
 
 ### Robustesse
 

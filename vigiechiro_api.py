@@ -355,6 +355,33 @@ def save_observation_sidecar(xlsx_path, entries, sync) -> Path:
 # Client
 # ---------------------------------------------------------------------------
 
+def fichiers_listing_page_done(
+    *,
+    n_page_items: int,
+    n_names_so_far: int,
+    meta_total,
+    page_size: int = 99,
+) -> bool:
+    """True s'il ne faut plus demander la page suivante du listing /fichiers.
+
+    Pure / testable. Ne s'arrête PAS quand ``total`` est 0 ou absent (sinon
+    une seule page ~99 fichiers → faux manquants en repair).
+
+    ``page_size`` doit rester **< 100** (plafond backend Eve).
+    """
+    if n_page_items <= 0:
+        return True
+    try:
+        total_i = int(meta_total) if meta_total is not None else 0
+    except (TypeError, ValueError):
+        total_i = 0
+    if total_i > 0 and n_names_so_far >= total_i:
+        return True
+    if n_page_items < page_size:
+        return True
+    return False
+
+
 class VigieChiroClient:
     """Client Vigie-Chiro. Lève les exceptions typées ci-dessus en cas d'erreur.
 
@@ -1139,56 +1166,92 @@ class VigieChiroClient:
         même session détecte ces fichiers et ne renvoie que les manquants.
 
         Stratégie :
-          1. ``GET /fichiers?where={"lien_participation":"<id>"}`` — endpoint
-             Eve standard. Retourne paginé.
-          2. Si ce champ n'est pas le bon (schema Vigie-Chiro a évolué), on
-             essaye ``participation`` puis ``lien_donnee``.
-          3. Si rien ne marche → retourne [] (l'upload se fera intégralement,
-             côté serveur ça créera potentiellement des doublons mais c'est
-             un comportement dégradé acceptable).
+          1. ``GET /fichiers?where={"lien_participation":"<id>"}`` — paginé
+             avec ``max_results=99`` (**jamais ≥ 100** : le backend Eve refuse).
+          2. Si ce champ n'est pas le bon, essai ``participation``.
+          3. Fallback : titres via ``/participations/<id>/donnees`` (mêmes
+             noms de fichiers que le tableur d'observations).
+          4. Si vraiment rien → ``[]`` (reprise = re-upload complet).
 
-        Retourne la liste des noms de fichiers (avec extension), ou [] si
-        aucun fichier ou impossible de lister.
+        Lève ``NetworkError`` / ``TokenExpiredError`` (pas d'avalement silencieux
+        en liste vide) pour que le repair puisse marquer ``listing_ok=False``.
         """
         import json
+        # Le backend refuse max_results >= 100 (voir iter_donnees).
+        page_size = 99
+        last_api_error: Exception | None = None
+
         for field in ("lien_participation", "participation"):
             try:
                 page = 1
                 names: list[str] = []
-                while True:
+                while page <= 500:
                     params = {
                         "where": json.dumps({field: participation_id}),
-                        "max_results": 99, "page": page,
+                        "max_results": page_size, "page": page,
                     }
                     resp = self._request("GET", "/fichiers", params=params,
                                           source="background")
                     items = (resp or {}).get("_items") or []
+                    if not items:
+                        break
                     for it in items:
-                        # Le champ "titre" contient le nom de fichier original
-                        # ("Car260155-...wav"). Selon le schéma, ce peut aussi
-                        # être "nom" ou "filename" — on essaye plusieurs.
                         name = it.get("titre") or it.get("nom") \
                             or it.get("filename")
                         if name:
                             names.append(str(name))
-                    # Détection fin de pagination
                     meta = (resp or {}).get("_meta") or {}
-                    total = meta.get("total", 0)
-                    if not items or len(names) >= total:
+                    if fichiers_listing_page_done(
+                            n_page_items=len(items),
+                            n_names_so_far=len(names),
+                            meta_total=meta.get("total"),
+                            page_size=page_size,
+                    ):
                         break
                     page += 1
                 if names:
                     return names
-                # Champ valide mais 0 résultat → on garde [] et on ne tente
-                # pas d'autres noms de champs
-                return []
-            except ApiError:
-                # Champ invalide pour ce schéma → essaye le suivant
+                # Champ accepté mais 0 fichier → ne pas essayer d'autres
+                # noms de champs (évite un double parcours vide).
+                # On tentera le fallback donnees ci-dessous.
+                break
+            except TokenExpiredError:
+                raise
+            except NetworkError:
+                raise
+            except ApiError as e:
+                # Schéma / filtre invalide → essayer le champ suivant
+                last_api_error = e
                 continue
-            except Exception:
-                # Erreur réseau ou autre : fallback graceful
-                return []
+
+        # Fallback robuste : les « données » portent le titre WAV et sont
+        # listables même si le filtre /fichiers échoue.
+        try:
+            names_d = self._list_file_titles_via_donnees(participation_id)
+            if names_d:
+                return names_d
+        except TokenExpiredError:
+            raise
+        except NetworkError:
+            raise
+        except Exception:
+            pass
+
+        # Vraiment 0 fichier (ou listing inaccessible) — [] pour la reprise
+        # d'upload complète. last_api_error conservé pour debug éventuel.
+        _ = last_api_error
         return []
+
+    def _list_file_titles_via_donnees(self, participation_id: str) -> list[str]:
+        """Titres WAV via ``/participations/<id>/donnees`` (fallback listing)."""
+        names: list[str] = []
+        seen: set[str] = set()
+        for d in self.iter_donnees(participation_id):
+            titre = d.get("titre") or d.get("nom") or ""
+            if titre and titre not in seen:
+                seen.add(str(titre))
+                names.append(str(titre))
+        return names
 
     # -- WRITE : modification de sites -------------------------------------
 

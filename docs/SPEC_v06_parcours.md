@@ -356,6 +356,8 @@ Le tutoriel **ne décrit pas** les features non livrées comme déjà disponible
 | 2026-08-04 | conception | Version initiale figée (parcours + FOCUS carte + ChiroSurf lazy) |
 | 2026-08-04 | conception | D10 rayon pick **5 km** ; D11 naming `Nuit{n}_`+stem (forum t483 + pièces Benjamin) ; rejet suffixe `_Nuit1` comme défaut |
 | 2026-08-04 | doc | Statut **Validé** ; relais README / CHANGELOG / TUTORIEL §14 / samples README / CONTRIBUTING |
+| 2026-08-04 | doc | Tutoriel : pick intégré §6, ChiroSurf nuits §8 B, synthèse proba, FAQ ; README features |
+| 2026-08-04 | beta | FOCUS carte survit au load sites ; Recharger = tous sites ; repair token 401 + max_results 99 ; popup bouton bas ; pin unique multi-nuits |
 
 ---
 

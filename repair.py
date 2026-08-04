@@ -144,6 +144,22 @@ def find_local_observations_xlsx(session: Path) -> Path | None:
     return candidates[0]
 
 
+def _norm_wav_name(name: str) -> str:
+    """Normalise un nom WAV pour comparaison local ↔ serveur.
+
+    - basenom seulement (pas de chemin)
+    - minuscules
+    - force l'extension ``.wav`` si absente (certains titres API n'en ont pas)
+    """
+    n = str(name or "").strip().replace("\\", "/")
+    if "/" in n:
+        n = n.rsplit("/", 1)[-1]
+    n = n.strip().lower()
+    if n and not n.endswith(".wav") and not n.endswith(".w4v"):
+        n = n + ".wav"
+    return n
+
+
 def compute_coverage(
     local_names: set[str] | list[str],
     server_names: set[str] | list[str],
@@ -152,28 +168,55 @@ def compute_coverage(
 ) -> dict[str, Any]:
     """Diff de couverture local ↔ serveur (fonction pure).
 
+    ``missing_on_server`` = fichiers **encore présents localement** (Data_k)
+    absents du listing serveur → vrai trou d'upload à reprendre.
+
+    ``extra_on_server`` = fichiers sur le serveur **absents de Data_k** →
+    typique **après nettoyage** (WAV purgés localement mais encore en ligne).
+    Ce n'est **pas** un échec d'upload : la couverture reste OK si tous les
+    locaux restants sont sur le serveur.
+
     ``listing_ok=False`` : le listing serveur a échoué → on refuse toute
     conclusion positive (pas de couverture 100 %, pas d'auto-set uploaded).
     """
-    local = {str(n) for n in local_names}
-    server = {str(n) for n in server_names}
-    missing = sorted(local - server)
-    extra = sorted(server - local)
+    # Mappe forme normalisée → nom d'origine (pour messages lisibles)
+    local_map: dict[str, str] = {}
+    for n in local_names:
+        key = _norm_wav_name(n)
+        if key:
+            local_map.setdefault(key, str(n))
+    server_map: dict[str, str] = {}
+    for n in server_names:
+        key = _norm_wav_name(n)
+        if key:
+            server_map.setdefault(key, str(n))
+
+    local_keys = set(local_map)
+    server_keys = set(server_map)
+    missing_keys = sorted(local_keys - server_keys)
+    extra_keys = sorted(server_keys - local_keys)
+    missing = [local_map[k] for k in missing_keys]
+    extra = [server_map[k] for k in extra_keys]
+
     if not listing_ok:
+        # Ne pas présenter tous les locaux comme « à uploader » : le diff
+        # n'est pas fiable (token expiré, réseau, API). La GUI / le rapport
+        # insistent sur l'échec de listing.
         return {
-            "local_wav_count": len(local),
-            "server_wav_count": len(server),
-            "missing_on_server": missing,
-            "extra_on_server": extra,
+            "local_wav_count": len(local_keys),
+            "server_wav_count": len(server_keys),
+            "missing_on_server": [],
+            "extra_on_server": [],
             "coverage_ok": False,
             "listing_ok": False,
         }
-    # Couverture 100 % = tous les WAV locaux sont sur le serveur.
+    # Couverture 100 % = tous les WAV **encore locaux** sont sur le serveur.
+    # Les extras serveur (post-nettoyage) n'empêchent PAS coverage_ok.
     # local vide + serveur vide : coverage_ok False (rien à valider).
-    coverage_ok = bool(local) and not missing
+    coverage_ok = bool(local_keys) and not missing_keys
     return {
-        "local_wav_count": len(local),
-        "server_wav_count": len(server),
+        "local_wav_count": len(local_keys),
+        "server_wav_count": len(server_keys),
         "missing_on_server": missing,
         "extra_on_server": extra,
         "coverage_ok": coverage_ok,
@@ -302,19 +345,41 @@ def format_repair_report(report: dict[str, Any] | RepairReport) -> str:
     lines.append("── Couverture WAV (Data_k ↔ serveur) ──")
     lines.append(f"  Local  (Data_k) : {r.get('local_wav_count', 0)} fichier(s)")
     lines.append(f"  Serveur         : {r.get('server_wav_count', 0)} fichier(s)")
-    cov = "✓ 100 %" if r.get("coverage_ok") else "✗ incomplète"
-    list_ok = "OK" if r.get("listing_ok", True) else "ÉCHEC listing"
+    listing_ok = r.get("listing_ok", True)
+    if not listing_ok:
+        cov = "non comparable (listing serveur en échec)"
+        list_ok = "ÉCHEC listing"
+    elif r.get("coverage_ok"):
+        cov = "✓ 100 % (tous les locaux sont en ligne)"
+        list_ok = "OK"
+    else:
+        cov = "✗ incomplète (locaux absents du serveur)"
+        list_ok = "OK"
     lines.append(f"  Couverture      : {cov}  (listing {list_ok})")
     missing = r.get("missing_on_server") or []
-    if missing:
+    if missing and listing_ok:
         preview = ", ".join(missing[:8])
         more = f" … (+{len(missing) - 8})" if len(missing) > 8 else ""
-        lines.append(f"  Manquants serveur : {preview}{more}")
+        lines.append(
+            f"  À uploader       : {len(missing)} encore dans Data_k, "
+            f"absents serveur — {preview}{more}"
+        )
     extra = r.get("extra_on_server") or []
-    if extra:
-        lines.append(f"  En trop serveur : {len(extra)} fichier(s)")
+    if extra and listing_ok:
+        cleaned = (r.get("local_flags") or {}).get("cleaned")
+        why = " (normal après nettoyage)" if cleaned else ""
+        lines.append(
+            f"  Sur serveur seul : {len(extra)} fichier(s) absents de Data_k"
+            f"{why} — ce n'est PAS un échec d'upload"
+        )
     if r.get("listing_error"):
-        lines.append(f"  Erreur listing  : {r['listing_error']}")
+        err = str(r["listing_error"])
+        lines.append(f"  Erreur listing  : {err}")
+        if "401" in err or "expir" in err.lower() or "token" in err.lower():
+            lines.append(
+                "  → Action : Préférences → API Vigie-Chiro → coller un "
+                "nouveau token (F12 sur le portail), puis relancer le diagnostic."
+            )
 
     lines.append("")
     lines.append("── État Tadarida (serveur) ──")
@@ -517,10 +582,32 @@ def diagnose_and_repair_session(
         report.listing_error = str(e)
         report.errors.append(f"list_participation_files : {e}")
 
-    # list_participation_files renvoie [] aussi en cas d'échec soft interne.
-    # On ne peut pas toujours distinguer « 0 fichiers » de « listing cassé ».
-    # Convention : exception → listing_ok=False ; [] sans exception → OK
-    # (0 fichiers serveur, coverage échouera si local non vide).
+    # Listing vide + beaucoup de locaux + xlsx déjà là → suspect (souvent
+    # bug API / max_results / filtre), PAS « 0 WAV uploadés ».
+    # On refuse alors de proposer un re-upload massif de tout Data_k.
+    empty_listing_suspect = (
+        listing_ok
+        and not server_names
+        and len(local_wavs) >= 20
+        and (report.has_xlsx or report.local_flags.get("cleaned")
+             or report.local_flags.get("uploaded")
+             or (etat or "").strip().upper() in _ETAT_DONE)
+    )
+    if empty_listing_suspect:
+        listing_ok = False
+        report.listing_error = (
+            report.listing_error
+            or "listing serveur vide alors que la session a déjà un xlsx / "
+               "flag uploadé-nettoyé — listing jugé non fiable"
+        )
+        report.notes.append(
+            "⚠ Listing serveur = 0 fichier alors que Data_k en contient "
+            f"{len(local_wavs)} et qu'un xlsx/flag indique un traitement déjà "
+            "avancé. On ne propose PAS de re-uploader tout Data_k. "
+            "Vérifie la participation sur le portail Vigie-Chiro."
+        )
+        server_names = []  # coverage with listing_ok=False
+
     cov = compute_coverage(local_wavs, server_names, listing_ok=listing_ok)
     report.server_wav_count = cov["server_wav_count"]
     report.missing_on_server = list(cov["missing_on_server"])
@@ -530,6 +617,24 @@ def diagnose_and_repair_session(
 
     if not local_wavs:
         report.notes.append("Data_k/ absent ou vide — couverture locale non évaluable.")
+
+    # Post-nettoyage : beaucoup d'extras serveur est attendu
+    if report.local_flags.get("cleaned") and report.extra_on_server:
+        report.notes.append(
+            f"{len(report.extra_on_server)} fichier(s) encore sur le serveur "
+            "mais absents de Data_k/ (supprimés au nettoyage) — normal, "
+            "ce ne sont pas des manquants d'upload."
+        )
+    if (report.listing_ok
+            and report.local_wav_count > 0
+            and report.server_wav_count > 0
+            and report.server_wav_count < report.local_wav_count
+            and len(report.missing_on_server) > 50
+            and report.server_wav_count <= 99):
+        report.notes.append(
+            "Le listing serveur semble tronqué (≤99 fichiers). "
+            "Relance le diagnostic ; si ça persiste, vérifie l'API."
+        )
 
     # -- Suggestions -------------------------------------------------------
     report.suggested_actions = suggest_actions(

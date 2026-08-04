@@ -258,12 +258,15 @@ def resolve_focus_coords(
 def campaign_points_from_sessions(
     session_paths: Iterable,
 ) -> list[dict]:
-    """Extrait les points GPS connus des manifests d'une liste de sessions."""
+    """Extrait les points GPS connus des manifests d'une liste de sessions.
+
+    Un même point (carré + Zx + coords) n'apparaît qu'**une** fois, avec
+    ``n_nights`` = nombre de sessions (nuits) dessus.
+    """
     from pathlib import Path
     from manifest import Manifest
 
-    out: list[dict] = []
-    seen: set[tuple] = set()
+    by_key: dict[tuple, dict] = {}
     for sp in session_paths:
         path = Path(sp)
         m = Manifest.load(path)
@@ -273,10 +276,10 @@ def campaign_points_from_sessions(
         if not ps or not ps.has_coords():
             continue
         key = (ps.site_numero, ps.point_code, round(ps.lat, 5), round(ps.lon, 5))  # type: ignore[arg-type]
-        if key in seen:
+        if key in by_key:
+            by_key[key]["n_nights"] = int(by_key[key].get("n_nights") or 1) + 1
             continue
-        seen.add(key)
-        out.append({
+        by_key[key] = {
             "numero": ps.site_numero,
             "point": ps.point_code,
             "lat": ps.lat,
@@ -284,5 +287,6 @@ def campaign_points_from_sessions(
             "site_id": ps.site_id,
             "commune": ps.commune,
             "session": path.name,
-        })
-    return out
+            "n_nights": 1,
+        }
+    return list(by_key.values())

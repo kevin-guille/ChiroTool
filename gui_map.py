@@ -411,6 +411,11 @@ class MapPanel(ctk.CTkFrame):
         self._pick_on_result = None
         self._pick_on_cancel = None
         self._focus_markers: list = []
+        # FOCUS « Voir sur la carte » : ne pas laisser load_sites_async
+        # recentrer sur toute la métropole et effacer le highlight.
+        self._focus_state: dict | None = None
+        self._focus_session_ref = None          # SessionState | path-like
+        self._focus_campaign_paths: list = []
         self._carre_preview_markers: list = []   # points du carré résolu (aperçu)
         # Registre optionnel pour colorer les markers selon l'état des sites.
         # Alimenté via set_registry() par gui_app au changement de workspace.
@@ -820,17 +825,30 @@ class MapPanel(ctk.CTkFrame):
         # Carré appartenant à un AUTRE observateur (point ajouté par l'utilisateur) :
         # violet, pour le distinguer de ses propres carrés.
         external_c = ("#8957e5", "#5a2ca0", "#3d1e6d")
+        focus = getattr(self, "_focus_state", None)
+        # Focus « Voir sur la carte » : rose vif + ★ (distinct de bleu/vert/orange)
+        focus_c = ("#e11d48", "#9f1239", "#be123c")
+        focus_drawn = False  # un seul pin au point de la nuit (pas d'overlay empilé)
+
         for lat, lon, site, pt in singletons:
             is_mine = site.get("is_mine", True)
-            if hide_labels:
+            is_focus = self._is_focus_point(site, pt, lat, lon, focus)
+            if is_focus:
+                focus_drawn = True
+            if hide_labels and not is_focus:
                 title = ""  # pas de texte : rendu beaucoup plus rapide
+            elif is_focus:
+                # Un seul libellé court (évite superposer ★ NUIT + #carré · Zx)
+                title = self._focus_marker_title(pt.get("nom"), focus)
             else:
                 title = f"{pt['nom']}"
                 if site.get("numero"):
                     title = f"#{site['numero']} · {pt['nom']}"
                 if not is_mine:
                     title += "  (autre obs.)"
-            if not is_mine:
+            if is_focus:
+                circle_c, outside_c, text_c = focus_c
+            elif not is_mine:
                 circle_c, outside_c, text_c = external_c
             else:
                 state = self._state_for_site(site)
@@ -861,15 +879,81 @@ class MapPanel(ctk.CTkFrame):
             )
             self._markers.append(cluster_marker)
 
+        # Autres points du contrat (gris), sans re-dessiner le pin FOCUS
+        if focus:
+            self._draw_campaign_markers_only(
+                float(focus["lat"]), float(focus["lon"]),
+                focus.get("campaign") or [],
+            )
+            if not focus_drawn:
+                # Point hors cache API (ex. autre obs.) : un seul pin rose
+                self._draw_single_focus_pin(
+                    float(focus["lat"]), float(focus["lon"]),
+                    self._focus_marker_title(
+                        focus.get("point"), focus),
+                )
+
+    def _is_focus_point(self, site: dict, pt: dict, lat: float, lon: float,
+                        focus: dict | None) -> bool:
+        """True si ce marker est le point de la nuit en FOCUS."""
+        if not focus:
+            return False
+        fnum = str(focus.get("numero") or "").strip()
+        fpt = str(focus.get("point") or "").strip().upper()
+        snum = str(site.get("numero") or "").strip()
+        pnom = str(pt.get("nom") or "").strip().upper()
+        if fnum and fpt and snum and pnom:
+            if (fnum.zfill(6) == snum.zfill(6) or fnum == snum) and fpt == pnom:
+                return True
+        try:
+            return (abs(float(lat) - float(focus["lat"])) < 1e-4
+                    and abs(float(lon) - float(focus["lon"])) < 1e-4)
+        except (TypeError, ValueError, KeyError):
+            return False
+
+    def _focus_marker_title(self, point_code, focus: dict | None) -> str:
+        """Libellé unique lisible pour le pin FOCUS (pas de double ligne)."""
+        code = str(point_code or (focus or {}).get("point") or "·").strip().upper()
+        n = int((focus or {}).get("n_nights") or 1)
+        if n > 1:
+            return f"★ {code} · {n} nuits"
+        return f"★ {code}"
+
     def _on_sites_loaded(self, sites: list[dict]):
         self._sites_cache = sites
 
         total_points = sum(len(s["points"]) for s in sites)
+
+        # Si un FOCUS session est en cours, ne PAS recadrer sur toute la
+        # métropole (c'était le bug « Voir sur la carte » → France entière).
+        # On re-résout éventuellement les coords via le cache API fraîchement chargé.
+        if self._focus_session_ref is not None:
+            self._resolve_focus_from_session(self._focus_session_ref,
+                                            self._focus_campaign_paths)
+
+        if self._focus_state:
+            try:
+                self.map.set_position(
+                    float(self._focus_state["lat"]),
+                    float(self._focus_state["lon"]),
+                )
+                self.map.set_zoom(15)
+            except Exception:
+                pass
+            self._render_markers()
+            self._schedule_zoom_watch()
+            lbl = self._focus_state.get("label") or "point"
+            self.status_lbl.configure(
+                text=f"📍 {lbl}  ·  {len(sites)} site(s) chargé(s)",
+                text_color=("#e11d48", "#fb7185"),
+            )
+            return
+
         lats = [pt["lat"] for s in sites for pt in s["points"]]
         lons = [pt["lon"] for s in sites for pt in s["points"]]
 
         # Auto-centrer sur l'ensemble AVANT de dessiner (pour que le clustering
-        # utilise le bon zoom)
+        # utilise le bon zoom) — uniquement hors mode FOCUS
         if lats and lons:
             avg_lat = sum(lats) / len(lats)
             avg_lon = sum(lons) / len(lons)
@@ -1007,13 +1091,14 @@ class MapPanel(ctk.CTkFrame):
         popup.overrideredirect(True)   # pas de barre de titre système
         popup.attributes("-topmost", True)  # reste au-dessus
 
-        # Positionnement : collé en haut-gauche de la zone carte
+        # Positionnement : collé en haut-gauche de la zone carte.
+        # Hauteur suffisante pour header + liste + bouton bas toujours visible.
         try:
             mx = self.map.winfo_rootx()
             my = self.map.winfo_rooty()
         except Exception:
             mx, my = self.winfo_rootx(), self.winfo_rooty()
-        popup.geometry(f"380x420+{mx + 14}+{my + 14}")
+        popup.geometry(f"400x520+{mx + 14}+{my + 14}")
 
         # Cadre interne pour avoir l'apparence CTk (bordure, radius)
         frame = ctk.CTkFrame(
@@ -1024,6 +1109,8 @@ class MapPanel(ctk.CTkFrame):
         )
         frame.pack(fill="both", expand=True, padx=0, pady=0)
         frame.grid_columnconfigure(0, weight=1)
+        # La zone historique (row 6) s'étend ; le bouton (row 7) reste collé bas.
+        frame.grid_rowconfigure(6, weight=1)
         self._point_popup = popup
         self._point_popup_frame = frame
 
@@ -1126,14 +1213,15 @@ class MapPanel(ctk.CTkFrame):
             ).grid(row=5, column=0, sticky="ew", padx=10, pady=(0, 6))
 
         if sessions:
-            # Hauteur adaptée : ~48 px/ligne + ~28 px par header d'année
+            # Hauteur plafonnée pour laisser de la place au bouton bas (~48 px).
+            # La row 6 a weight=1 : la zone scroll s'étend sans manger le footer.
             years = {str(s.get("date_debut") or "????")[:4] for s in sessions}
             approx_h = 48 * len(sessions) + 28 * len(years)
             body_container = ctk.CTkScrollableFrame(
                 frame, fg_color="transparent",
-                height=min(280, max(80, approx_h)),
+                height=min(240, max(90, approx_h)),
             )
-            body_container.grid(row=6, column=0, sticky="ew", padx=6, pady=(0, 8))
+            body_container.grid(row=6, column=0, sticky="nsew", padx=6, pady=(0, 4))
             body_container.grid_columnconfigure(0, weight=1)
 
             # Grouping par année : header "══ 2025 ══" entre chaque bloc
@@ -1153,18 +1241,22 @@ class MapPanel(ctk.CTkFrame):
                 text="(aucune session enregistrée localement pour ce point)",
                 font=ctk.CTkFont(size=11, slant="italic"),
                 text_color=("gray50", "gray60"),
-                anchor="w", wraplength=330,
-            ).grid(row=6, column=0, sticky="ew", padx=10, pady=(0, 12))
+                anchor="w", wraplength=350,
+            ).grid(row=6, column=0, sticky="nsew", padx=10, pady=(0, 8))
 
-        # Action : mémoriser ce point pour le wizard « Préparer » (meta)
+        # Footer fixe : toujours visible sous la zone scroll (ne plus couper)
+        footer = ctk.CTkFrame(frame, fg_color="transparent")
+        footer.grid(row=7, column=0, sticky="ew", padx=10, pady=(6, 12))
+        footer.grid_columnconfigure(0, weight=1)
         ctk.CTkButton(
-            frame,
+            footer,
             text="★  Utiliser pour la prochaine préparation",
-            height=32,
+            height=36,
+            font=ctk.CTkFont(size=13, weight="bold"),
             fg_color=("#2ea043", "#238636"),
             hover_color=("#258038", "#1b6828"),
             command=lambda s=site, p=pt: self._activate_point_for_prepare(s, p),
-        ).grid(row=7, column=0, sticky="ew", padx=10, pady=(4, 10))
+        ).grid(row=0, column=0, sticky="ew")
 
         # Rendu robuste sur Windows : withdraw + configure + deiconify évite
         # les fenêtres fantômes à (0,0) en mode overrideredirect.
@@ -1679,6 +1771,8 @@ class MapPanel(ctk.CTkFrame):
             self._point_popup_esc_id = None
 
     def _on_reload_sites(self):
+        """Recharge tous les sites et sort du mode FOCUS (vue d'ensemble)."""
+        self.clear_focus()
         self._sites_loaded = False
         self.load_sites_async()
 
@@ -1879,14 +1973,21 @@ class MapPanel(ctk.CTkFrame):
 
     def _view_france(self):
         """Recentre la carte sur la France métropolitaine."""
+        self.clear_focus()
         try:
             self.map.set_position(46.8, 2.4)
             self.map.set_zoom(6)
         except Exception:
             pass
+        if self._sites_cache:
+            try:
+                self._render_markers()
+            except Exception:
+                pass
 
     def _view_all_sites(self):
         """Cadre la carte pour montrer tous les sites de l'utilisateur."""
+        self.clear_focus()
         if not self._sites_cache:
             # Pas de sites : fallback sur la France
             self._view_france()
@@ -1920,6 +2021,10 @@ class MapPanel(ctk.CTkFrame):
         try:
             self.map.set_position(avg_lat, avg_lon)
             self.map.set_zoom(zoom)
+        except Exception:
+            pass
+        try:
+            self._render_markers()
         except Exception:
             pass
 
@@ -2305,50 +2410,40 @@ class MapPanel(ctk.CTkFrame):
 
     # -- Focus programmable (appelé depuis la sidebar) ---------------------
 
+    def clear_focus(self) -> None:
+        """Annule le mode FOCUS (ex. clic France / tous les sites)."""
+        self._focus_state = None
+        self._focus_session_ref = None
+        self._focus_campaign_paths = []
+        self._current_focus = None
+        for m in getattr(self, "_focus_markers", []) or []:
+            try:
+                m.delete()
+            except Exception:
+                pass
+        self._focus_markers = []
+
     def focus_on_session(self, session, *, force: bool = True,
                          campaign_session_paths: list | None = None):
         """Centre la carte sur une session (SPEC §2 — mode FOCUS).
 
         Priorité coords : manifest (D8) → active_point → cache API → campagne.
-        Affiche les marqueurs du projet/dossier si fournis, highlight la nuit.
-        Ne dépend **pas** d'un full-fetch API.
+        Mémorise l'état pour survivre à ``load_sites_async`` (qui sinon
+        recentrait sur toute la métropole et effaçait le highlight).
         """
-        from manifest import Manifest
-        from point_selection import (
-            resolve_focus_coords,
-            campaign_points_from_sessions,
-        )
-
-        m = Manifest.load(session.path)
-        meta = m.meta if m else None
-        try:
-            ap = load_active_point()
-        except Exception:
-            ap = None
-
-        campaign: list[dict] = []
-        if campaign_session_paths:
-            try:
-                campaign = campaign_points_from_sessions(campaign_session_paths)
-            except Exception:
-                campaign = []
-
-        resolved = resolve_focus_coords(
-            manifest_meta=meta,
-            active=ap,
-            sites_cache=self._sites_cache or [],
-            campaign_points=campaign,
-        )
-
-        if not resolved:
+        self._focus_session_ref = session
+        self._focus_campaign_paths = list(campaign_session_paths or [])
+        ok = self._resolve_focus_from_session(session, self._focus_campaign_paths)
+        if not ok:
             self.status_lbl.configure(
-                text="📍 Coordonnées inconnues — choisissez le point une fois "
-                     "sur la carte (pick) pour les mémoriser",
+                text="📍 Coordonnées inconnues — chargement des sites, "
+                     "ou choisissez le point une fois sur la carte",
                 text_color=("#bf8700", "#d29922"),
             )
             return
 
-        lat, lon, label = resolved
+        lat = float(self._focus_state["lat"])
+        lon = float(self._focus_state["lon"])
         if not force and self._current_focus == (lat, lon):
             return
 
@@ -2359,18 +2454,109 @@ class MapPanel(ctk.CTkFrame):
         except Exception:
             pass
 
-        # Marqueurs campagne + highlight nuit (sans bloquer sur API)
-        self._draw_focus_markers(lat, lon, label, campaign)
+        # Re-dessine si des marqueurs existent déjà (sites déjà en cache)
+        if self._sites_cache:
+            self._render_markers()
+        else:
+            self._draw_focus_markers(
+                lat, lon,
+                self._focus_state.get("label") or "★",
+                self._focus_state.get("campaign") or [],
+            )
 
+        label = self._focus_state.get("label") or "point"
         self.status_lbl.configure(
             text=f"📍 {label}  ({lat:.4f}, {lon:.4f})",
-            text_color=("gray40", "gray60"),
+            text_color=("#e11d48", "#fb7185"),
         )
 
-    def _draw_focus_markers(self, lat: float, lon: float, label: str,
-                            campaign: list[dict]) -> None:
-        """Marqueurs discrets campagne + highlight du point focus."""
-        # Nettoie d'anciens marqueurs focus
+    def _resolve_focus_from_session(self, session, campaign_paths) -> bool:
+        """Calcule ``_focus_state`` depuis manifest / active / cache / campagne.
+
+        Retourne True si des coords sont disponibles.
+        """
+        from pathlib import Path
+        from manifest import Manifest
+        from point_selection import (
+            resolve_focus_coords,
+            campaign_points_from_sessions,
+        )
+
+        path = getattr(session, "path", None) or session
+        path = Path(path)
+        m = Manifest.load(path)
+        meta = m.meta if m else None
+        try:
+            ap = load_active_point()
+        except Exception:
+            ap = None
+
+        campaign: list[dict] = []
+        if campaign_paths:
+            try:
+                campaign = campaign_points_from_sessions(campaign_paths)
+            except Exception:
+                campaign = []
+
+        resolved = resolve_focus_coords(
+            manifest_meta=meta,
+            active=ap,
+            sites_cache=self._sites_cache or [],
+            campaign_points=campaign,
+        )
+        if not resolved:
+            return False
+
+        lat, lon, label = resolved
+        numero = (meta or {}).get("n_site_tadarida") if meta else None
+        point = (meta or {}).get("n_point_fixe") if meta else None
+        # Nb de nuits du contrat sur ce même point (pour libellé « · N nuits »)
+        n_nights = 1
+        try:
+            n_nights = sum(
+                1 for p in campaign
+                if abs(float(p.get("lat", 0)) - float(lat)) < 1e-4
+                and abs(float(p.get("lon", 0)) - float(lon)) < 1e-4
+            ) or 1
+            # campaign_points déduplique déjà par point : compter via sessions
+            if campaign_paths and n_nights <= 1:
+                n_nights = self._count_nights_at_point(
+                    campaign_paths, numero, point)
+        except Exception:
+            n_nights = 1
+        self._focus_state = {
+            "lat": float(lat),
+            "lon": float(lon),
+            "label": label,
+            "campaign": campaign,
+            "numero": numero,
+            "point": point,
+            "session_name": path.name,
+            "n_nights": max(1, int(n_nights)),
+        }
+        return True
+
+    def _count_nights_at_point(self, campaign_paths, numero, point) -> int:
+        """Compte les sessions (nuits) du dossier sur le même carré/point."""
+        from pathlib import Path
+        from manifest import Manifest
+        from point_selection import _norm_site
+        n = 0
+        num = _norm_site(numero)
+        pt = str(point or "").strip().upper()
+        for sp in campaign_paths or []:
+            try:
+                m = Manifest.load(Path(sp))
+                if not m or not m.meta:
+                    continue
+                if (_norm_site(m.meta.get("n_site_tadarida")) == num
+                        and str(m.meta.get("n_point_fixe") or "").upper() == pt):
+                    n += 1
+            except Exception:
+                continue
+        return max(1, n)
+
+    def _clear_focus_marker_overlays(self) -> None:
         for m in getattr(self, "_focus_markers", []) or []:
             try:
                 m.delete()
@@ -2378,38 +2564,63 @@ class MapPanel(ctk.CTkFrame):
                 pass
         self._focus_markers = []
 
+    def _draw_campaign_markers_only(
+            self, lat: float, lon: float, campaign: list[dict]) -> None:
+        """Autres points GPS du contrat (gris), **sans** re-piner le FOCUS.
+
+        Déduplique par coordonnées : N nuits sur le même point = 1 pastille
+        grise (le FOCUS porte déjà le libellé « · N nuits »).
+        """
+        self._clear_focus_marker_overlays()
+        seen: set[tuple[float, float]] = set()
         for p in campaign or []:
             try:
                 pla, plo = float(p["lat"]), float(p["lon"])
             except (TypeError, ValueError, KeyError):
                 continue
-            # skip exact focus (drawn after)
-            if abs(pla - lat) < 1e-5 and abs(plo - lon) < 1e-5:
+            if abs(pla - lat) < 1e-4 and abs(plo - lon) < 1e-4:
+                continue  # c'est le point focus — déjà dessiné
+            key = (round(pla, 5), round(plo, 5))
+            if key in seen:
                 continue
+            seen.add(key)
             try:
+                # Sans texte : évite le bruit ; le clic principal reste sur les
+                # marqueurs API. Pastille grise discrète pour contexte contrat.
                 mk = self.map.set_marker(
                     pla, plo,
-                    text=str(p.get("point") or ""),
-                    marker_color_circle="#8b949e",
-                    marker_color_outside="#484f58",
-                    text_color="#484f58",
+                    text="",
+                    marker_color_circle="#94a3b8",
+                    marker_color_outside="#64748b",
+                    text_color="#475569",
                 )
                 self._focus_markers.append(mk)
             except Exception:
                 pass
 
+    def _draw_single_focus_pin(self, lat: float, lon: float, title: str) -> None:
+        """Un seul pin FOCUS si le point n'est pas dans le cache API."""
         try:
-            short = (label or "★").split("·")[0].strip() or "★"
             mk = self.map.set_marker(
                 lat, lon,
-                text=f"★ {short}",
-                marker_color_circle="#1f6feb",
-                marker_color_outside="#1158c7",
-                text_color="#1158c7",
+                text=title or "★",
+                marker_color_circle="#e11d48",
+                marker_color_outside="#9f1239",
+                text_color="#9f1239",
             )
             self._focus_markers.append(mk)
         except Exception:
             pass
+
+    def _draw_focus_markers(self, lat: float, lon: float, label: str,
+                            campaign: list[dict]) -> None:
+        """Compat : campagne grise + pin si besoin (hors rendu principal)."""
+        self._draw_campaign_markers_only(lat, lon, campaign)
+        title = self._focus_marker_title(
+            (self._focus_state or {}).get("point"),
+            self._focus_state,
+        )
+        self._draw_single_focus_pin(lat, lon, title)
 
     # -- Mode PICK (wizard meta → retour PointSelection) --------------------
 

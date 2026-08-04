@@ -27,7 +27,7 @@ décrivant :
 |----------|------|
 | [`docs/SPEC_v06_parcours.md`](docs/SPEC_v06_parcours.md) | **Source de vérité** parcours (PointSelection, carte pick/focus 5 km, ChiroSurf `Nuit{n}_`, export 3 modes) |
 | [`CHANGELOG.md`](CHANGELOG.md) § *Prévu* | Résumé user-facing des vagues |
-| [`docs/TUTORIEL.md`](docs/TUTORIEL.md) §14 | Annonce utilisateurs (sans promettre l’exe) |
+| [`docs/TUTORIEL.md`](docs/TUTORIEL.md) | Guide utilisateur v0.6 (pick, ChiroSurf nuits, synthèse) |
 | [`samples/issue3_benjamin/`](samples/issue3_benjamin/) | Fixtures CSV multi-nuits + `_Vu` (issue #3) |
 
 En cas de doute d’implémentation, la **SPEC prime**. Tout écart = amendement

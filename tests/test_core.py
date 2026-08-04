@@ -2101,6 +2101,35 @@ class TestFolderRenameNonFatal:
 # repair — diagnostic / alignement d'état (une nuit)
 # =========================================================================
 
+class TestFichiersListingPagination:
+    def test_stop_on_empty_page(self):
+        from vigiechiro_api import fichiers_listing_page_done
+        assert fichiers_listing_page_done(
+            n_page_items=0, n_names_so_far=0, meta_total=None) is True
+
+    def test_continue_when_total_missing_and_full_page(self):
+        """Régression : total=0/absent ne doit PAS couper après page 1."""
+        from vigiechiro_api import fichiers_listing_page_done
+        assert fichiers_listing_page_done(
+            n_page_items=99, n_names_so_far=99, meta_total=0,
+            page_size=99) is False
+        assert fichiers_listing_page_done(
+            n_page_items=99, n_names_so_far=99, meta_total=None,
+            page_size=99) is False
+
+    def test_stop_when_total_reached(self):
+        from vigiechiro_api import fichiers_listing_page_done
+        assert fichiers_listing_page_done(
+            n_page_items=50, n_names_so_far=250, meta_total=250,
+            page_size=99) is True
+
+    def test_stop_on_short_page(self):
+        from vigiechiro_api import fichiers_listing_page_done
+        assert fichiers_listing_page_done(
+            n_page_items=37, n_names_so_far=137, meta_total=None,
+            page_size=99) is True
+
+
 class TestRepairCoveragePure:
     """Helpers purs : compute_coverage + suggest_actions."""
 
@@ -2121,17 +2150,55 @@ class TestRepairCoveragePure:
         assert cov["extra_on_server"] == []
 
     def test_coverage_extra_on_server_still_ok(self):
-        """Des fichiers en trop côté serveur n'empêchent pas coverage_ok."""
+        """Des fichiers en trop côté serveur n'empêchent pas coverage_ok.
+
+        Cas typique post-nettoyage : des centaines de WAV encore en ligne
+        mais purgés de Data_k — ce ne sont PAS des manquants d'upload.
+        """
         from repair import compute_coverage
-        cov = compute_coverage(["a.wav"], ["a.wav", "ghost.wav"])
+        cov = compute_coverage(["a.wav"], ["a.wav", "ghost.wav", "noise.wav"])
         assert cov["coverage_ok"] is True
-        assert cov["extra_on_server"] == ["ghost.wav"]
+        assert set(cov["extra_on_server"]) == {"ghost.wav", "noise.wav"}
+        assert cov["missing_on_server"] == []
+
+    def test_coverage_name_normalization(self):
+        """Casse / extension manquante côté API ne doivent pas créer de faux manquants."""
+        from repair import compute_coverage
+        cov = compute_coverage(
+            ["Car123.WAV", "b.wav"],
+            ["car123.wav", "B"],  # B sans .wav
+        )
+        assert cov["coverage_ok"] is True
+        assert cov["missing_on_server"] == []
 
     def test_coverage_listing_failed(self):
         from repair import compute_coverage
-        cov = compute_coverage(["a.wav"], ["a.wav"], listing_ok=False)
+        cov = compute_coverage(["a.wav", "b.wav"], [], listing_ok=False)
         assert cov["coverage_ok"] is False
         assert cov["listing_ok"] is False
+        # Pas de faux « à uploader » quand le listing a échoué
+        assert cov["missing_on_server"] == []
+
+    def test_format_report_highlights_token_401(self):
+        from repair import format_repair_report
+        text = format_repair_report({
+            "session": "s",
+            "participation_id": "p",
+            "local_wav_count": 10,
+            "server_wav_count": 0,
+            "coverage_ok": False,
+            "listing_ok": False,
+            "listing_error": "token Vigie-Chiro invalide ou expiré (HTTP 401)",
+            "missing_on_server": [],
+            "extra_on_server": [],
+            "local_flags": {},
+            "suggested_actions": ["noop"],
+            "errors": ["list_participation_files : token … 401"],
+            "notes": [],
+        })
+        assert "non comparable" in text or "ÉCHEC listing" in text
+        assert "À uploader" not in text
+        assert "Préférences" in text or "token" in text.lower()
 
     def test_coverage_empty_local(self):
         from repair import compute_coverage
@@ -2332,6 +2399,24 @@ def _session_with_manifest(tmp_path, *, wavs, part_id="pid123", flags=None, xlsx
 
 
 class TestDiagnoseAndRepairSession:
+    def test_empty_listing_with_xlsx_no_mass_reupload(self, tmp_path):
+        """Listing 0 + xlsx/cleaned → ne pas proposer re-upload de tout Data_k."""
+        from repair import diagnose_and_repair_session, ACTION_RESUME_UPLOAD
+        wavs = [f"f{i}.wav" for i in range(25)]
+        session = _session_with_manifest(
+            tmp_path, wavs=wavs,
+            flags={"uploaded": True, "cleaned": True},
+            xlsx=True,
+        )
+        client = _FakeRepairClient(etat="TERMINE", files=[])  # listing vide
+        report = diagnose_and_repair_session(
+            session, token=None, apply=False, client=client,
+        )
+        assert report["listing_ok"] is False
+        assert ACTION_RESUME_UPLOAD not in report["suggested_actions"]
+        assert any("re-uploader" in n or "listing" in n.lower()
+                   for n in (report.get("notes") or []))
+
     def test_dry_run_no_file_modification(self, tmp_path):
         from repair import diagnose_and_repair_session
         from manifest import Manifest

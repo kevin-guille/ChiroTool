@@ -31,17 +31,27 @@ Issue [#3](https://github.com/kevin-guille/ChiroTool/issues/3) (Benjamin Drillat
   pour le wizard meta (parcours carte → préparer).
 - Upload « tous WAV déjà sur serveur » : plus de flag `uploaded` silencieux ;
   journalisation `trigger_compute`.
-- Bouton **📍 Carte** qui ouvrait la France sans coords utiles.
+- **📍 FOCUS carte** : ne plus être écrasé par le chargement API (vue France) ;
+  pin rose unique `★ Zx` / `★ Zx · N nuits` ; **🔄 Recharger sites** sort du
+  FOCUS et montre tous les sites ; fiche point avec bouton bas toujours visible.
+- **Vérifier / Réparer** (retours beta) :
+  - pagination `/fichiers` + **`max_results=99`** (plafond Eve) ;
+  - fallback titres via `/participations/<id>/donnees` ;
+  - token **401** : message clair, pas de re-upload massif fantôme ;
+  - couverture = WAV **encore dans Data_k** ; purges nettoyage = info
+    « sur serveur seul » (ex. 185 fichiers).
 
 ### Documentation
 
-- SPEC parcours v0.6, tutoriel §14, samples issue #3, CONTRIBUTING.
+- Tutoriel v0.6 (meta/carte FOCUS, ChiroSurf nuits, repair/token, FAQ).
+- SPEC, samples issue #3, CONTRIBUTING, README.
+- Publication GitHub prévue après tests terrain complémentaires (jeudi).
 
-### Suite possible (non bloquant release)
+### Suite possible (post-0.6)
 
 - Export multi-nuits compilé (espèces × nuits).
-- Modes export formalisés Léger / Travail / Complet (les options Data existent).
-- PDF tutoriel à régénérer après captures.
+- Modes export formalisés Léger / Travail / Complet.
+- PDF tutoriel + captures à jour.
 
 ## [0.5.0] — 2026-07-19
 

@@ -1642,22 +1642,56 @@ class ChiroToolApp(ctk.CTk):
             except Exception:
                 formatted = str(diag)
 
-        # Rien à faire
+        # Rien à appliquer automatiquement
         if suggested == ["noop"] or (
             not any(a != "noop" for a in suggested)
         ):
-            messagebox.showinfo(
-                "État cohérent",
-                f"Session : {s.name}\n\n"
-                f"{formatted}\n\n"
-                "Aucune correction nécessaire.",
+            errs = " ".join(str(e) for e in (diag.get("errors") or []))
+            auth_issue = (
+                not diag.get("listing_ok", True)
+                and ("401" in errs or "expir" in errs.lower()
+                     or "token" in errs.lower())
             )
+            if auth_issue:
+                messagebox.showwarning(
+                    "Diagnostic — token / API",
+                    f"Session : {s.name}\n\n"
+                    f"{formatted}\n\n"
+                    "Aucune correction automatique (listing serveur impossible).\n"
+                    "Renouvelle le token (Préférences → API Vigie-Chiro) puis "
+                    "relance « Vérifier / Réparer » pour une couverture fiable.",
+                )
+            else:
+                messagebox.showinfo(
+                    "Diagnostic terminé",
+                    f"Session : {s.name}\n\n"
+                    f"{formatted}\n\n"
+                    "Aucune correction automatique nécessaire.",
+                )
             return
 
         # Synthèse courte + invitation à lire le journal du diagnostic
         missing_n = len(diag.get("missing_on_server") or [])
+        extra_n = len(diag.get("extra_on_server") or [])
+        n_loc = diag.get("local_wav_count", 0)
+        n_srv = diag.get("server_wav_count", 0)
         etat = diag.get("traitement_etat") or "(vide)"
-        cov = "100 %" if diag.get("coverage_ok") else f"incomplète ({missing_n} manquant(s))"
+        if not diag.get("listing_ok", True):
+            cov = (
+                f"listing serveur non fiable "
+                f"(local {n_loc} · listé {n_srv})\n"
+                f"  → pas de re-upload massif proposé ; voir le journal"
+            )
+        elif diag.get("coverage_ok"):
+            cov = f"OK — {n_loc} locaux tous en ligne"
+            if extra_n:
+                cov += f"\n  ({extra_n} encore sur serveur hors Data_k — souvent nettoyage)"
+        else:
+            cov = (
+                f"incomplète — {missing_n} fichier(s) encore dans Data_k "
+                f"absents du serveur\n"
+                f"  (local {n_loc} · serveur listé {n_srv})"
+            )
         summary = (
             f"Session : {s.name}\n\n"
             f"Couverture WAV : {cov}\n"

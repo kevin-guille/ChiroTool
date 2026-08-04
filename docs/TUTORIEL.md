@@ -215,7 +215,8 @@ En bas de la **Vue session**, une barre unique regroupe tout ce que vous pouvez
 faire sur la nuit sélectionnée :
 
 > **▶ Préparer** · **☁ Upload** · **🔧 Vérifier / Réparer** · **🧹 Nettoyer** ·
-> **🔍 Valider** · **✎ Métadonnées** · **📍 Carte** · **📊 Synthèse** · **⋯ Détails**
+> **🔍 Valider** · **🌊 ChiroSurf nuits** · **✎ Métadonnées** · **📍 Carte** ·
+> **📊 Synthèse** · **⋯ Détails**
 
 Les libellés sont volontairement courts : **passez la souris sur un bouton** pour
 lire ce qu'il fait exactement.
@@ -271,29 +272,31 @@ nuit (site, point, passage, enregistreur…) à partir du nom du dossier, du fic
 
 Dans cet assistant :
 
-- **Points récents** : liste vos points Vigie-Chiro, le **dernier choix sur la
-  carte** (badge ★) et les points d’**autres observateurs** que vous avez
-  réutilisés. Un clic remplit le carré et le point.
+- **Points récents** : libellés parlants (*commune · Zx · carré*), dernier choix
+  carte (badge ★), points d’**autres observateurs** déjà réutilisés.
+- **🗺️ Choisir sur la carte…** : ouvre la carte en mode *choix de point*
+  (recherche commune, vos points dans un rayon de **5 km**, ou
+  **➕ Ajouter un point** / réutilisation). Au retour, **carré + point** sont
+  remplis et les **GPS** sont mémorisés pour cette session.
 - **Contrat** : le nom du projet (un bouton ▾ propose ceux déjà saisis)
 - **Date de début** : la date de pose (un bouton 📅 ouvre un calendrier)
-- **N° site Tadarida** : les 6 chiffres du carré
+- **N° site Tadarida** : les 6 chiffres du carré (saisie manuelle si besoin)
 - **Point** : Z1, A2, etc.
 - **Passage** : 1, 2…
 - **N° enregistreur** : choisissez-le dans la liste (il remplit automatiquement
   la série et le micro depuis votre parc « Mes matériels »)
 
-> 💡 **Astuce carte** : si vous créez ou réutilisez un point sur la carte (y
-> compris un point déjà posé par un collègue), il devient le *point actif*. Au
-> « Préparer » suivant, carré et point sont préremplis — plus besoin de les
-> retaper. Sur la fiche d’un marker : **« Utiliser pour la prochaine
-> préparation »**.
+> 💡 **Astuce** : créez ou réutilisez un point une fois (carte ou pick depuis
+> les meta) → il devient le *point actif*. Au « Préparer » suivant, carré et
+> point sont préremplis. Sur la fiche d’un marker : **« ★ Utiliser pour la
+> prochaine préparation »** (bouton toujours visible en bas de la fiche).
 >
-> Le bouton **📍 Carte** (barre d’actions) bascule sur l’onglet carte pour
-> localiser le point de la nuit. Si le point n’est pas encore chargé ou n’a
-> pas de coordonnées connues, la carte peut rester sur une vue large (France) :
-> dans ce cas, repassez par l’onglet **Carte** (recherche commune / vos sites)
-> ou recréez / réutilisez le point une fois pour le mémoriser. Une amélioration
-> de ce focus est détaillée en [§14](#14--nouveautés-v06-issue-3--suite).
+> **📍 Carte** (barre d’actions) = mode **FOCUS** : zoom sur le point de la
+> nuit (pin rose `★ Z1`, ou `★ Z1 · 3 nuits` s’il y a plusieurs sessions sur
+> le même point). Les GPS viennent d’abord du **manifest** de la session.
+>
+> Sur l’onglet Carte, **🔄 Recharger sites**, **Mes sites** ou **France**
+> quittent le FOCUS et montrent **tous** vos sites (vue d’ensemble).
 
 Cliquez sur **« Valider »**.
 
@@ -349,19 +352,29 @@ seul.
 
 1. Ouvrez la nuit concernée (une seule nuit à la fois).
 2. Cliquez sur **« 🔧 Vérifier / Réparer »** (bouton orange quand la nuit est en ⏳).
-3. ChiroTool **diagnostique d'abord** (aucune modification) : couverture des WAV
-   local ↔ serveur, état Tadarida, présence du xlsx, flags du manifest.
-4. Un résumé s'affiche. Selon le cas, vous pourrez **confirmer explicitement** :
-   - aligner le flag « uploadé » si tous les WAV sont déjà sur le serveur ;
+3. ChiroTool **diagnostique d'abord** (aucune modification) et affiche un
+   **rapport détaillé** (utile à copier dans une issue GitHub) : couverture
+   Data_k ↔ serveur, état Tadarida, xlsx, flags, erreurs API.
+4. Selon le cas, vous pourrez **confirmer explicitement** :
+   - aligner le flag « uploadé » si tous les WAV **locaux restants** sont en ligne ;
    - **télécharger le xlsx** si l'analyse est terminée côté serveur ;
    - **relancer Tadarida** (double confirmation — uniquement si la couverture est
      complète et que le compute n'est pas déjà en cours / terminé).
-5. Si des WAV manquent encore sur le serveur, l'outil vous renvoie vers
-   **« ☁ Upload »** (reprise automatique des manquants) plutôt que de lancer une
-   analyse partielle.
+5. Si des WAV **encore présents dans Data_k** manquent vraiment sur le serveur,
+   l'outil propose de reprendre via **« ☁ Upload »**.
 
-> 🛡️ **Une nuit à la fois** — pour ne pas saturer les serveurs. Ne remplace pas
-> l'édition manuelle du JSON du manifest (à éviter).
+> 💡 **Après nettoyage** : des fichiers peuvent rester « sur le serveur seulement »
+> (ex. 185 purgés localement). C'est **normal** — seuls les WAV encore dans
+> `Data_k/` comptent pour la couverture 100 %.
+
+> ⚠️ **Token API** : si le token est expiré (HTTP 401), le listing serveur
+> échoue. Le diagnostic le signale clairement et **ne propose pas** un
+> re-upload massif de tout Data_k. Allez dans **Préférences → API Vigie-Chiro**,
+> collez un nouveau token (F12 sur le portail), puis relancez le diagnostic.
+> Avec un bon token, le listing de milliers de fichiers peut prendre
+> **quelques dizaines de secondes** (pagination API) — c'est attendu.
+
+> 🛡️ **Une nuit à la fois** — pour ne pas saturer les serveurs.
 
 ### Étape 4 — Nettoyer
 
@@ -438,8 +451,9 @@ côté serveur. Au retour, relancez « Upload » sur les nuits concernées (ou u
 ## 8 · Valider les sons et remonter vos identifications
 
 L'identification de Tadarida est automatique : pour fiabiliser vos données, vous
-voudrez sûrement **valider manuellement** les contacts importants (espèces
-patrimoniales, identifications douteuses…).
+pouvez valider **de deux façons** (complémentaires, pas exclusives).
+
+### A · Validation contact par contact (ChiroTool)
 
 1. Sur une nuit dont le tableur est récupéré, cliquez sur **« 🔍 Valider »**.
 2. Un tableau filtrable des contacts s'affiche.
@@ -457,6 +471,30 @@ patrimoniales, identifications douteuses…).
 > 📸 **[Capture 14 — Vue de validation : la saisie guidée (✓ connu), le bouton
 > « Monter au genre » pour les sons incertains, et « Envoyer » qui remonte vos
 > identifications vers Vigie-Chiro.]**
+
+### B · Méthode MNHN / Team Chiro via ChiroSurf (10 % → 75 %)
+
+Si votre **participation couvre plusieurs nuits** d’affilée (un seul tableur
+Tadarida multi-nuits), le référentiel d’activité et la validation « optimisée »
+ChiroSurf se basent sur une **nuit unique**. ChiroTool scinde pour vous :
+
+1. Cliquez sur **« 🌊 ChiroSurf nuits »** (visible dès qu’un xlsx d’observations
+   est présent).
+2. ChiroTool crée le dossier `chirosurf/` dans la session et un CSV **par nuit
+   biologique** (coupure à **midi**) :
+   `Nuit1_<nom-du-tableur>-observations.csv`, `Nuit2_…`, etc.
+3. Cliquez **📂 Ouvrir le dossier chirosurf/**, puis dans ChiroSurf chargez le
+   CSV **sans** le suffixe `_Vu` (les WAV restent dans `Data_k/` de la session).
+4. Après validation ChiroSurf, le fichier `…_Vu.csv` apparaît **à côté** du
+   brut. Pour poursuivre une validation, rouvrez toujours le CSV **sans** `_Vu`.
+5. Dans la fenêtre ChiroTool, **Synthèse** sur une ligne de nuit lit le `_Vu`
+   s’il existe (sinon le CSV brut de la nuit).
+
+> ⚠️ Les CSV bruts peuvent être **régénérés** (bouton dans la fenêtre) ; les
+> `_Vu` ne sont **jamais** écrasés automatiquement.
+
+> 💡 La validation contact par contact (**🔍 Valider**) reste disponible en
+> parallèle sur le tableur complet.
 
 ### Saisir une espèce : le champ vous guide
 
@@ -548,9 +586,15 @@ récapitulatif par espèce : combien de contacts, combien de fichiers, et surtou
 
 ### Ce que vous lisez
 
-En haut : **« X contacts détectés · Y identifiés (validés) · Z espèces de chiros »**.
-Une case **« Identifications validées seulement »** permet de ne compter que
-**vos** validations, en ignorant les propositions automatiques de Tadarida.
+En haut : **« X contacts détectés · Y identifiés (validés) · Z espèces de chiros »**,
+plus la **source** (nom du xlsx, ou `_Vu nuit N` si vous venez de ChiroSurf nuits).
+
+Filtres utiles :
+
+- **« Identifications validées seulement »** : ne compter que **vos** validations
+  (ignore Tadarida seul).
+- **« Proba Tadarida ≥ »** : seuil optionnel (ex. `0.5` ou `50`) pour la synthèse
+  **non validée** — les lignes déjà validées par l’observateur passent toujours.
 
 Pour chaque espèce, une colonne **Activité** indique :
 
@@ -676,7 +720,9 @@ et les métadonnées sur une clé ou un disque, en laissant les **bruts Data/**
    - **Data_k (TE×10)** — coché par défaut (recommandé pour le partage) ;
    - **Data (bruts)** — décoché par défaut ;
    - les **métadonnées** (manifest, xlsx d'observations, Summary, etc.) sont
-     **toujours** incluses.
+     **toujours** incluses ;
+   - le dossier **`chirosurf/`** (CSV multi-nuits / `_Vu`) est emporté s’il
+     existe, sans option à cocher.
 4. Lisez l'**estimation de volume**, choisissez le dossier de destination
    (clé USB…), confirmez.
 5. Un journal de copie s'affiche. À la fin, un dossier
@@ -684,7 +730,8 @@ et les métadonnées sur une clé ou un disque, en laissant les **bruts Data/**
    rejouable : un scan ChiroTool sur l'autre poste retrouve les pastilles d'état.
 
 > 💡 Pour un partage « léger » : Data_k **oui**, Data **non**. Pour une archive
-> complète de la nuit, cochez les deux.
+> complète de la nuit, cochez les deux. Pour une relecture pure synthèse /
+> `_Vu` sans sons : Data_k **non**, Data **non** (meta + chirosurf seulement).
 
 ### Partager le matériel
 
@@ -708,8 +755,9 @@ de la grille nationale STOC 2×2 km) correspondant :
   suivi) ou **créer votre propre point** sur ce carré.
 
 Après create **ou** reuse, le point est mémorisé pour la **prochaine préparation**
-(préremplissage carré + code point dans l’assistant métadonnées, y compris pour
-un site d’un autre observateur).
+(préremplissage carré + code point + GPS dans le manifest, y compris pour un
+site d’un autre observateur). Même effet via le bouton vert de la fiche point :
+**« ★ Utiliser pour la prochaine préparation »**.
 
 > 💡 Rejoindre le carré d'un autre observateur ne change pas sa propriété :
 > chacun reste **propriétaire de ses nuits** (participations). Les points déjà
@@ -718,8 +766,13 @@ un site d’un autre observateur).
 > ⚠ La création d'un carré est **définitive** (seul un administrateur
 > Vigie-Chiro peut le supprimer) : vérifiez l'emplacement avant de confirmer.
 
-> 🔎 Astuce : utilisez la **recherche de lieu / commune** en haut de la carte
-> pour zoomer avant d’ajouter un point, plutôt que de partir de la vue France.
+> 🔎 **Deux usages carte** :
+> - **📍 Voir sur la carte** (depuis une nuit) → zoom + pin rose sur ce point ;
+> - **🔄 Recharger sites** / **Mes sites** / **France** → tous vos sites,
+>   vue d’ensemble (sort du mode FOCUS).
+>
+> Utilisez la **recherche de lieu / commune** pour zoomer avant d’ajouter un
+> point.
 
 ---
 
@@ -759,13 +812,22 @@ Aucun problème : la nuit s'affiche en orange ⏳ « à reprendre ». Re-cliquez
 Le bouton est grisé tant que le tableur d'observations n'a pas été récupéré
 (étape Upload + Tadarida). C'est normal.
 
-**« 📍 Carte ouvre la France, pas mon point. »**
-Le recentrage s’appuie sur les sites déjà chargés / connus. Si le chargement
-API n’est pas prêt, ou si le point vient d’un autre observateur sans
-mémorisation locale, la carte peut rester large. Solutions immédiates :
-recharger les sites sur l’onglet Carte, rechercher la commune, ou réutiliser
-une fois le point (create/reuse) pour le mémoriser. Amélioration du focus
-— voir [§14](#14--nouveautés-v06-issue-3--suite).
+**« 📍 Carte ne trouve pas mon point. »**
+Le recentrage utilise d’abord les **GPS du manifest**, puis le point actif, puis
+le cache API. Si rien n’est connu : message orange (plus de zoom France
+trompeur). Solution : une fois **🗺️ Choisir sur la carte…** ou create/reuse.
+Pour revoir **tous** les sites après un FOCUS : **🔄 Recharger sites**.
+
+**« Vérifier / Réparer propose de tout re-uploader. »**
+Vérifiez d’abord le **token** (401 = expiré → Préférences → API). Avec un bon
+token, le rapport doit distinguer : couverture 100 % des locaux restants,
+fichiers « sur serveur seul » après nettoyage, ou vrais manquants dans Data_k.
+Le journal complet peut être collé dans une [issue GitHub](https://github.com/kevin-guille/ChiroTool/issues).
+
+**« Comment valider une participation multi-nuits dans ChiroSurf ? »**
+**🌊 ChiroSurf nuits** → un CSV par nuit bio → ouvrir le dossier → charger le
+brut (sans `_Vu`) dans ChiroSurf → le `_Vu` apparaît à côté → **Synthèse** par
+nuit dans ChiroTool. Voir [§8 B](#b--méthode-mnhn--team-chiro-via-chirosurf-10--75-).
 
 **« Où sont stockées mes données ? »**
 Votre index et vos sauvegardes sont dans le sous-dossier `_chirotool/` de votre
@@ -802,43 +864,27 @@ ChiroTool couvre la grande majorité des cas, mais pas (encore) tout :
 
 ---
 
-## 14 · Nouveautés v0.6 (issue #3) & suite
+## 14 · Nouveautés v0.6 (résumé) & suite
 
-### Disponible dès la v0.6
+Rappel des apports de la **v0.6** (détail dans le flux ci-dessus) :
 
-#### Point & carte
+| Zone | Ce qui change |
+|------|----------------|
+| Meta / carte | **🗺️ Choisir sur la carte…**, GPS en manifest, libellés humains, **📍 FOCUS** (pin rose), **🔄 Recharger** = tous les sites |
+| Validation | **🌊 ChiroSurf nuits** (1 CSV / nuit bio) + validation contact-par-contact inchangée |
+| Synthèse | Source `_Vu`, filtre **proba Tadarida ≥** |
+| Campagne | **🔧 Vérifier / Réparer** (rapport détaillé, token 401, nettoyage), export **USB** |
 
-- Dans l’assistant **métadonnées** : **🗺️ Choisir sur la carte…** (recherche
-  commune, points dans **5 km**, création / réutilisation) → carré et point
-  remplis automatiquement ; GPS enregistrés dans le manifest.
-- **📍 Carte** : recentre sur la nuit (coords du manifest en priorité), affiche
-  les points du même projet/dossier et met en avant la nuit courante.
-- Libellés plus parlants sur les points récents (commune · Zx · carré).
+Conception / dev : [`SPEC_v06_parcours.md`](SPEC_v06_parcours.md) · issue
+[#3](https://github.com/kevin-guille/ChiroTool/issues/3).
 
-#### ChiroSurf multi-nuits (méthode MNHN)
-
-1. Sur une nuit avec tableur : **🌊 ChiroSurf nuits**.
-2. ChiroTool crée (à la demande) `chirosurf/Nuit1_…-observations.csv`, etc.
-   (une **nuit biologique** = coupure à midi).
-3. Ouvrez le dossier, chargez le CSV **sans** `_Vu` dans ChiroSurf ; le
-   `…_Vu.csv` apparaît à côté.
-4. Bouton **Synthèse** par nuit (lit le `_Vu` s’il est présent).
-5. En synthèse : filtre **Proba Tadarida ≥** (optionnel).
-6. La validation **contact par contact** (**🔍 Valider**) reste disponible.
-
-#### Export / réparation
-
-- **🔧 Vérifier / Réparer** (pastille ⏳).
-- Export **Sessions (USB)** : Data_k ± Data + métadonnées (+ `chirosurf/` s’il
-  existe).
-
-Détail conception : [`SPEC_v06_parcours.md`](SPEC_v06_parcours.md).
-
-### Suite possible
+### Suite possible (après publication v0.6)
 
 - Export multi-nuits compilé (espèces × nuits en colonnes).
 - Libellés d’export « Léger / Travail / Complet » encore plus explicites.
-- Captures d’écran tutoriel pour le pick carte et ChiroSurf nuits.
+- Captures d’écran tutoriel (pick carte, ChiroSurf nuits, diagnostic).
+- Régénération du **PDF** tutoriel (`docs/build_pdf.py`).
+- Tests terrain complémentaires (create point, multi-contrats).
 
 ---
 
