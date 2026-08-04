@@ -3,35 +3,45 @@
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 Les versions publiées suivent le SemVer du fichier `version.py` / tags GitHub.
 
-## [Non publié]
+## [0.6.0] — 2026-08-04
+
+Issue [#3](https://github.com/kevin-guille/ChiroTool/issues/3) (Benjamin Drillat)
++ SPEC [`docs/SPEC_v06_parcours.md`](docs/SPEC_v06_parcours.md).
 
 ### Ajouté
 
-- **Vérifier / Réparer** (une nuit) : diagnostic local ↔ serveur (Data_k, fichiers
-  de participation, `traitement.etat`, xlsx), alignement des flags, téléchargement
-  du tableur et relance Tadarida **avec confirmations**. Bouton en vue session
-  (mis en avant si pastille ⏳).
-- **Export portable de sessions** : wizard Registre → Exporter → Sessions (USB).
-  Choix contrats / nuits, options Data / Data_k, métadonnées toujours incluses,
-  estimation de volume, paquet `ChiroTool_export_…` avec README + manifeste.
-- Modules `repair.py` et `export_sessions.py` (API pure, testables, sans GUI).
+- **Vérifier / Réparer** (une nuit) : diagnostic local ↔ serveur, alignement
+  flags, fetch xlsx / relance Tadarida **avec confirmations**.
+- **Export portable de sessions** (Registre → Sessions USB) : Data_k ± Data +
+  métadonnées, estimation de volume, paquet horodaté.
+- **PointSelection** + GPS dans le **manifest** (lat/lon, site_id, commune).
+- **Mode pick carte** depuis l’assistant métadonnées (« 🗺️ Choisir sur la carte… ») :
+  commune, points dans **5 km**, create/reuse → champs remplis.
+- **FOCUS 📍 Carte** : recentrage sans full-API (manifest → active_point → cache),
+  marqueurs du projet/dossier + highlight de la nuit.
+- **ChiroSurf multi-nuits** (lazy) : bouton **🌊 ChiroSurf nuits** → dossier
+  `chirosurf/Nuit{n}_…-observations.csv` (nuit biologique, coupure midi) ;
+  ouverture dossier ; synthèse par nuit / `_Vu`.
+- **Synthèse** : filtre **proba Tadarida minimale** ; source xlsx ou `_Vu`.
+- Modules `point_selection.py`, `chirosurf_nights.py` (tests unitaires).
 
 ### Corrigé
 
-- **Point actif (carte → wizard meta)** : créer *ou* réutiliser un point
-  (y compris d’un autre observateur) le mémorise (`active_point.json` + sites
-  externes). L’assistant de métadonnées préremplit carré/point et propose le
-  choix en tête des « Points récents » (badge ★ / « autre obs. »). Corrige le
-  parcours bloquant signalé quand le renommage restait vide après reuse carte.
-- Branche upload « tous les WAV déjà sur le serveur » : plus de pose silencieuse
-  du flag `uploaded` ; le résultat de `trigger_compute` est toujours journalisé
-  via `record_action` ; en cas d’échec, le flag n’est pas posé (reprise /
-  réparation possibles).
+- **Point actif** create **et** reuse (y compris autre observateur) mémorisé
+  pour le wizard meta (parcours carte → préparer).
+- Upload « tous WAV déjà sur serveur » : plus de flag `uploaded` silencieux ;
+  journalisation `trigger_compute`.
+- Bouton **📍 Carte** qui ouvrait la France sans coords utiles.
 
 ### Documentation
 
-- README : fonctionnalités repair + export portable.
-- Tutoriel : pastille ⏳, procédure Vérifier / Réparer, export USB / partage.
+- SPEC parcours v0.6, tutoriel §14, samples issue #3, CONTRIBUTING.
+
+### Suite possible (non bloquant release)
+
+- Export multi-nuits compilé (espèces × nuits).
+- Modes export formalisés Léger / Travail / Complet (les options Data existent).
+- PDF tutoriel à régénérer après captures.
 
 ## [0.5.0] — 2026-07-19
 

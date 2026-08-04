@@ -45,21 +45,21 @@ Idéal pour les **bureaux d’études**, **associations** et **observateurs** qu
 
 ---
 
-## Nouveautés v0.5
+## Nouveautés v0.6
 
-La **v0.5** consolide ChiroTool pour une utilisation en production de campagne :
+La **v0.6** répond à l’issue [#3](https://github.com/kevin-guille/ChiroTool/issues/3)
+(validation MNHN / multi-nuits) et fiabilise le parcours point ↔ carte :
 
 | | Nouveauté | Bénéfice terrain |
 |---|-----------|------------------|
-| 🔐 | **Token sécurisé** (Credential Manager / DPAPI ; saisie CLI masquée) | Plus de secret dans l’historique shell |
-| 🧹 | **Nettoyage massif renforcé** (simulation chiffrée → confirmation → garde anti mass-delete) | Zéro suppression « surprise » de WAV |
-| 📤 | **Envoi des identifications** vers Vigie-Chiro (sidecar, synchro, rollup registre) | Remontée observateur sans re-saisie |
-| 📊 | **Synthèse d’activité** + référentiel national (saison / région / habitat) | Lecture rapide du niveau d’activité |
-| 🎛️ | **Graphes refondus** (filtres, recherche, sections repliables) | Exploration fluide multi-nuits |
-| 🧭 | **UX avant-publication** (métadonnées non devinées, confirmations safe, multi-écran) | Moins d’erreurs, plus de confort |
-| ✅ | **CI automatique** (pytest sur chaque push) | Non-régression du moteur métier |
+| 🔧 | **Vérifier / Réparer** une nuit (diag API + disque) | Reprise après upload partiel / force-launch web |
+| 💾 | **Export USB** de sessions (Data_k ± Data) | Partage collègue sans copier des To de bruts |
+| 🗺️ | **Pick carte** depuis les métadonnées (commune, 5 km) | Plus de saisie manuelle de carré / Zx |
+| 📍 | **FOCUS carte** (GPS manifest, points du projet) | « Voir sur la carte » recentre vraiment |
+| 🌊 | **ChiroSurf nuits** (`chirosurf/Nuit{n}_…csv`) | Méthode 10 %→75 % nuit par nuit |
+| 📊 | Synthèse **`_Vu`** + filtre **proba Tadarida min** | Lecture activité après validation ChiroSurf |
 
-👉 Détail des versions : [Releases](https://github.com/kevin-guille/ChiroTool/releases)
+👉 Détail : [Changelog](CHANGELOG.md) · [SPEC](docs/SPEC_v06_parcours.md) · [Releases](https://github.com/kevin-guille/ChiroTool/releases)
 
 ---
 
@@ -96,11 +96,11 @@ La **v0.5** consolide ChiroTool pour une utilisation en production de campagne :
 
 ### Après l’analyse
 
-- **Validation des contacts** (raccourcis, ChiroSurf, taxons, envoi des identifications)
-- **Graphes d’activité** et **synthèse** avec niveaux de référence
+- **Validation des contacts** (raccourcis, ouverture WAV dans ChiroSurf, taxons, envoi des identifications)
+- **Graphes d’activité** et **synthèse** avec niveaux de référence (national / région / milieu)
 - **Registre de campagne** multi-sites (SQLite, export CSV / xlsx)
 - **Export portable de sessions** (clé USB / partage : Data_k ± Data + métadonnées)
-- **Carte OSM** : carrés STOC, création de point, points sur carré d’un autre observateur
+- **Carte OSM** : carrés STOC, création / réutilisation de point (y compris autre observateur), continuité vers les métadonnées
 
 ### Robustesse
 
@@ -230,12 +230,15 @@ python vigiechiro_api.py resolve-carre <lat> <lon>  # carré STOC (lecture)
 
 ---
 
-## Tutoriel
+## Tutoriel & documentation
 
-Un **tutoriel illustré** (PDF) guide le premier lancement, une nuit complète,
-le mode batch et la validation :
-
-📘 **[`docs/ChiroTool-Tutoriel.pdf`](docs/ChiroTool-Tutoriel.pdf)**
+| Document | Public |
+|----------|--------|
+| 📘 [**Tutoriel PDF**](docs/ChiroTool-Tutoriel.pdf) | Utilisateurs (version publiée) |
+| 📘 [**Tutoriel Markdown**](docs/TUTORIEL.md) | Utilisateurs (source du PDF) |
+| 🧭 [**SPEC parcours post-0.5**](docs/SPEC_v06_parcours.md) | Conception / dev (issue #3) |
+| 📝 [**Changelog**](CHANGELOG.md) | Versions & *Prévu* |
+| 🤝 [**Contribuer**](CONTRIBUTING.md) | Contributeurs |
 
 Captures sources : [`docs/captures/`](docs/captures/).
 

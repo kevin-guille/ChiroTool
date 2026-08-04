@@ -32,7 +32,7 @@ Arborescence produite
           Data_k/          (si include_data_k)
           Data/            (si include_data et source en Data/)
           *.wav            (si include_data et WAV à la racine source)
-          ChiroSurf_nuits/ (si présent — toujours inclus)
+          chirosurf/       (si présent — toujours inclus ; multi-nuits ChiroSurf)
 
 Garde-fous
 ----------
@@ -61,8 +61,8 @@ except Exception:  # pragma: no cover
 _RAW_SUBDIR_NAMES = frozenset({"data", "wavs", "wave", "records", "recordings"})
 _AUDIO_SUFFIXES = frozenset({".wav", ".w4v"})
 
-# Dossiers toujours emportés s'ils existent (métadonnées / futur workflow)
-_ALWAYS_DIRS = ("ChiroSurf_nuits",)
+# Dossiers toujours emportés s'ils existent (métadonnées / workflow ChiroSurf)
+_ALWAYS_DIRS = ("chirosurf", "ChiroSurf_nuits")  # legacy + SPEC D3
 
 ProgressCb = Callable[[int, int, str], None] | None
 

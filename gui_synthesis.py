@@ -61,20 +61,24 @@ def _parse_night_context(session_name: str):
 class SynthesisView(ctk.CTkToplevel):
     """Fenêtre récapitulative (contacts par espèce) d'une nuit."""
 
-    def __init__(self, master, *, session_path: Path, xlsx_path: Path):
+    def __init__(self, master, *, session_path: Path, xlsx_path: Path,
+                 prefer_vu_night: int | None = None):
         super().__init__(master)
         self.session_path = Path(session_path)
         self.xlsx_path = Path(xlsx_path)
+        self.prefer_vu_night = prefer_vu_night
         self.result: dict | None = None
+        self._source_label = self.xlsx_path.name
 
         # Contexte d'interprétation (niveaux d'activité)
         self._reference = load_reference()          # {} si CSV absent → pas de classe
         self._season, self._region = _parse_night_context(self.session_path.name)
         self._habitat = None                        # milieu dominant (choix utilisateur)
 
-        self.title(f"Synthèse — {self.session_path.name}")
-        self.geometry("820x660")
-        self.minsize(640, 460)
+        title_extra = f" · nuit {prefer_vu_night}" if prefer_vu_night else ""
+        self.title(f"Synthèse — {self.session_path.name}{title_extra}")
+        self.geometry("820x700")
+        self.minsize(640, 480)
         self.transient(master)
         self.after(50, self.grab_set)
         self.focus()
@@ -104,6 +108,22 @@ class SynthesisView(ctk.CTkToplevel):
             variable=self.validated_only_var, command=self._recompute,
             font=ctk.CTkFont(size=11), checkbox_width=18, checkbox_height=18,
         ).grid(row=1, column=0, sticky="w", pady=(4, 0))
+
+        # Filtre proba Tadarida min (synthèse non validée) — issue #3
+        filt = ctk.CTkFrame(header, fg_color="transparent")
+        filt.grid(row=2, column=0, sticky="w", pady=(4, 0))
+        ctk.CTkLabel(filt, text="Proba Tadarida ≥", font=ctk.CTkFont(size=11)).pack(
+            side="left")
+        self.min_proba_var = ctk.StringVar(value="")
+        ctk.CTkEntry(
+            filt, textvariable=self.min_proba_var, width=56,
+            placeholder_text="ex 0.5",
+            font=ctk.CTkFont(family="Consolas", size=11),
+        ).pack(side="left", padx=(4, 4))
+        ctk.CTkButton(
+            filt, text="Appliquer", width=80, height=26,
+            command=self._recompute,
+        ).pack(side="left")
 
         # Sélecteur « milieu dominant » : affine le référentiel d'activité
         # (contexte général autour du point). Défaut = national.
@@ -178,32 +198,45 @@ class SynthesisView(ctk.CTkToplevel):
 
     def _load(self):
         try:
-            import warnings
-            warnings.filterwarnings("ignore", category=UserWarning, module="openpyxl")
-            import openpyxl
-            wb = openpyxl.load_workbook(self.xlsx_path, data_only=True)
-            ws = wb.active
-            data = list(ws.iter_rows(values_only=True))
+            from chirosurf_nights import load_table_for_synthesis
+            headers, rows, src = load_table_for_synthesis(
+                self.session_path, self.xlsx_path,
+                prefer_vu_night=self.prefer_vu_night,
+            )
         except Exception as e:
             messagebox.showerror("Lecture impossible",
-                                 f"Impossible d'ouvrir {self.xlsx_path.name} :\n{e}",
+                                 f"Impossible d'ouvrir les observations :\n{e}",
                                  parent=self)
             self.destroy()
             return
-        if not data:
+        if not headers:
             messagebox.showwarning("Fichier vide", "Le tableur est vide.", parent=self)
             self.destroy()
             return
 
-        self._headers = [str(h) if h is not None else "" for h in data[0]]
-        self._rows = [list(r) for r in data[1:] if any(c is not None for c in r)]
+        self._headers = headers
+        self._rows = rows
+        self._source_label = src
         self._recompute()
 
     def _recompute(self):
-        """(Re)calcule la synthèse selon la case « validées seulement », puis
-        (ré)applique les niveaux d'activité et rafraîchit."""
+        """(Re)calcule la synthèse selon filtres, puis niveaux d'activité."""
         vo = bool(self.validated_only_var.get()) if hasattr(self, "validated_only_var") else False
-        self.result = compute_night_synthesis(self._headers, self._rows, validated_only=vo)
+        thr = None
+        if hasattr(self, "min_proba_var"):
+            raw = (self.min_proba_var.get() or "").strip().replace(",", ".")
+            if raw:
+                try:
+                    thr = float(raw)
+                    if thr > 1.0:  # utilisateur a saisi 50 pour 50 %
+                        thr = thr / 100.0
+                except ValueError:
+                    thr = None
+        self.result = compute_night_synthesis(
+            self._headers, self._rows,
+            validated_only=vo,
+            min_tadarida_proba=thr,
+        )
         self._apply_activity()
 
     # -- niveaux d'activité -------------------------------------------------
@@ -272,11 +305,13 @@ class SynthesisView(ctk.CTkToplevel):
             text="Par groupe —  " + ("   ·   ".join(parts) if parts else "aucun contact"))
 
         val = res.get("validated_contacts", 0)
+        src = getattr(self, "_source_label", "") or ""
         self.count_lbl.configure(text=(
             f"{res.get('total_contacts', 0)} contacts détectés  ·  "
             f"{val} identifiés (validés)  ·  "
             f"{res.get('richesse_chiros', 0)} espèces de chiros  ·  "
-            f"{res.get('total_fichiers', 0)} fichiers"))
+            f"{res.get('total_fichiers', 0)} fichiers"
+            + (f"  ·  source : {src}" if src else "")))
 
         if has_ref:
             self.note_lbl.configure(text=(

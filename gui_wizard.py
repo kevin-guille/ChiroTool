@@ -110,12 +110,21 @@ class SessionMetaWizard(ctk.CTkToplevel):
             dynamic_resizing=False)
         self._recent_menu.set("Chargement…")
         self._recent_menu.grid(row=1, column=0, sticky="ew", padx=10, pady=(2, 2))
+        ctk.CTkButton(
+            rp, text="🗺️  Choisir sur la carte…", height=30,
+            fg_color=("#3b8ed0", "#1f6aa5"),
+            command=self._on_pick_on_map,
+        ).grid(row=2, column=0, sticky="ew", padx=10, pady=(4, 2))
         ctk.CTkLabel(
-            rp, text="Sélectionne un point → remplit le carré et le point. "
+            rp, text="Sélectionne un point récent, ou ouvre la carte "
+                     "(commune · 5 km · create/reuse) → remplit carré + point. "
                      "★ = dernier choix carte ; « autre obs. » = site partagé.",
             font=ctk.CTkFont(size=10), text_color=("gray40", "gray70"),
             anchor="w", justify="left", wraplength=520,
-        ).grid(row=2, column=0, sticky="ew", padx=10, pady=(0, 8))
+        ).grid(row=3, column=0, sticky="ew", padx=10, pady=(0, 8))
+
+        # PointSelection retenu (lat/lon pour le manifest D8)
+        self._picked_selection = None
 
         row = 1   # le formulaire commence après le bandeau « Points récents »
         # --- Contrat ---
@@ -378,6 +387,7 @@ class SessionMetaWizard(ctk.CTkToplevel):
         """Préremplit site/point depuis active_point si le guess est incomplet."""
         try:
             from gui_map import load_active_point, should_prefill_from_active
+            from point_selection import point_selection_from_active
             ap = load_active_point()
         except Exception:
             return
@@ -395,6 +405,13 @@ class SessionMetaWizard(ctk.CTkToplevel):
             self.site_var.set(str(ap["numero"]))
         if not cur_point and ap.get("point"):
             self.point_var.set(str(ap["point"]))
+        # GPS pour le manifest (D8) même sans clic « récent » explicite
+        try:
+            ps = point_selection_from_active(ap)
+            if ps and ps.has_coords():
+                self._picked_selection = ps
+        except Exception:
+            pass
         try:
             tag = "autre obs." if not ap.get("is_mine", True) else "carte"
             self.err_lbl.configure(
@@ -490,15 +507,25 @@ class SessionMetaWizard(ctk.CTkToplevel):
         threading.Thread(target=_worker, daemon=True).start()
 
     def _label_for_recent(self, p: dict) -> str:
-        base = f"{p.get('numero') or '?'} · {p.get('point') or '?'}"
+        """Libellé humain d'abord (commune · Zx · carré) — SPEC D6."""
+        try:
+            from point_selection import format_point_label
+            base = format_point_label(
+                str(p.get("numero") or ""),
+                str(p.get("point") or ""),
+                commune=p.get("commune"),
+                provenance=(
+                    "other" if p.get("is_mine") is False
+                    else ("created" if p.get("is_active") and p.get("source") == "create"
+                          else "mine")
+                ),
+            )
+        except Exception:
+            base = f"{p.get('numero') or '?'} · {p.get('point') or '?'}"
+            if p.get("commune"):
+                base = f"{p['commune']} · {base}"
         if p.get("is_active"):
             base = f"★ {base} · dernier choix carte"
-        elif p.get("is_mine") is False:
-            base += " · autre obs."
-        if p.get("commune") and not p.get("is_active"):
-            base += f" · {p['commune']}"
-        elif p.get("commune") and p.get("is_active"):
-            base += f" · {p['commune']}"
         upd = (p.get("updated") or "")[:10]
         return f"{base}   ({upd})" if upd else base
 
@@ -541,6 +568,83 @@ class SessionMetaWizard(ctk.CTkToplevel):
         except Exception:
             pass
 
+    def _on_pick_on_map(self):
+        """Mode PICK carte (SPEC P2) : masque le wizard, retourne un PointSelection."""
+        app = self.winfo_toplevel()
+        map_panel = getattr(app, "map_panel", None)
+        if map_panel is None:
+            messagebox.showinfo(
+                "Carte",
+                "Onglet Carte indisponible. Utilise les points récents "
+                "ou la saisie manuelle.",
+                parent=self)
+            return
+
+        def _on_result(selection):
+            try:
+                self.deiconify()
+                self.lift()
+                self.grab_set()
+                self.focus()
+            except Exception:
+                pass
+            self._apply_point_selection(selection)
+
+        def _on_cancel():
+            try:
+                self.deiconify()
+                self.lift()
+                self.grab_set()
+                self.focus()
+            except Exception:
+                pass
+            try:
+                self.err_lbl.configure(
+                    text="Choix carte annulé — saisie manuelle ou points récents.",
+                    text_color=("gray40", "gray70"))
+            except Exception:
+                pass
+
+        try:
+            self.grab_release()
+        except Exception:
+            pass
+        self.withdraw()
+        try:
+            # Bascule onglet Carte si l'app le permet
+            tabs = getattr(app, "detail_tabs", None)
+            if tabs is not None:
+                tabs.set("Carte")
+        except Exception:
+            pass
+        try:
+            map_panel.enter_pick_mode(_on_result, _on_cancel)
+            map_panel.load_sites_async()
+        except Exception as e:
+            _on_cancel()
+            messagebox.showerror("Carte", f"Mode pick impossible :\n{e}", parent=self)
+
+    def _apply_point_selection(self, selection) -> None:
+        """Applique un PointSelection aux champs + mémorise pour le manifest."""
+        from point_selection import PointSelection
+        if not isinstance(selection, PointSelection):
+            return
+        self._picked_selection = selection
+        if selection.site_numero:
+            self.site_var.set(selection.site_numero)
+        if selection.point_code:
+            self.point_var.set(selection.point_code)
+        try:
+            self.err_lbl.configure(
+                text=f"✓ {selection.label_humain}",
+                text_color=("#2ea043", "#3fb950"))
+        except Exception:
+            pass
+
+    def get_point_selection(self):
+        """PointSelection retenu (pick / récent avec coords), ou None."""
+        return getattr(self, "_picked_selection", None)
+
     def _on_pick_recent_point(self, label: str):
         p = self._recent_label_map.get(label)
         if not p:
@@ -549,6 +653,20 @@ class SessionMetaWizard(ctk.CTkToplevel):
             self.site_var.set(str(p["numero"]))
         if p.get("point"):
             self.point_var.set(str(p["point"]))
+        # Construit PointSelection si coords connues
+        try:
+            from point_selection import PointSelection
+            if p.get("lat") is not None and p.get("lon") is not None:
+                self._picked_selection = PointSelection(
+                    site_numero=str(p.get("numero") or ""),
+                    point_code=str(p.get("point") or ""),
+                    lat=float(p["lat"]), lon=float(p["lon"]),
+                    site_id=str(p.get("site_id") or ""),
+                    provenance="other" if p.get("is_mine") is False else "mine",
+                    commune=p.get("commune"),
+                )
+        except Exception:
+            pass
         # Mémorise le choix explicite comme point actif (prochaine session)
         try:
             from gui_map import save_active_point
@@ -1095,7 +1213,18 @@ class SessionMetaWizard(ctk.CTkToplevel):
 
 def open_wizard(master, *, prefill: SessionMeta | None = None,
                 session_name: str | None = None) -> SessionMeta | None:
-    """Helper : ouvre le wizard bloquant et retourne la SessionMeta ou None."""
+    """Helper : ouvre le wizard bloquant et retourne la SessionMeta ou None.
+
+    Si un PointSelection a été retenu (pick carte / récent avec GPS), il est
+    attaché sur ``meta._point_selection`` pour que l'appelant le fusionne
+    dans le manifest (D8).
+    """
     dlg = SessionMetaWizard(master, prefill=prefill, session_name=session_name)
     master.wait_window(dlg)
-    return dlg.get()
+    meta = dlg.get()
+    if meta is not None:
+        try:
+            meta._point_selection = dlg.get_point_selection()  # type: ignore[attr-defined]
+        except Exception:
+            pass
+    return meta

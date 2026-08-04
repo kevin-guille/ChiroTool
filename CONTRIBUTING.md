@@ -21,12 +21,27 @@ décrivant :
   sites précis et coordonnées GPS de points d'écoute avant de joindre une capture
   ou un fichier d'exemple.
 
+## Conception post-0.5 (validée)
+
+| Document | Rôle |
+|----------|------|
+| [`docs/SPEC_v06_parcours.md`](docs/SPEC_v06_parcours.md) | **Source de vérité** parcours (PointSelection, carte pick/focus 5 km, ChiroSurf `Nuit{n}_`, export 3 modes) |
+| [`CHANGELOG.md`](CHANGELOG.md) § *Prévu* | Résumé user-facing des vagues |
+| [`docs/TUTORIEL.md`](docs/TUTORIEL.md) §14 | Annonce utilisateurs (sans promettre l’exe) |
+| [`samples/issue3_benjamin/`](samples/issue3_benjamin/) | Fixtures CSV multi-nuits + `_Vu` (issue #3) |
+
+En cas de doute d’implémentation, la **SPEC prime**. Tout écart = amendement
+explicite du §8 de la SPEC avant merge. Le détail tutoriel des features livrées
+se met à jour **après** chaque vague, pas avant.
+
 ## Proposer du code
 
 1. *Forkez* le dépôt et créez une branche (`git checkout -b fix/mon-correctif`).
 2. Gardez les changements ciblés et commentés (le code est en français).
 3. Vérifiez que les tests passent : `python -m pytest`.
 4. Ouvrez une *pull request* en expliquant le pourquoi du changement.
+5. Si le changement touche carte / meta / ChiroSurf : alignez-vous sur la SPEC
+   ci-dessus (ou proposez un amendement dans son §8).
 
 ### Style
 

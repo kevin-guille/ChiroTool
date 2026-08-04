@@ -2515,6 +2515,135 @@ class TestDiagnoseAndRepairSession:
         assert client.trigger_calls == 0
 
 
+# =========================================================================
+# point_selection + chirosurf_nights (SPEC v0.6 / issue #3)
+# =========================================================================
+
+class TestPointSelection:
+    def test_haversine_and_radius(self):
+        from point_selection import haversine_km, filter_points_within_radius
+        # ~111 km per degree latitude
+        d = haversine_km(45.0, 5.0, 45.01, 5.0)
+        assert 0.5 < d < 2.0
+        pts = [{"lat": 45.0, "lon": 5.0}, {"lat": 46.0, "lon": 5.0}]
+        near = filter_points_within_radius(
+            pts, center_lat=45.0, center_lon=5.0, radius_km=5)
+        assert len(near) == 1
+        assert near[0]["_distance_km"] < 1
+
+    def test_resolve_focus_manifest_first(self):
+        from point_selection import resolve_focus_coords, PointSelection
+        meta = {
+            "n_site_tadarida": "381009",
+            "n_point_fixe": "Z1",
+            "point_lat": 45.123,
+            "point_lon": 5.678,
+        }
+        r = resolve_focus_coords(manifest_meta=meta)
+        assert r is not None
+        lat, lon, label = r
+        assert abs(lat - 45.123) < 1e-9
+        assert "Z1" in label
+
+        ps = PointSelection(site_numero="1", point_code="z2",
+                            lat=1.0, lon=2.0, provenance="other")
+        m = ps.to_manifest_meta()
+        assert m["n_site_tadarida"] == "000001"
+        assert m["n_point_fixe"] == "Z2"
+        assert m["point_lat"] == 1.0
+        assert "autre" in ps.label_humain.lower() or "obs" in ps.label_humain.lower()
+
+    def test_format_label_human_first(self):
+        from point_selection import format_point_label
+        lbl = format_point_label("381009", "Z1", commune="Vif")
+        assert lbl.startswith("Vif")
+        assert "Z1" in lbl
+        assert "381009" in lbl
+
+
+class TestChiroSurfNights:
+    def test_split_biological_nights_benjamin(self):
+        """Fixtures issue #3 : 8000 + 7839 = multi."""
+        from pathlib import Path
+        from chirosurf_nights import (
+            read_csv, split_rows_by_biological_night, biological_night_key,
+        )
+        sample = Path(__file__).resolve().parent.parent / (
+            "samples/issue3_benjamin/multi_nuits-observations.csv")
+        if not sample.is_file():
+            pytest.skip("samples issue #3 absents")
+        headers, rows = read_csv(sample)
+        slices = split_rows_by_biological_night(headers, rows)
+        assert len(slices) == 2
+        assert slices[0].n_contacts == 8000
+        assert slices[1].n_contacts == 7839
+        assert slices[0].night_date.isoformat() == "2026-07-28"
+        assert slices[1].night_date.isoformat() == "2026-07-29"
+
+    def test_naming_d11(self):
+        from chirosurf_nights import raw_csv_name, vu_csv_name, origin_stem_from_xlsx_name
+        stem = origin_stem_from_xlsx_name(
+            "444976eda-participation-6a70-observations.xlsx")
+        assert "observations" in stem
+        assert raw_csv_name(1, stem) == f"Nuit1_{stem}.csv"
+        assert vu_csv_name(1, stem) == f"Nuit1_{stem}_Vu.csv"
+
+    def test_prepare_writes_lazy(self, tmp_path):
+        from pathlib import Path
+        from chirosurf_nights import (
+            prepare_chirosurf_nights, list_chirosurf_nights,
+        )
+        # build mini multi-night xlsx-like via csv then openpyxl path needs xlsx
+        # use write_csv + rows_from path via prepare expecting xlsx — write xlsx
+        import openpyxl
+        session = tmp_path / "sess"
+        session.mkdir()
+        xlsx = session / "participation-abc-observations.xlsx"
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.append(["nom du fichier", "tadarida_taxon", "tadarida_probabilite",
+                    "observateur_taxon", "observateur_probabilite",
+                    "temps_debut", "temps_fin", "frequence_mediane",
+                    "tadarida_taxon_autre", "validateur_taxon",
+                    "validateur_probabilite"])
+        # night 1 evening + night 1 morning after midnight
+        ws.append(["Car381009-2026-Pass1-Z1-SMU_20260728_220000_000",
+                    "Pippip", 0.9, "", "", 0, 1, 40, "", "", ""])
+        ws.append(["Car381009-2026-Pass1-Z1-SMU_20260729_020000_000",
+                    "Pippip", 0.8, "", "", 0, 1, 40, "", "", ""])
+        # night 2
+        ws.append(["Car381009-2026-Pass1-Z1-SMU_20260729_220000_000",
+                    "Barbar", 0.95, "", "", 0, 1, 30, "", "", ""])
+        wb.save(xlsx)
+
+        nights = prepare_chirosurf_nights(session, xlsx)
+        assert len(nights) == 2
+        assert nights[0].has_raw and nights[0].raw_path.is_file()
+        assert nights[0].n_contacts == 2
+        assert nights[1].n_contacts == 1
+        assert (session / "chirosurf").is_dir()
+        # second call does not require force
+        nights2 = list_chirosurf_nights(session)
+        assert len(nights2) == 2
+
+
+class TestSynthesisMinProba:
+    def test_min_proba_keeps_validated(self):
+        from synthesis import compute_night_synthesis
+        headers = ["nom du fichier", "tadarida_taxon", "tadarida_probabilite",
+                    "observateur_taxon"]
+        rows = [
+            ["a", "Pippip", "0.9", ""],
+            ["b", "Pippip", "0.2", ""],
+            ["c", "Barbar", "0.1", "Barbar"],  # validé malgré faible proba
+        ]
+        res = compute_night_synthesis(headers, rows, min_tadarida_proba=0.5)
+        by = {s["taxon"]: s for s in res["species"]}
+        assert by["Pippip"]["n_contacts"] == 1
+        assert by["Barbar"]["n_contacts"] == 1
+        assert res["total_contacts"] == 2
+
+
 if __name__ == "__main__":
     # Permet de lancer directement : python tests/test_core.py
     import sys

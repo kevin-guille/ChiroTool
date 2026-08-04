@@ -18,7 +18,8 @@ def _col_index(headers: list) -> dict[str, int]:
     """Mappe les colonnes métier utiles vers leur indice (insensible à la casse)."""
     lower = [str(h).lower().strip() for h in headers]
     idx: dict[str, int] = {}
-    for wanted in ("nom du fichier", "tadarida_taxon", "observateur_taxon"):
+    for wanted in ("nom du fichier", "tadarida_taxon", "observateur_taxon",
+                    "tadarida_probabilite", "observateur_probabilite"):
         if wanted in lower:
             idx[wanted] = lower.index(wanted)
     return idx
@@ -42,13 +43,33 @@ def retained_taxon(row: list, ci: dict[str, int]) -> tuple[str, bool]:
     return "", False
 
 
+def _tadarida_proba(row: list, ci: dict[str, int]) -> float | None:
+    """Probabilité Tadarida (0–1) si lisible, sinon None."""
+    i = ci.get("tadarida_probabilite")
+    if i is None or i >= len(row):
+        return None
+    v = row[i]
+    if v in (None, ""):
+        return None
+    try:
+        return float(v)
+    except (TypeError, ValueError):
+        return None
+
+
 def compute_night_synthesis(headers: list, rows: list, *,
-                            validated_only: bool = False) -> dict:
+                            validated_only: bool = False,
+                            min_tadarida_proba: float | None = None) -> dict:
     """Récapitulatif par espèce d'une nuit.
 
     ``validated_only`` : ne compter que les contacts **validés par l'observateur**
     (colonne ``observateur_taxon`` renseignée) et ignorer les identifications
     automatiques Tadarida non revues.
+
+    ``min_tadarida_proba`` : si défini (0–1), ignore les contacts non validés
+    dont la proba Tadarida est absente ou strictement inférieure au seuil
+    (issue #3 / synthèse non validée). Les lignes déjà validées observateur
+    passent toujours.
 
     Retour ::
 
@@ -71,6 +92,13 @@ def compute_night_synthesis(headers: list, rows: list, *,
     ci = _col_index(headers)
     t_file = ci.get("nom du fichier")
 
+    thr = None
+    if min_tadarida_proba is not None:
+        try:
+            thr = float(min_tadarida_proba)
+        except (TypeError, ValueError):
+            thr = None
+
     per: dict[str, dict] = {}
     for row in rows:
         if not row:
@@ -80,6 +108,10 @@ def compute_night_synthesis(headers: list, rows: list, *,
             continue
         if validated_only and not validated:
             continue                              # ignore les non-validés (Tadarida seul)
+        if thr is not None and not validated:
+            p = _tadarida_proba(row, ci)
+            if p is None or p < thr:
+                continue
         d = per.setdefault(taxon, {"n": 0, "n_val": 0, "files": set(), "validated": False})
         d["n"] += 1
         if validated:

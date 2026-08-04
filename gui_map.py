@@ -407,6 +407,10 @@ class MapPanel(ctk.CTkFrame):
         self._current_focus: str | None = None
         self._add_point_mode = False
         self._add_point_marker = None
+        self._pick_mode = False
+        self._pick_on_result = None
+        self._pick_on_cancel = None
+        self._focus_markers: list = []
         self._carre_preview_markers: list = []   # points du carré résolu (aperçu)
         # Registre optionnel pour colorer les markers selon l'état des sites.
         # Alimenté via set_registry() par gui_app au changement de workspace.
@@ -714,6 +718,13 @@ class MapPanel(ctk.CTkFrame):
             except Exception:
                 pass
         self._markers.clear()
+        # Marqueurs FOCUS (campagne + highlight) — sinon orphelins après re-render
+        for m in getattr(self, "_focus_markers", []) or []:
+            try:
+                m.delete()
+            except Exception:
+                pass
+        self._focus_markers = []
         for p in self._polygons:
             try:
                 p.delete()
@@ -1195,11 +1206,16 @@ class MapPanel(ctk.CTkFrame):
         if site_id and not is_mine:
             _remember_external_site_id(site_id)
         try:
+            la = float(pt["lat"]) if pt.get("lat") is not None else None
+            lo = float(pt["lon"]) if pt.get("lon") is not None else None
+        except (TypeError, ValueError):
+            la = lo = None
+        try:
             save_active_point(
                 site_id=site_id,
                 numero=site.get("numero"),
                 point=pt.get("nom") or "",
-                lat=pt.get("lat"), lon=pt.get("lon"),
+                lat=la, lon=lo,
                 is_mine=is_mine,
                 source="reuse",
             )
@@ -1208,6 +1224,15 @@ class MapPanel(ctk.CTkFrame):
                 "Point actif",
                 f"Impossible de mémoriser le point :\n{e}")
             return
+
+        # Mode PICK depuis le wizard meta
+        if la is not None and lo is not None and self._maybe_complete_pick_from_point(
+                site_id=site_id, point_name=pt.get("nom") or "",
+                lat=la, lon=lo, numero=site.get("numero"),
+                is_mine=is_mine, provenance="reuse"):
+            self._close_point_popup()
+            return
+
         num = site.get("numero") or "?"
         name = pt.get("nom") or "?"
         self.status_lbl.configure(
@@ -1759,6 +1784,49 @@ class MapPanel(ctk.CTkFrame):
             text=f"📍 {short}",
             text_color=("gray40", "gray60"),
         )
+        if getattr(self, "_pick_mode", False):
+            self._apply_pick_radius_filter(lat, lon)
+
+    def _apply_pick_radius_filter(self, lat: float, lon: float) -> None:
+        """En mode pick : n'affiche que mes points dans un rayon de 5 km (D10)."""
+        from point_selection import PICK_RADIUS_KM, filter_points_within_radius, haversine_km
+        flat = []
+        for s in self._sites_cache or []:
+            if not s.get("is_mine", True):
+                continue
+            for pt in s.get("points") or []:
+                if pt.get("lat") is None or pt.get("lon") is None:
+                    continue
+                flat.append({
+                    "site": s, "pt": pt,
+                    "lat": pt["lat"], "lon": pt["lon"],
+                })
+        near = filter_points_within_radius(
+            flat, center_lat=lat, center_lon=lon, radius_km=PICK_RADIUS_KM)
+        # Re-render : clear markers puis marqueurs filtrés seulement
+        self._clear_markers()
+        for item in near:
+            s, pt = item["site"], item["pt"]
+            try:
+                mk = self.map.set_marker(
+                    float(pt["lat"]), float(pt["lon"]),
+                    text=str(pt.get("nom") or ""),
+                    marker_color_circle="#2ea043",
+                    marker_color_outside="#1b6828",
+                    text_color="#1b6828",
+                    command=lambda _c=None, site=s, point=pt: self._show_point_popup(site, point),
+                )
+                # store for cleanup
+                if not hasattr(self, "_markers"):
+                    self._markers = []
+                self._markers.append(mk)
+            except Exception:
+                pass
+        self.status_lbl.configure(
+            text=(f"📍 {len(near)} point(s) à moins de {PICK_RADIUS_KM:.0f} km — "
+                  f"clic marqueur ou ➕ Ajouter un point"),
+            text_color=("#1f6feb", "#58a6ff"),
+        )
 
     def _on_search(self):
         """Recherche explicite (Entrée ou clic bouton). Prend le 1er résultat."""
@@ -1798,6 +1866,8 @@ class MapPanel(ctk.CTkFrame):
                     text=f"📍 {short}",
                     text_color=("gray40", "gray60"),
                 )
+                if getattr(self, "_pick_mode", False):
+                    self._apply_pick_radius_filter(lat, lon)
             try:
                 self.after(0, _apply)
             except (RuntimeError, Exception):
@@ -2169,6 +2239,14 @@ class MapPanel(ctk.CTkFrame):
         except Exception:
             pass
 
+        # Mode PICK (wizard meta) : retourne le PointSelection et stoppe ici
+        if self._maybe_complete_pick_from_point(
+                site_id=site_id, point_name=point_name,
+                lat=lat, lon=lon, numero=numero,
+                is_mine=bool(is_mine),
+                provenance="reuse" if reused else "create"):
+            return
+
         num_disp = ""
         if numero:
             digits = "".join(c for c in str(numero) if c.isdigit())
@@ -2227,45 +2305,211 @@ class MapPanel(ctk.CTkFrame):
 
     # -- Focus programmable (appelé depuis la sidebar) ---------------------
 
-    def focus_on_session(self, session, *, force: bool = True):
-        """Centre la carte sur une session (via son manifest ou le site_id API).
+    def focus_on_session(self, session, *, force: bool = True,
+                         campaign_session_paths: list | None = None):
+        """Centre la carte sur une session (SPEC §2 — mode FOCUS).
 
-        Si ``force=False``, on ne bouge pas la carte si elle pointe déjà sur
-        le même point (évite des reset intempestifs quand l'utilisateur
-        a déjà zoomé ailleurs).
+        Priorité coords : manifest (D8) → active_point → cache API → campagne.
+        Affiche les marqueurs du projet/dossier si fournis, highlight la nuit.
+        Ne dépend **pas** d'un full-fetch API.
         """
         from manifest import Manifest
+        from point_selection import (
+            resolve_focus_coords,
+            campaign_points_from_sessions,
+        )
+
         m = Manifest.load(session.path)
+        meta = m.meta if m else None
+        try:
+            ap = load_active_point()
+        except Exception:
+            ap = None
 
-        target_point = None
-        if m and m.meta:
-            sid = m.meta.get("vigiechiro_site_id")
-            nom = m.meta.get("n_point_fixe")
-            numero = m.meta.get("n_site_tadarida")
-            for s in self._sites_cache:
-                if (sid and s["id"] == sid) or (not sid and s.get("numero") == numero):
-                    for pt in s["points"]:
-                        if pt["nom"] == nom:
-                            target_point = pt
-                            break
-                    break
+        campaign: list[dict] = []
+        if campaign_session_paths:
+            try:
+                campaign = campaign_points_from_sessions(campaign_session_paths)
+            except Exception:
+                campaign = []
 
-        if not target_point:
+        resolved = resolve_focus_coords(
+            manifest_meta=meta,
+            active=ap,
+            sites_cache=self._sites_cache or [],
+            campaign_points=campaign,
+        )
+
+        if not resolved:
             self.status_lbl.configure(
-                text="point non géolocalisé (charge les sites d'abord)",
-                text_color=("gray40", "gray60"),
+                text="📍 Coordonnées inconnues — choisissez le point une fois "
+                     "sur la carte (pick) pour les mémoriser",
+                text_color=("#bf8700", "#d29922"),
             )
             return
 
-        # Ne pas repositionner si on pointe déjà dessus (à 1 m près)
-        if not force and self._current_focus == (target_point["lat"], target_point["lon"]):
+        lat, lon, label = resolved
+        if not force and self._current_focus == (lat, lon):
             return
 
-        self._current_focus = (target_point["lat"], target_point["lon"])
-        self.map.set_position(target_point["lat"], target_point["lon"])
-        self.map.set_zoom(15)
+        self._current_focus = (lat, lon)
+        try:
+            self.map.set_position(lat, lon)
+            self.map.set_zoom(15)
+        except Exception:
+            pass
+
+        # Marqueurs campagne + highlight nuit (sans bloquer sur API)
+        self._draw_focus_markers(lat, lon, label, campaign)
+
         self.status_lbl.configure(
-            text=f"📍 {target_point['nom']} "
-                 f"({target_point['lat']:.4f}, {target_point['lon']:.4f})",
+            text=f"📍 {label}  ({lat:.4f}, {lon:.4f})",
             text_color=("gray40", "gray60"),
         )
+
+    def _draw_focus_markers(self, lat: float, lon: float, label: str,
+                            campaign: list[dict]) -> None:
+        """Marqueurs discrets campagne + highlight du point focus."""
+        # Nettoie d'anciens marqueurs focus
+        for m in getattr(self, "_focus_markers", []) or []:
+            try:
+                m.delete()
+            except Exception:
+                pass
+        self._focus_markers = []
+
+        for p in campaign or []:
+            try:
+                pla, plo = float(p["lat"]), float(p["lon"])
+            except (TypeError, ValueError, KeyError):
+                continue
+            # skip exact focus (drawn after)
+            if abs(pla - lat) < 1e-5 and abs(plo - lon) < 1e-5:
+                continue
+            try:
+                mk = self.map.set_marker(
+                    pla, plo,
+                    text=str(p.get("point") or ""),
+                    marker_color_circle="#8b949e",
+                    marker_color_outside="#484f58",
+                    text_color="#484f58",
+                )
+                self._focus_markers.append(mk)
+            except Exception:
+                pass
+
+        try:
+            short = (label or "★").split("·")[0].strip() or "★"
+            mk = self.map.set_marker(
+                lat, lon,
+                text=f"★ {short}",
+                marker_color_circle="#1f6feb",
+                marker_color_outside="#1158c7",
+                text_color="#1158c7",
+            )
+            self._focus_markers.append(mk)
+        except Exception:
+            pass
+
+    # -- Mode PICK (wizard meta → retour PointSelection) --------------------
+
+    def enter_pick_mode(self, on_result, on_cancel=None):
+        """Entre en mode sélection de point pour le wizard (SPEC P2).
+
+        ``on_result(PointSelection)`` / ``on_cancel()`` appelés une fois.
+        """
+        self._pick_on_result = on_result
+        self._pick_on_cancel = on_cancel
+        self._pick_mode = True
+        self.status_lbl.configure(
+            text="→ Mode choix de point : recherche commune, clic marqueur, "
+                 "ou ➕ Ajouter un point (rayon 5 km)",
+            text_color=("#1f6feb", "#58a6ff"),
+        )
+        # ESC annule le pick (en plus de l'add-point)
+        try:
+            self._pick_esc_bind = self.winfo_toplevel().bind(
+                "<Escape>", lambda _e: self.cancel_pick_mode(), add="+")
+        except Exception:
+            self._pick_esc_bind = None
+
+    def cancel_pick_mode(self):
+        cb = getattr(self, "_pick_on_cancel", None)
+        self._exit_pick_mode_state()
+        if cb:
+            try:
+                cb()
+            except Exception:
+                pass
+
+    def _exit_pick_mode_state(self):
+        self._pick_mode = False
+        self._pick_on_result = None
+        self._pick_on_cancel = None
+        try:
+            if getattr(self, "_pick_esc_bind", None):
+                self.winfo_toplevel().unbind("<Escape>", self._pick_esc_bind)
+                self._pick_esc_bind = None
+        except Exception:
+            pass
+        # Restaure les marqueurs complets (le filtre 5 km avait réduit la vue)
+        try:
+            if self._sites_cache:
+                self._render_markers()
+            n = len(self._sites_cache or [])
+            self.status_lbl.configure(
+                text=f"{n} site(s) chargé(s)" if n else "carte",
+                text_color=("gray40", "gray60"),
+            )
+        except Exception:
+            pass
+
+    def _complete_pick(self, selection) -> None:
+        """Termine le pick avec un PointSelection et notifie le wizard."""
+        cb = getattr(self, "_pick_on_result", None)
+        self._exit_pick_mode_state()
+        if cb:
+            try:
+                cb(selection)
+            except Exception:
+                pass
+
+    def _maybe_complete_pick_from_point(
+            self, *, site_id: str, point_name: str,
+            lat: float, lon: float, numero: str | None,
+            is_mine: bool, provenance: str) -> bool:
+        """Si mode pick actif, complète et retourne True (appelant skip default)."""
+        if not getattr(self, "_pick_mode", False):
+            return False
+        from point_selection import PointSelection, format_point_label
+        commune = None
+        try:
+            commune = reverse_commune(lat, lon)
+        except Exception:
+            pass
+        prov = provenance
+        if provenance == "reuse":
+            prov = "mine" if is_mine else "other"
+        elif provenance == "create":
+            prov = "created"
+        sel = PointSelection(
+            site_numero=str(numero or ""),
+            point_code=point_name,
+            lat=lat, lon=lon,
+            site_id=site_id or "",
+            provenance=prov,
+            commune=commune,
+        )
+        try:
+            save_active_point(
+                site_id=site_id or "",
+                numero=numero,
+                point=point_name,
+                lat=lat, lon=lon,
+                is_mine=is_mine,
+                source="reuse" if provenance == "reuse" else "create",
+            )
+        except Exception:
+            pass
+        self._complete_pick(sel)
+        return True

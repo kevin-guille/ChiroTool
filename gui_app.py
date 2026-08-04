@@ -1422,6 +1422,9 @@ class ChiroToolApp(ctk.CTk):
             _btn("🔍 Valider", lambda: self._open_validation_view(s),
                  "Vue de validation des contacts (ChiroSurf) + envoi des "
                  "identifications validées au serveur", accent="#1f6feb")
+            _btn("🌊 ChiroSurf nuits", lambda: self._open_chirosurf_nights(s),
+                 "Scinder multi-nuits pour ChiroSurf (méthode 10 %→75 %) "
+                 "et importer les _Vu")
 
         _btn("✎ Métadonnées", lambda: self._edit_meta(s),
              "Modifier les métadonnées de la session (site, point, passage, série…)")
@@ -1555,6 +1558,23 @@ class ChiroToolApp(ctk.CTk):
             f"  • mise à jour du registre\n\n"
             f"Continuer ?"):
             return
+        # Persiste lat/lon (PointSelection) avant rename (D8)
+        try:
+            from manifest import Manifest as _M
+            mm = _M.load_or_create(s.path)
+            mm.set_meta(
+                nom_contrat=meta.nom_contrat,
+                date_debut=meta.date_debut.isoformat() if meta.date_debut else None,
+                n_site_tadarida=meta.n_site_tadarida,
+                n_point_fixe=meta.n_point_fixe,
+                n_passage=meta.n_passage,
+                n_enregistreur=meta.n_enregistreur,
+                n_serie=meta.n_serie,
+            )
+            self._merge_point_selection_into_manifest(mm, meta)
+            mm.save(s.path)
+        except Exception:
+            pass
         worker = run_prep(s.path, meta, dry_run=False, force=False)
         RunDialog(self, title=f"Préparation — {s.name}",
                   worker=worker, on_done=self._after_phase_done)
@@ -1941,6 +1961,114 @@ class ChiroToolApp(ctk.CTk):
             return
         SynthesisView(self, session_path=s.path, xlsx_path=xlsx)
 
+    def _open_chirosurf_nights(self, s: SessionState):
+        """Prépare / liste les CSV nuit pour ChiroSurf (SPEC P4 / issue #3)."""
+        xlsx = find_observations_xlsx(s.path)
+        if xlsx is None:
+            messagebox.showwarning(
+                "Pas d'observations",
+                "Aucun tableur d'observations trouvé.\n"
+                "Lance d'abord l'upload + Tadarida.",
+            )
+            return
+        try:
+            from chirosurf_nights import prepare_chirosurf_nights
+            nights = prepare_chirosurf_nights(s.path, xlsx, force_raw=False)
+        except Exception as e:
+            messagebox.showerror(
+                "ChiroSurf nuits",
+                f"Impossible de préparer les CSV :\n{e}",
+            )
+            return
+        if not nights:
+            messagebox.showinfo(
+                "ChiroSurf nuits",
+                "Aucun contact exploitable dans le tableur.",
+            )
+            return
+
+        # Dialog simple liste + actions
+        dlg = ctk.CTkToplevel(self)
+        dlg.title(f"ChiroSurf — nuits · {s.name}")
+        dlg.geometry("560x420")
+        dlg.transient(self)
+        dlg.after(50, dlg.grab_set)
+        ctk.CTkLabel(
+            dlg, text="1 CSV par nuit biologique (méthode MNHN / ChiroSurf)",
+            font=ctk.CTkFont(size=14, weight="bold"), anchor="w",
+        ).pack(fill="x", padx=14, pady=(12, 4))
+        ctk.CTkLabel(
+            dlg, text="Ouvre le CSV brut (sans _Vu) dans ChiroSurf. "
+                      "Le fichier _Vu est écrit dans le même dossier.",
+            font=ctk.CTkFont(size=11), text_color=("gray40", "gray70"),
+            wraplength=520, anchor="w", justify="left",
+        ).pack(fill="x", padx=14, pady=(0, 8))
+
+        box = ctk.CTkScrollableFrame(dlg, fg_color="transparent")
+        box.pack(fill="both", expand=True, padx=10, pady=4)
+
+        def _open_folder():
+            import subprocess, sys
+            folder = nights[0].raw_path.parent
+            try:
+                if sys.platform.startswith("win"):
+                    subprocess.Popen(["explorer", str(folder)])
+                else:
+                    subprocess.Popen(["xdg-open", str(folder)])
+            except Exception as e:
+                messagebox.showerror("Dossier", str(e), parent=dlg)
+
+        def _regen():
+            try:
+                prepare_chirosurf_nights(s.path, xlsx, force_raw=True)
+                messagebox.showinfo(
+                    "Régénéré",
+                    "CSV bruts régénérés (les _Vu existants sont conservés).",
+                    parent=dlg)
+                dlg.destroy()
+                self._open_chirosurf_nights(s)
+            except Exception as e:
+                messagebox.showerror("Erreur", str(e), parent=dlg)
+
+        for nf in nights:
+            row = ctk.CTkFrame(box, fg_color=("#eef5ff", "#16263d"), corner_radius=6)
+            row.pack(fill="x", pady=3, padx=2)
+            ctk.CTkLabel(
+                row, text=nf.label, anchor="w",
+                font=ctk.CTkFont(size=12),
+            ).pack(side="left", padx=10, pady=8, fill="x", expand=True)
+
+            def _open_synth(n=nf.night_index):
+                dlg.destroy()
+                SynthesisView(
+                    self, session_path=s.path, xlsx_path=xlsx,
+                    prefer_vu_night=n,
+                )
+
+            ctk.CTkButton(
+                row, text="Synthèse", width=90, height=28,
+                command=_open_synth,
+            ).pack(side="right", padx=6, pady=6)
+
+        footer = ctk.CTkFrame(dlg, fg_color="transparent")
+        footer.pack(fill="x", padx=12, pady=10)
+        ctk.CTkButton(
+            footer, text="📂 Ouvrir le dossier chirosurf/",
+            command=_open_folder, height=32,
+        ).pack(side="left")
+        ctk.CTkButton(
+            footer, text="Régénérer bruts", width=130, height=32,
+            fg_color=("gray85", "gray25"),
+            text_color=("gray15", "gray90"),
+            command=_regen,
+        ).pack(side="left", padx=8)
+        ctk.CTkButton(
+            footer, text="Fermer", width=100, height=32,
+            fg_color=("gray85", "gray25"),
+            text_color=("gray15", "gray90"),
+            command=dlg.destroy,
+        ).pack(side="right")
+
     def _guess_initiales(self) -> str:
         """Essaie de déduire les initiales de l'utilisateur (2-3 lettres majuscules)."""
         # Depuis l'API si token → pseudo
@@ -1972,11 +2100,24 @@ class ChiroToolApp(ctk.CTk):
         return "XX"
 
     def _view_on_map(self, s: SessionState):
-        """Bascule sur l'onglet Carte et centre sur la session."""
+        """Bascule sur l'onglet Carte et centre sur la session (FOCUS, SPEC §2)."""
         self.detail_tabs.set("Carte")
+        # Points du même projet/dossier (manifests locaux — pas de full API)
+        campaign_paths = []
+        try:
+            parent = s.path.parent
+            if parent.is_dir():
+                campaign_paths = [
+                    p for p in parent.iterdir()
+                    if p.is_dir() and not p.name.startswith("_")
+                ]
+        except Exception:
+            campaign_paths = []
+        # Focus immédiat (coords manifest / active_point) — ne dépend pas de l'API
+        self.map_panel.focus_on_session(
+            s, force=True, campaign_session_paths=campaign_paths)
+        # Enrichissement optionnel en arrière-plan (marqueurs user)
         self.map_panel.load_sites_async()
-        # Petit délai pour laisser le chargement se faire si c'est la 1ère fois
-        self.after(300, lambda: self.map_panel.focus_on_session(s, force=True))
 
     def _edit_meta(self, s: SessionState):
         """Ouvre le wizard pour éditer les metadata d'une session.
@@ -2021,6 +2162,7 @@ class ChiroToolApp(ctk.CTk):
             n_enregistreur=meta.n_enregistreur,
             n_serie=meta.n_serie,
         )
+        self._merge_point_selection_into_manifest(m, meta)
         m.save(s.path)
         # Mémorise le contrat saisi pour l'autocomplétion future (LRU, 50 max)
         self._remember_contract(meta.nom_contrat)
@@ -2029,6 +2171,46 @@ class ChiroToolApp(ctk.CTk):
             f"Session : {s.name}\n\nLes métadonnées seront utilisées pour "
             f"les prochaines actions (préparation, upload, nettoyage)."
         )
+
+    @staticmethod
+    def _merge_point_selection_into_manifest(m, meta) -> None:
+        """Fusionne GPS / site_id d'un PointSelection dans le manifest (D8).
+
+        Fallback : si le wizard n'a pas attaché de sélection mais qu'un
+        ``active_point`` frais correspond au site+point de la meta, on
+        reprend ses coords (cas « Préparer » sans repasser par le pick).
+        """
+        ps = getattr(meta, "_point_selection", None)
+        if ps is None or not getattr(ps, "has_coords", lambda: False)():
+            try:
+                from gui_map import load_active_point, active_point_is_fresh
+                from point_selection import point_selection_from_active
+                ap = load_active_point()
+                if active_point_is_fresh(ap):
+                    cand = point_selection_from_active(ap)
+                    if cand and cand.has_coords():
+                        meta_site = str(meta.n_site_tadarida or "").strip()
+                        meta_pt = str(meta.n_point_fixe or "").strip().upper()
+                        cand_site = str(cand.site_numero or "").strip()
+                        cand_pt = str(cand.point_code or "").strip().upper()
+                        # Exige concordance site+point si la meta les a
+                        # (évite de coller le GPS d'un autre point actif).
+                        site_ok = (not meta_site) or (
+                            cand_site == meta_site
+                            or cand_site == meta_site.zfill(6)
+                            or cand_site.zfill(6) == meta_site.zfill(6)
+                        )
+                        point_ok = (not meta_pt) or (cand_pt == meta_pt)
+                        if site_ok and point_ok and meta_site and meta_pt:
+                            ps = cand
+            except Exception:
+                pass
+        if ps is None:
+            return
+        try:
+            m.set_meta(**ps.to_manifest_meta())
+        except Exception:
+            pass
 
     def _autodetect_materiels(self, workspace: Path) -> None:
         """Détecte un parc matériel à importer dans le workspace.

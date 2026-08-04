@@ -8,7 +8,7 @@
 
 ![Icône ChiroTool](captures/icon_256.png)
 
-**Version 0.5** · Tutoriel utilisateur
+**Version 0.6** · Tutoriel utilisateur
 
 </div>
 
@@ -29,7 +29,8 @@
 11. [Travailler en équipe](#11--travailler-en-équipe)
 12. [Questions fréquentes & dépannage](#12--questions-fréquentes--dépannage)
 13. [Limites connues](#13--limites-connues)
-14. [Crédits & licence](#14--crédits--licence)
+14. [Nouveautés v0.6](#14--nouveautés-v06-issue-3--suite)
+15. [Crédits & licence](#15--crédits--licence)
 
 ---
 
@@ -286,6 +287,13 @@ Dans cet assistant :
 > « Préparer » suivant, carré et point sont préremplis — plus besoin de les
 > retaper. Sur la fiche d’un marker : **« Utiliser pour la prochaine
 > préparation »**.
+>
+> Le bouton **📍 Carte** (barre d’actions) bascule sur l’onglet carte pour
+> localiser le point de la nuit. Si le point n’est pas encore chargé ou n’a
+> pas de coordonnées connues, la carte peut rester sur une vue large (France) :
+> dans ce cas, repassez par l’onglet **Carte** (recherche commune / vos sites)
+> ou recréez / réutilisez le point une fois pour le mémoriser. Une amélioration
+> de ce focus est détaillée en [§14](#14--nouveautés-v06-issue-3--suite).
 
 Cliquez sur **« Valider »**.
 
@@ -699,12 +707,19 @@ de la grille nationale STOC 2×2 km) correspondant :
   point existant** (recommandé s'il est au même endroit, pour la continuité du
   suivi) ou **créer votre propre point** sur ce carré.
 
+Après create **ou** reuse, le point est mémorisé pour la **prochaine préparation**
+(préremplissage carré + code point dans l’assistant métadonnées, y compris pour
+un site d’un autre observateur).
+
 > 💡 Rejoindre le carré d'un autre observateur ne change pas sa propriété :
 > chacun reste **propriétaire de ses nuits** (participations). Les points déjà
 > en place ne sont jamais modifiés ni écrasés.
 
 > ⚠ La création d'un carré est **définitive** (seul un administrateur
 > Vigie-Chiro peut le supprimer) : vérifiez l'emplacement avant de confirmer.
+
+> 🔎 Astuce : utilisez la **recherche de lieu / commune** en haut de la carte
+> pour zoomer avant d’ajouter un point, plutôt que de partir de la vue France.
 
 ---
 
@@ -744,6 +759,14 @@ Aucun problème : la nuit s'affiche en orange ⏳ « à reprendre ». Re-cliquez
 Le bouton est grisé tant que le tableur d'observations n'a pas été récupéré
 (étape Upload + Tadarida). C'est normal.
 
+**« 📍 Carte ouvre la France, pas mon point. »**
+Le recentrage s’appuie sur les sites déjà chargés / connus. Si le chargement
+API n’est pas prêt, ou si le point vient d’un autre observateur sans
+mémorisation locale, la carte peut rester large. Solutions immédiates :
+recharger les sites sur l’onglet Carte, rechercher la commune, ou réutiliser
+une fois le point (create/reuse) pour le mémoriser. Amélioration du focus
+— voir [§14](#14--nouveautés-v06-issue-3--suite).
+
 **« Où sont stockées mes données ? »**
 Votre index et vos sauvegardes sont dans le sous-dossier `_chirotool/` de votre
 dossier de travail. Un fichier `README.txt` y explique chaque fichier. **Ne le
@@ -771,10 +794,55 @@ ChiroTool couvre la grande majorité des cas, mais pas (encore) tout :
 - **Modifier une participation déjà créée** (météo erronée…) : via le portail web.
 - **Supprimer un carré créé par erreur** : action réservée aux administrateurs
   Vigie-Chiro (contactez l'équipe du programme).
+- **Participation multi-nuits** : utilisez **🌊 ChiroSurf nuits** pour scinder
+  automatiquement (voir [§14](#14--nouveautés-v06-issue-3--suite)). La validation
+  contact par contact reste disponible en parallèle.
+- **Bouton 📍 Carte** : si les GPS n’ont jamais été mémorisés pour la session,
+  choisissez une fois le point (pick carte ou create/reuse) pour les enregistrer.
 
 ---
 
-## 14 · Crédits & licence
+## 14 · Nouveautés v0.6 (issue #3) & suite
+
+### Disponible dès la v0.6
+
+#### Point & carte
+
+- Dans l’assistant **métadonnées** : **🗺️ Choisir sur la carte…** (recherche
+  commune, points dans **5 km**, création / réutilisation) → carré et point
+  remplis automatiquement ; GPS enregistrés dans le manifest.
+- **📍 Carte** : recentre sur la nuit (coords du manifest en priorité), affiche
+  les points du même projet/dossier et met en avant la nuit courante.
+- Libellés plus parlants sur les points récents (commune · Zx · carré).
+
+#### ChiroSurf multi-nuits (méthode MNHN)
+
+1. Sur une nuit avec tableur : **🌊 ChiroSurf nuits**.
+2. ChiroTool crée (à la demande) `chirosurf/Nuit1_…-observations.csv`, etc.
+   (une **nuit biologique** = coupure à midi).
+3. Ouvrez le dossier, chargez le CSV **sans** `_Vu` dans ChiroSurf ; le
+   `…_Vu.csv` apparaît à côté.
+4. Bouton **Synthèse** par nuit (lit le `_Vu` s’il est présent).
+5. En synthèse : filtre **Proba Tadarida ≥** (optionnel).
+6. La validation **contact par contact** (**🔍 Valider**) reste disponible.
+
+#### Export / réparation
+
+- **🔧 Vérifier / Réparer** (pastille ⏳).
+- Export **Sessions (USB)** : Data_k ± Data + métadonnées (+ `chirosurf/` s’il
+  existe).
+
+Détail conception : [`SPEC_v06_parcours.md`](SPEC_v06_parcours.md).
+
+### Suite possible
+
+- Export multi-nuits compilé (espèces × nuits en colonnes).
+- Libellés d’export « Léger / Travail / Complet » encore plus explicites.
+- Captures d’écran tutoriel pour le pick carte et ChiroSurf nuits.
+
+---
+
+## 15 · Crédits & licence
 
 **ChiroTool** est un projet **libre et open-source**.
 
