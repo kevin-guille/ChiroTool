@@ -245,7 +245,7 @@
   .stat .l{font-size:.9rem;color:var(--muted);margin-top:6px;display:block}
   .note{font-size:.86rem;color:var(--muted);margin-top:16px}
 
-  /* What's new v0.5 */
+  /* What's new v0.6 */
   .news-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
   .news{
     display:grid;grid-template-columns:auto 1fr;gap:14px;
@@ -574,17 +574,19 @@
       <div class="f"><div class="ic">⏱️</div><h3>Expansion TE×10</h3>
         <p>Intégrée, reproduisant Kaleidoscope bit-à-bit. Accélération Rust optionnelle, fallback Python transparent.</p></div>
       <div class="f"><div class="ic">☁️</div><h3>Upload &amp; Tadarida</h3>
-        <p>Participation API, upload parallèle avec reprise, suivi de l’analyse et récupération des résultats.</p></div>
+        <p>Participation API, upload parallèle avec reprise, suivi de l’analyse et récupération des résultats. Météo non bloquante.</p></div>
+      <div class="f"><div class="ic">🔧</div><h3>Vérifier / Réparer</h3>
+        <p>Diagnostic local ↔ serveur (couverture WAV, flags, fetch xlsx, trigger Tadarida) pour reprendre une nuit en ⏳.</p></div>
       <div class="f"><div class="ic">🧹</div><h3>Nettoyage par seuils</h3>
         <p>Seuils par groupe (chiros, orthos, micromam, oiseaux), aperçu chiffré et garde-fou mass-delete.</p></div>
       <div class="f"><div class="ic">🔍</div><h3>Validation &amp; envoi</h3>
-        <p>Contacts filtrables, ChiroSurf, taxons, envoi des identifications vers le portail.</p></div>
+        <p>Contacts filtrables, ChiroSurf multi-nuits (1 CSV / nuit bio), taxons, envoi des identifications vers le portail.</p></div>
       <div class="f"><div class="ic">📈</div><h3>Graphes &amp; synthèse</h3>
-        <p>Activité horaire, niveaux de référence (saison / région / habitat), exports pour rapports.</p></div>
-      <div class="f"><div class="ic">🗂️</div><h3>Registre de campagne</h3>
-        <p>Suivi multi-sites / multi-contrats, export CSV/xlsx — idéal en équipe et pour le reporting.</p></div>
-      <div class="f"><div class="ic">🗺️</div><h3>Carte &amp; carrés STOC</h3>
-        <p>Points sur OSM, création de carré, ajout sur un carré existant (y compris d’un autre observateur).</p></div>
+        <p>Activité horaire, niveaux de référence, source xlsx ou <code>_Vu</code>, filtre proba Tadarida.</p></div>
+      <div class="f"><div class="ic">🗂️</div><h3>Registre &amp; export USB</h3>
+        <p>Suivi multi-sites / multi-contrats, export CSV/xlsx, paquet portable Data_k ± Data pour un collègue.</p></div>
+      <div class="f"><div class="ic">🗺️</div><h3>Carte pick &amp; FOCUS</h3>
+        <p>Choisir un point (5&nbsp;km) pour les meta, recentrer une nuit (pin rose), créer ou rejoindre un carré STOC.</p></div>
       <div class="f"><div class="ic">🔒</div><h3>Local &amp; portable</h3>
         <p>Un .exe, aucune installation. Mode portable (clé USB) ou config utilisateur. Données chez vous.</p></div>
     </div>
@@ -601,9 +603,9 @@
       <div class="step"><div class="num">1</div><h3>Préparer</h3>
         <p>Déposez vos dossiers de nuits, scannez, cliquez «&nbsp;Préparer&nbsp;» : renommage + expansion temporelle.</p></div>
       <div class="step"><div class="num">2</div><h3>Upload + Tadarida</h3>
-        <p>L’assistant pré-remplit la participation. ChiroTool uploade, suit l’analyse et récupère les observations.</p></div>
+        <p>L’assistant pré-remplit la participation (météo optionnelle). ChiroTool uploade, suit l’analyse et récupère les observations. En cas de coupure&nbsp;: <strong>Vérifier / Réparer</strong>.</p></div>
       <div class="step"><div class="num">3</div><h3>Nettoyer &amp; valider</h3>
-        <p>Aperçu des suppressions, seuils de confiance, validation des contacts, envoi des identifications.</p></div>
+        <p>Aperçu des suppressions, validation contact-par-contact ou multi-nuits ChiroSurf (10&nbsp;%→75&nbsp;%), envoi des identifications.</p></div>
     </div>
   </div>
 </section>
@@ -756,6 +758,7 @@
         <a href="https://github.com/kevin-guille/ChiroTool/releases">Télécharger</a><br>
         <a href="ChiroTool-Tutoriel.pdf">Tutoriel PDF</a><br>
         <a href="https://github.com/kevin-guille/ChiroTool/blob/main/README.md">README</a><br>
+        <a href="https://github.com/kevin-guille/ChiroTool/blob/main/CHANGELOG.md">Changelog</a><br>
         <a href="https://github.com/kevin-guille/ChiroTool/issues">Signaler un bug</a>
       </p>
     </div>

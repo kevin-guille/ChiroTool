@@ -56,4 +56,4 @@ API publique. Ce n’est pas un outil officiel du MNHN.
 
 ---
 
-SHA-256 (`ChiroTool.exe`) : `À RENSEIGNER APRÈS BUILD`
+SHA-256 (`ChiroTool.exe`) : `3DFFF47B244FAF9616FC62D1C2CFD8E62D45A57BD26FE3FD095019593ED66647`
