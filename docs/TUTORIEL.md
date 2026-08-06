@@ -318,16 +318,22 @@ votre parc, les dates depuis les enregistrements.
 
 > 📸 **[Capture 09 — Assistant « Nouvelle participation Vigie-Chiro »]**
 
-- **Conditions météo** : températures, vent, couverture nuageuse
+- **Conditions météo** (optionnel) : températures (souvent issues du
+  `Summary.txt`), vent, couverture nuageuse
 - **Matériel** : détecteur, micro, hauteur
-- Complétez ce qui manque, puis **« Valider »**.
+- Complétez ce qui est utile, puis **« Valider »**.
+
+> 💡 **Météo non bloquante** : vent et couverture ne sont **pas** mesurés par
+> les enregistreurs. Vous pouvez les laisser à **« — à renseigner — »** et
+> uploader quand même — le portail web permet de les compléter **après**
+> l'analyse. Les températures du Summary sont préremplies quand le fichier
+> est présent ; sans Summary, les laisser vides est accepté.
 
 > ⚠️ **Ce que ChiroTool ne fait volontairement pas** : inventer une valeur à votre
-> place. Les champs qu'il ne peut pas déduire affichent **« — à renseigner — »**
-> et l'assistant **refuse de valider** tant qu'ils sont vides. C'est délibéré :
-> ces données partent sur le portail national **à votre nom**, comme si vous les
-> aviez mesurées. Un vent « nul » pré-coché par défaut et jamais relu, c'est une
-> fausse donnée dans la base — donc rien n'est pré-coché au hasard.
+> place. Les listes vent / couverture démarrent sur **« — à renseigner — »**
+> plutôt que sur « nul » ou « 0-25 » par défaut. C'est délibéré : ces données
+> partent sur le portail national **à votre nom**. Mieux vaut un champ vide
+> qu'une fausse observation pré-cochée et jamais relue.
 
 ChiroTool enchaîne alors **trois phases automatiques** :
 
@@ -874,17 +880,18 @@ Rappel des apports de la **v0.6** (détail dans le flux ci-dessus) :
 | Validation | **🌊 ChiroSurf nuits** (1 CSV / nuit bio) + validation contact-par-contact inchangée |
 | Synthèse | Source `_Vu`, filtre **proba Tadarida ≥** |
 | Campagne | **🔧 Vérifier / Réparer** (rapport détaillé, token 401, nettoyage), export **USB** |
+| Upload | **Météo non bloquante** (T° Summary auto ; vent/couverture optionnels, complétables sur le portail) |
 
 Conception / dev : [`SPEC_v06_parcours.md`](SPEC_v06_parcours.md) · issue
 [#3](https://github.com/kevin-guille/ChiroTool/issues/3).
 
-### Suite possible (après publication v0.6)
+### Suite possible (après v0.6)
 
+- Robustesse / UX du **mode batch** (retours terrain).
 - Export multi-nuits compilé (espèces × nuits en colonnes).
 - Libellés d’export « Léger / Travail / Complet » encore plus explicites.
 - Captures d’écran tutoriel (pick carte, ChiroSurf nuits, diagnostic).
 - Régénération du **PDF** tutoriel (`docs/build_pdf.py`).
-- Tests terrain complémentaires (create point, multi-contrats).
 
 ---
 

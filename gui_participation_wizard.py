@@ -2,8 +2,10 @@
 gui_participation_wizard.py — wizard de création d'une participation Vigie-Chiro.
 
 Ouvert avant l'upload API pour collecter :
-  - météo (températures début/fin obligatoirement **entières**,
-    vent & couverture en enum stricts)
+  - météo (températures début/fin entières si renseignées ; vent & couverture
+    en enum stricts) — **non bloquante** : le Summary préremplit les T° quand
+    il est là ; vent/couverture restent optionnels (saisie terrain, complétable
+    plus tard sur le portail web)
   - configuration matériel (détecteur, micro gauche, hauteur)
   - option stéréo (micro droit)
   - commentaire libre
@@ -218,26 +220,40 @@ class ParticipationWizard(ctk.CTkToplevel):
         self.date_fin_entry.grid(row=row, column=1, sticky="ew", padx=8, pady=4)
         row += 1
 
-        # --- Section météo ---
-        row = self._section(form, row, "Conditions météo")
+        # --- Section météo (optionnelle : ne bloque pas l'upload) ---
+        row = self._section(form, row, "Conditions météo (optionnel)")
+        ctk.CTkLabel(
+            form,
+            text=("T° préremplies depuis le Summary.txt si présent. "
+                  "Vent / couverture = observation terrain, non mesurées "
+                  "par le boîtier — complétables plus tard sur le portail."),
+            font=ctk.CTkFont(size=11),
+            text_color=("gray40", "gray65"),
+            anchor="w",
+            justify="left",
+            wraplength=680,
+        ).grid(row=row, column=0, columnspan=2, sticky="ew",
+               padx=16, pady=(0, 4))
+        row += 1
 
-        self._label(form, row, "Température début (°C) *",
-                      help="Valeur entière")
+        self._label(form, row, "T° début de nuit (°C)",
+                      help="Summary · entier optionnel")
         self.temp_deb_var = ctk.StringVar()
         ctk.CTkEntry(form, textvariable=self.temp_deb_var, width=120,
                        placeholder_text="ex: 22",
                        ).grid(row=row, column=1, sticky="w", padx=8, pady=4)
         row += 1
 
-        self._label(form, row, "Température fin (°C) *",
-                      help="Valeur entière")
+        self._label(form, row, "T° fin de nuit (°C)",
+                      help="Summary · entier optionnel")
         self.temp_fin_var = ctk.StringVar()
         ctk.CTkEntry(form, textvariable=self.temp_fin_var, width=120,
                        placeholder_text="ex: 15",
                        ).grid(row=row, column=1, sticky="w", padx=8, pady=4)
         row += 1
 
-        self._label(form, row, "Vent *")
+        self._label(form, row, "Vent",
+                      help="Optionnel · portail web ensuite OK")
         self.vent_label_var = ctk.StringVar(value=_UNSET)
         ctk.CTkOptionMenu(
             form, variable=self.vent_label_var, values=[_UNSET] + vent_labels(),
@@ -245,7 +261,8 @@ class ParticipationWizard(ctk.CTkToplevel):
         ).grid(row=row, column=1, sticky="w", padx=8, pady=4)
         row += 1
 
-        self._label(form, row, "Couverture nuageuse *")
+        self._label(form, row, "Couverture nuageuse",
+                      help="Optionnel · portail web ensuite OK")
         self.cov_label_var = ctk.StringVar(value=_UNSET)
         ctk.CTkOptionMenu(
             form, variable=self.cov_label_var,
@@ -622,29 +639,30 @@ class ParticipationWizard(ctk.CTkToplevel):
         if date_debut and date_fin and date_fin <= date_debut:
             errs.append("date fin doit être après date début")
 
-        # Températures (entier obligatoire, bornes -20..+50 °C)
-        def _parse_temp(raw: str, label: str):
+        # Températures : optionnelles (souvent préremplies via Summary).
+        # Champ vide = non renseigné (OK). Si saisi : entier -20..+50.
+        def _parse_temp_optional(raw: str, label: str):
+            s = (raw or "").strip()
+            if not s:
+                return None
             try:
-                v = int(raw.strip())
+                v = int(s)
             except ValueError:
-                errs.append(f"{label} invalide (nombre entier attendu)")
+                errs.append(f"{label} invalide (nombre entier attendu, ou laisser vide)")
                 return None
             if v < -20 or v > 50:
                 errs.append(f"{label} hors limites (-20 à +50 °C) : {v}")
                 return None
             return v
 
-        temp_deb = _parse_temp(self.temp_deb_var.get(), "température début")
-        temp_fin = _parse_temp(self.temp_fin_var.get(), "température fin")
+        temp_deb = _parse_temp_optional(self.temp_deb_var.get(), "température début")
+        temp_fin = _parse_temp_optional(self.temp_fin_var.get(), "température fin")
 
-        # Vent / couverture — sentinelle non convertie (from_label → None) : on
-        # BLOQUE plutôt que de publier une météo par défaut fausse et irréversible.
+        # Vent / couverture : optionnels. La sentinelle « — à renseigner — »
+        # n'est PAS convertie en valeur inventée (from_label → None) et n'est
+        # PAS bloquante — l'utilisateur peut compléter plus tard sur le portail.
         vent = vent_from_label(self.vent_label_var.get())
         couverture = couverture_from_label(self.cov_label_var.get())
-        if vent is None:
-            errs.append("vent : à renseigner (observation de terrain, non devinée)")
-        if couverture is None:
-            errs.append("couverture nuageuse : à renseigner")
 
         # Détecteur — si "Autre", on prend la valeur libre saisie
         detecteur = self.det_var.get().strip()
@@ -701,13 +719,18 @@ class ParticipationWizard(ctk.CTkToplevel):
             self.err_lbl.configure(text="⚠  " + "\n⚠  ".join(errs))
             return
 
-        # Construction du payload
-        meteo = {
-            "temperature_debut": temp_deb,
-            "temperature_fin": temp_fin,
-            "vent": vent,
-            "couverture": couverture,
-        }
+        # Construction du payload — n'envoyer que les champs météo réellement
+        # renseignés (pas de None / pas de fausses valeurs par défaut).
+        meteo: dict = {}
+        if temp_deb is not None:
+            meteo["temperature_debut"] = temp_deb
+        if temp_fin is not None:
+            meteo["temperature_fin"] = temp_fin
+        if vent is not None:
+            meteo["vent"] = vent
+        if couverture is not None:
+            meteo["couverture"] = couverture
+
         configuration = {
             "detecteur_enregistreur_type": detecteur,
         }
@@ -724,7 +747,7 @@ class ParticipationWizard(ctk.CTkToplevel):
             "date_debut": date_debut,
             "date_fin": date_fin,
             "point": self.meta.n_point_fixe,
-            "meteo": meteo,
+            "meteo": meteo or None,
             "configuration": configuration,
             "commentaire": commentaire,
         }

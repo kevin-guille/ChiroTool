@@ -3,7 +3,7 @@
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 Les versions publiées suivent le SemVer du fichier `version.py` / tags GitHub.
 
-## [0.6.0] — 2026-08-04
+## [0.6.0] — 2026-08-07
 
 Issue [#3](https://github.com/kevin-guille/ChiroTool/issues/3) (Benjamin Drillat)
 + SPEC [`docs/SPEC_v06_parcours.md`](docs/SPEC_v06_parcours.md).
@@ -40,12 +40,15 @@ Issue [#3](https://github.com/kevin-guille/ChiroTool/issues/3) (Benjamin Drillat
   - token **401** : message clair, pas de re-upload massif fantôme ;
   - couverture = WAV **encore dans Data_k** ; purges nettoyage = info
     « sur serveur seul » (ex. 185 fichiers).
+- **Météo participation non bloquante** (retour Benjamin) : vent / couverture
+  et T° vides n'empêchent plus l'upload ; Summary continue de préremplir les
+  T° ; pas de valeur inventée ; complétion possible plus tard sur le portail.
 
 ### Documentation
 
-- Tutoriel v0.6 (meta/carte FOCUS, ChiroSurf nuits, repair/token, FAQ).
+- Tutoriel v0.6 (meta/carte FOCUS, ChiroSurf nuits, repair/token, météo
+  optionnelle, FAQ).
 - SPEC, samples issue #3, CONTRIBUTING, README.
-- Publication GitHub prévue après tests terrain complémentaires (jeudi).
 
 ### Suite possible (post-0.6)
 

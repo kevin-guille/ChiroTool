@@ -59,6 +59,7 @@ La **v0.6** répond à l’issue [#3](https://github.com/kevin-guille/ChiroTool/
 | 🌊 | **ChiroSurf nuits** (`chirosurf/Nuit{n}_…csv`) | Méthode 10 %→75 % nuit par nuit |
 | 📊 | Synthèse **`_Vu`** + filtre **proba Tadarida min** | Lecture activité après validation ChiroSurf |
 | 🔧 | **Vérifier / Réparer** (journal détaillé, token 401, nettoyage) | Diagnostic copiable pour les issues |
+| 🌤 | **Météo non bloquante** (T° Summary ; vent/couverture optionnels) | Upload même sans saisie terrain complète |
 
 👉 Détail : [Changelog](CHANGELOG.md) · [SPEC](docs/SPEC_v06_parcours.md) · [Releases](https://github.com/kevin-guille/ChiroTool/releases)
 
@@ -266,7 +267,7 @@ Tests : `pytest tests/` (également en [CI GitHub Actions](https://github.com/ke
 
 Vous avez une saison Point Fixe devant vous ? **ChiroTool est fait pour ça.**
 
-1. **[Téléchargez la v0.5](https://github.com/kevin-guille/ChiroTool/releases)** (exe ou sources)
+1. **[Téléchargez la v0.6](https://github.com/kevin-guille/ChiroTool/releases)** (exe ou sources)
 2. Traitez une nuit test de bout en bout
 3. Envoyez un retour — bug, idée, besoin de formation —
    via une [**issue GitHub**](https://github.com/kevin-guille/ChiroTool/issues)
