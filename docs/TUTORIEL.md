@@ -887,11 +887,12 @@ Conception / dev : [`SPEC_v06_parcours.md`](SPEC_v06_parcours.md) · issue
 
 ### Suite possible (après v0.6)
 
-- Robustesse / UX du **mode batch** (retours terrain).
+- Robustesse / UX du **mode batch** : données complémentaires de participation
+  (template avant lot, auto Summary / matériels, éventuel rattrapage).
+- Journal d’upload rouvrable, reprise après coupure plus lisible.
 - Export multi-nuits compilé (espèces × nuits en colonnes).
 - Libellés d’export « Léger / Travail / Complet » encore plus explicites.
 - Captures d’écran tutoriel (pick carte, ChiroSurf nuits, diagnostic).
-- Régénération du **PDF** tutoriel (`docs/build_pdf.py`).
 
 ---
 

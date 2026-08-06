@@ -2,9 +2,9 @@
 
 | | |
 |--|--|
-| **Statut** | **Implémenté en v0.6.0** (conception validée + code livré) |
-| **Date** | 2026-08-04 |
-| **Contexte** | Issue [#3](https://github.com/kevin-guille/ChiroTool/issues/3) (Benjamin Drillat) + retours carte / meta |
+| **Statut** | **Livré en v0.6.0** (2026-08-07) : code, PDF tutoriel, release GitHub, landing Pages |
+| **Date** | 2026-08-04 (conception) · 2026-08-07 (publication) |
+| **Contexte** | Issue [#3](https://github.com/kevin-guille/ChiroTool/issues/3) (retours terrain) + retours carte / meta |
 | **Principe** | Pragmatisme — une vérité disque, peu de fichiers, parcours unifiés, libellés humains d’abord |
 
 Ce document **prime** sur l’improvisation au codage. En cas de doute : revenir ici, ou amender le §8 avant de coder autre chose.

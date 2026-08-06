@@ -78,6 +78,8 @@ GROK*.md
 
 # Notes internes de communication / promotion (locales, jamais publiees)
 docs/*promo*.md
+docs/MESSAGE_*.md
+docs/MESSAGE_BENJAMIN*.md
 docs/*-notes.md
 docs/post-reseaux.md
 
