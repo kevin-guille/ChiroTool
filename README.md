@@ -58,7 +58,6 @@ La **v0.6** répond à l’issue [#3](https://github.com/kevin-guille/ChiroTool/
 | 📍 | **FOCUS carte** (pin rose, GPS manifest) + recharger = tous sites | « Voir sur la carte » recentre vraiment |
 | 🌊 | **ChiroSurf nuits** (`chirosurf/Nuit{n}_…csv`) | Méthode 10 %→75 % nuit par nuit |
 | 📊 | Synthèse **`_Vu`** + filtre **proba Tadarida min** | Lecture activité après validation ChiroSurf |
-| 🔧 | **Vérifier / Réparer** (journal détaillé, token 401, nettoyage) | Diagnostic copiable pour les issues |
 | 🌤 | **Météo non bloquante** (T° Summary ; vent/couverture optionnels) | Upload même sans saisie terrain complète |
 
 👉 Détail : [Changelog](CHANGELOG.md) · [SPEC](docs/SPEC_v06_parcours.md) · [Releases](https://github.com/kevin-guille/ChiroTool/releases)
