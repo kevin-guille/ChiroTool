@@ -27,14 +27,17 @@ Nuit_1_<id>-participation-<id>-observations_Vu.csv
 
 - Délimiteur `;`, 11 colonnes Vigie-Chiro standard.
 - **Nuit biologique** = coupure à midi : 8000 + 7839 = total multi.
-- `_Vu` = mêmes lignes, colonnes `observateur_taxon` /
-  `observateur_probabilite` renseignées (ex. SUR / PROBABLE).
+- `_Vu` = **mêmes lignes** que le brut. `observateur_taxon` /
+  `observateur_probabilite` ne sont remplis que sur les contacts **écoutés**
+  (16 lignes SUR / PROBABLE sur Nuit_1 comme sur Nuit_2). La méthode
+  ChiroSurf 10 % → 75 % n'annote pas le reste de la nuit.
 - ChiroSurf écrit le `_Vu` **à côté** du brut ; on rouvre le CSV sans `_Vu`
   pour continuer.
 
 ## Usage
 
-Référence pour tests unitaires du futur module de split / import (Vague C).
+Référence pour les tests du split multi-nuits, de l'import `_Vu`, et du
+compteur « identifications validées » (`observateur_taxon` renseigné).
 Ne pas traiter comme données de production à redistribuer hors dev.
 
 Conception associée : [`docs/SPEC_v06_parcours.md`](../../docs/SPEC_v06_parcours.md).

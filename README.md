@@ -97,7 +97,8 @@ La **v0.6** répond à l’issue [#3](https://github.com/kevin-guille/ChiroTool/
 
 ### Après l’analyse
 
-- **Validation des contacts** (raccourcis, ouverture WAV dans ChiroSurf, taxons, envoi des identifications)
+- **Validation des contacts** (raccourcis, tri des colonnes, filtre taxon observateur, ouverture WAV dans ChiroSurf, envoi des identifications)
+- **Vue session** : bilan `X / Y` contacts avec taxon observateur (et envois Vigie-Chiro)
 - **ChiroSurf multi-nuits** : scission lazy `chirosurf/Nuit{n}_…csv` (nuit biologique) pour la méthode 10 %→75 %
 - **Graphes d’activité** et **synthèse** (référentiels national / région / milieu, filtre proba Tadarida, source `_Vu`)
 - **Registre de campagne** multi-sites (SQLite, export CSV / xlsx)

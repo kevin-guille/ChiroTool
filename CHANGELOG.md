@@ -12,14 +12,21 @@ Les versions publiées suivent le SemVer du fichier `version.py` / tags GitHub.
 - **Vue session** : bilan `X / Y` contacts avec taxon observateur (xlsx en
   arrière-plan, cache) et nombre d'identifications déjà envoyées si sidecar.
 
+### Corrigé
+
+- **Valider** : le 2e clic sur un en-tête conserve le tri (callback heading
+  reposé après mise à jour du libellé ▲ / ▼).
+
 ### Documentation
 
-- FAQ tutoriel : SSD **EXFAT** sous Windows (lenteur / plantage au
-  renommage-TE×10 ; copie locale NTFS).
+- Tutoriel : tri / filtre Valider, bilan `X / Y` en Vue session, comportement
+  réel de « identifications validées seulement » sur un `_Vu` ChiroSurf,
+  découpage TE×10 en tranches de 5 s (tout le son conservé), FAQ **EXFAT**.
 
 ### Tests
 
 - TE×10 : un WAV de 15 s raw produit **3** segments (pas de troncature).
+- Cohérence synthèse / compteur observateur sur le `_Vu` Nuit_1 issue #3.
 
 ## [0.6.0] — 2026-08-07
 

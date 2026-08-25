@@ -202,7 +202,8 @@ campagne. Une pastille de couleur indique l'état de chaque nuit :
 
 **③ Le panneau de détail (à droite)** — 6 onglets :
 
-- **Vue session** : les infos de la nuit sélectionnée + la barre d'actions
+- **Vue session** : les infos de la nuit sélectionnée, le bilan de validation
+  (`X / Y` contacts avec taxon observateur) + la barre d'actions
 - **Registre** : toutes vos nuits, toutes campagnes confondues (suivi global)
 - **Historique** : la chronologie des opérations faites sur une nuit
 - **Carte** : vos points sur fond OpenStreetMap / IGN
@@ -253,7 +254,11 @@ D:\Chiros-2026\
 Dans ChiroTool, vérifiez que le dossier de travail est le bon, puis cliquez sur
 **« 🔄 Scanner »**. Vos nuits apparaissent dans la liste de gauche.
 
-Cliquez sur votre nuit : son détail s'affiche à droite.
+Cliquez sur votre nuit : son détail s'affiche à droite. Une fois le tableur
+d'observations récupéré, le bloc **Détection** montre aussi
+**« Validation : X / Y contacts (taxon observateur) »** (et, s'il y a déjà eu
+un envoi, le nombre d'identifications remontées à Vigie-Chiro). Inutile d'ouvrir
+**🔍 Valider** juste pour ce décompte.
 
 > 📸 **[Capture 06 — Vue session : progression du pipeline et barre d'actions]**
 
@@ -302,7 +307,13 @@ Cliquez sur **« Valider »**.
 
 ChiroTool exécute alors :
 1. Le **renommage** des WAV au format Vigie-Chiro (`Car260155-2026-Pass1-Z6-…`)
-2. L'**expansion temporelle ×10** (création du dossier `Data_k/`)
+2. L'**expansion temporelle ×10** (création du dossier `Data_k/`) : chaque
+   fichier est découpé en tranches de **5 secondes** (temps brut), comme
+   Kaleidoscope. Un WAV déjà en 5 s reste un fichier ; un WAV plus long sort
+   en plusieurs WAV (nouveau timestamp toutes les 5 s). **Tout le son est
+   conservé**, ce n'est pas un prélèvement des 5 premières secondes. Le
+   protocole Point Fixe règle en général les SM4 sur 5 s : dans ce cas le
+   nombre de fichiers ne change pas.
 
 Une **barre de progression** vous indique l'avancement en temps réel.
 
@@ -462,7 +473,13 @@ pouvez valider **de deux façons** (complémentaires, pas exclusives).
 ### A · Validation contact par contact (ChiroTool)
 
 1. Sur une nuit dont le tableur est récupéré, cliquez sur **« 🔍 Valider »**.
-2. Un tableau filtrable des contacts s'affiche.
+2. Un tableau filtrable des contacts s'affiche :
+   - **Clic sur un en-tête** pour trier (A–Z ou petit–grand). Un 2e clic inverse ;
+     un 3e revient à l'ordre d'origine. Pratique pour ramener en haut les plus
+     fortes probas d'une espèce.
+   - **« Taxon observateur renseigné uniquement »** : n'afficher que les lignes
+     déjà validées (à la place de « Non validés seulement », les deux cases ne
+     se cumulent pas).
 3. Sélectionnez un contact, puis :
    - Utilisez les **raccourcis clavier** `O` / `P` / `S` pour indiquer votre
      niveau de confiance (pOssible / Probable / Sûr).
@@ -494,7 +511,10 @@ ChiroSurf se basent sur une **nuit unique**. ChiroTool scinde pour vous :
 4. Après validation ChiroSurf, le fichier `…_Vu.csv` apparaît **à côté** du
    brut. Pour poursuivre une validation, rouvrez toujours le CSV **sans** `_Vu`.
 5. Dans la fenêtre ChiroTool, **Synthèse** sur une ligne de nuit lit le `_Vu`
-   s’il existe (sinon le CSV brut de la nuit).
+   s'il existe (sinon le CSV brut de la nuit). La case **« identifications
+   validées seulement »** ne compte alors que les lignes où
+   `observateur_taxon` est rempli : avec la méthode 10 % → 75 %, ChiroSurf
+   n'y inscrit que les contacts **vraiment écoutés**, pas le reste de la nuit.
 
 > ⚠️ Les CSV bruts peuvent être **régénérés** (bouton dans la fenêtre) ; les
 > `_Vu` ne sont **jamais** écrasés automatiquement.
@@ -572,8 +592,8 @@ Le Registre affiche aussi, par nuit, ce qui reste à remonter.
 > 🧹 **Masquer les sons supprimés au nettoyage** : si vous validez *après* avoir
 > nettoyé, cochez cette case (elle s'active automatiquement) pour n'afficher que
 > les contacts dont le WAV existe encore. La **liste des taxons** se met aussi à
-> jour selon les filtres actifs (proba, masquage) : seuls les taxons encore
-> présents sont proposés.
+> jour selon les filtres actifs (proba, masquage, taxon observateur) : seuls les
+> taxons encore présents sont proposés.
 
 > 💡 Si vous nettoyez **après** avoir validé, vos décisions humaines sont
 > respectées : un faux « noise » que vous avez corrigé en *Pipistrelle* sera
@@ -597,10 +617,12 @@ plus la **source** (nom du xlsx, ou `_Vu nuit N` si vous venez de ChiroSurf nuit
 
 Filtres utiles :
 
-- **« Identifications validées seulement »** : ne compter que **vos** validations
-  (ignore Tadarida seul).
+- **« Identifications validées seulement »** : ne compter que les lignes où
+  **taxon observateur** est renseigné (ignore Tadarida seul). Après un `_Vu`
+  ChiroSurf 10 % → 75 %, ce sont les contacts écoutés, pas toute l'activité
+  statistiquement retenue.
 - **« Proba Tadarida ≥ »** : seuil optionnel (ex. `0.5` ou `50`) pour la synthèse
-  **non validée** — les lignes déjà validées par l’observateur passent toujours.
+  **non validée** ; les lignes déjà validées par l'observateur passent toujours.
 
 Pour chaque espèce, une colonne **Activité** indique :
 
@@ -901,17 +923,27 @@ Rappel des apports de la **v0.6** (détail dans le flux ci-dessus) :
 | Campagne | **🔧 Vérifier / Réparer** (rapport détaillé, token 401, nettoyage), export **USB** |
 | Upload | **Météo non bloquante** (T° Summary auto ; vent/couverture optionnels, complétables sur le portail) |
 
-Conception / dev : [`SPEC_v06_parcours.md`](SPEC_v06_parcours.md) · issue
-[#3](https://github.com/kevin-guille/ChiroTool/issues/3).
+**Depuis la v0.6** (code local, pas encore de tag de release) :
 
-### Suite possible (après v0.6)
+- **Valider** : tri au clic sur les en-têtes ; filtre « Taxon observateur renseigné uniquement ».
+- **Vue session** : bilan `X / Y` contacts validés (et envois Vigie-Chiro s'il y en a).
+- FAQ **EXFAT** (SSD externes sous Windows).
 
+Conception / dev : [`SPEC_v06_parcours.md`](SPEC_v06_parcours.md) · issues
+[#3](https://github.com/kevin-guille/ChiroTool/issues/3),
+[#4](https://github.com/kevin-guille/ChiroTool/issues/4).
+
+### Suite possible
+
+- Synthèse `_Vu` : option « nuit validée statistiquement » (10 % → 75 %), en
+  attente du cadrage terrain (issue #3).
+- Ouverture ChiroSurf sur le CSV de la nuit (pas seulement le dossier / un WAV).
+- Anabat Ranger / Swift : renommage et fichiers > 5 s (besoin d'exemples, issue #4).
 - Robustesse / UX du **mode batch** : données complémentaires de participation
   (template avant lot, auto Summary / matériels, éventuel rattrapage).
-- Journal d’upload rouvrable, reprise après coupure plus lisible.
+- Journal d'upload rouvrable, reprise après coupure plus lisible.
 - Export multi-nuits compilé (espèces × nuits en colonnes).
-- Libellés d’export « Léger / Travail / Complet » encore plus explicites.
-- Captures d’écran tutoriel (pick carte, ChiroSurf nuits, diagnostic).
+- Captures d'écran tutoriel (pick carte, ChiroSurf nuits, diagnostic).
 
 ---
 
