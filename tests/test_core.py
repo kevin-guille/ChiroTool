@@ -915,6 +915,18 @@ class TestValidationFilters:
         assert rp(["f", "Pippip", 0.9, None], self.CI,
                   only_unvalidated=True) is True
 
+    def test_only_observer_taxon(self):
+        from gui_validation import row_passes_filters as rp
+        assert rp(["f", "Pippip", 0.9, "Pippip"], self.CI,
+                  only_observer_taxon=True) is True
+        assert rp(["f", "Pippip", 0.9, None], self.CI,
+                  only_observer_taxon=True) is False
+        assert rp(["f", "Pippip", 0.9, ""], self.CI,
+                  only_observer_taxon=True) is False
+        # Les deux filtres opposés : rien ne passe
+        assert rp(["f", "Pippip", 0.9, "Pippip"], self.CI,
+                  only_unvalidated=True, only_observer_taxon=True) is False
+
     def test_only_patrimonial(self):
         from gui_validation import row_passes_filters as rp, PATRIMONIAL_CODES
         assert rp(["f", "barbar", 0.9, None], self.CI, only_patrimonial=True,
@@ -942,6 +954,39 @@ class TestValidationFilters:
                             wav_present=wav_present)
         assert "Nycnoc" not in t
         assert "Pippip" in t
+
+    def test_eligible_taxons_observer_only(self):
+        from gui_validation import eligible_taxons
+        t = eligible_taxons(self._rows(), self.CI, only_observer_taxon=True)
+        assert t == ["barbar"]
+
+    def test_sort_proba_desc_missing_last(self):
+        from gui_validation import sort_filtered_indexes
+        ci = {"tadarida_probabilite": 0, "nom du fichier": 1}
+        rows = [[0.2, "a"], [0.9, "b"], [None, "c"], [0.5, "d"]]
+        out = sort_filtered_indexes([0, 1, 2, 3], rows, ci, "tad_proba",
+                                    descending=True)
+        assert out == [1, 3, 0, 2]          # 0.9, 0.5, 0.2, puis manquant
+
+    def test_sort_taxon_asc(self):
+        from gui_validation import sort_filtered_indexes
+        ci = {"tadarida_taxon": 0}
+        rows = [["Pippip"], ["barbar"], ["Nycnoc"]]
+        out = sort_filtered_indexes([0, 1, 2], rows, ci, "tad_taxon")
+        assert out == [1, 2, 0]              # barbar, Nycnoc, Pippip
+
+    def test_count_observer_progress(self):
+        from gui_validation import count_observer_progress
+        headers = ["nom du fichier", "tadarida_taxon", "observateur_taxon"]
+        rows = [
+            ["a", "pippip", "pippip"],
+            ["b", "noise", ""],
+            ["c", "barbar", None],
+            [None, None, None],
+        ]
+        d = count_observer_progress(headers, rows)
+        assert d["n_total"] == 3
+        assert d["n_validated"] == 1
 
 
 # =========================================================================
@@ -1049,6 +1094,36 @@ class TestTe10Robustness:
         assert stats["written"] >= 1        # le valide est traité malgré l'autre
         assert stats["errors"] >= 1         # le corrompu compté en erreur
         assert stats["engine"] == "python"
+
+    def test_plan_file_splits_15s_wav_not_truncated(self, tmp_path):
+        """Un WAV de 15 s raw doit donner 3 segments de 5 s (tout le son, pas
+        seulement les 5 premières secondes). Noms distincts (timestamp +5 s)."""
+        from te10 import plan_file
+        sr = 8000
+        src = tmp_path / "s_20250101_120000.wav"
+        self._wav(src, frames=15 * sr, sr=sr)
+        plans = plan_file(src, tmp_path / "out", 10, 5.0)
+        assert len(plans) == 3
+        assert [p.n_frames for p in plans] == [5 * sr, 5 * sr, 5 * sr]
+        names = [p.dst.name for p in plans]
+        assert len(set(names)) == 3
+        assert "120000" in names[0]
+        assert "120005" in names[1]
+        assert "120010" in names[2]
+        assert all(n.endswith("_000.wav") for n in names)
+
+    def test_process_folder_writes_all_segments(self, tmp_path):
+        from te10 import process_folder
+        sr = 8000
+        src = tmp_path / "src"
+        src.mkdir()
+        self._wav(src / "s_20250101_120000.wav", frames=15 * sr, sr=sr)
+        out = tmp_path / "out"
+        stats = process_folder(src, out, jobs=1, force_python=True)
+        assert stats["n_planned_segments"] == 3
+        assert stats["written"] == 3
+        assert stats["errors"] == 0
+        assert len(list(out.glob("*.wav"))) == 3
 
 
 # =========================================================================

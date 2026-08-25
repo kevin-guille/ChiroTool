@@ -10,7 +10,8 @@ Fonctionnalités :
   - Tableau (ttk.Treeview) avec colonnes : heure, durée, fréq, taxon Tadarida,
     proba, taxon observateur, confiance
   - Filtres : par taxon/groupe, par proba min, seulement non-validés,
-    seulement patrimoniaux
+    taxon observateur renseigné, seulement patrimoniaux
+  - Tri au clic sur les en-têtes (asc / desc / ordre d'origine)
   - Édition inline du contact sélectionné (taxon + confiance)
   - Bouton "▶ ChiroSurf" par ligne (double-clic aussi)
   - Raccourcis clavier :
@@ -74,12 +75,16 @@ CONFIDENCE_VALUES = ("POSSIBLE", "PROBABLE", "SUR")
 def row_passes_filters(row: list, col_idx: dict, *, taxon_filter: str = "Tous",
                        proba_min: float = 0.0, hide_cleaned: bool = False,
                        wav_present: bool = True, only_unvalidated: bool = False,
+                       only_observer_taxon: bool = False,
                        only_patrimonial: bool = False,
                        patrimonial_codes=frozenset()) -> bool:
     """La ligne d'observations passe-t-elle les filtres actifs ?
 
     Fonction PURE (aucune dépendance GUI) → testable. ``wav_present`` indique si
     le WAV existe encore (pour l'option « masquer les sons supprimés »).
+    ``only_observer_taxon`` : ne garder que les lignes avec taxon observateur
+    renseigné (issue #4). Incompatible avec ``only_unvalidated`` : si les deux
+    sont True, rien ne passe.
     """
     ci = col_idx
 
@@ -103,6 +108,8 @@ def row_passes_filters(row: list, col_idx: dict, *, taxon_filter: str = "Tous",
             pass
     if only_unvalidated and obs:
         return False
+    if only_observer_taxon and not obs:
+        return False
     if only_patrimonial and (str(tad) or "").lower() not in patrimonial_codes:
         return False
     return True
@@ -110,7 +117,9 @@ def row_passes_filters(row: list, col_idx: dict, *, taxon_filter: str = "Tous",
 
 def eligible_taxons(rows: list, col_idx: dict, *, proba_min: float = 0.0,
                     hide_cleaned: bool = False, wav_present: list | None = None,
-                    only_unvalidated: bool = False, only_patrimonial: bool = False,
+                    only_unvalidated: bool = False,
+                    only_observer_taxon: bool = False,
+                    only_patrimonial: bool = False,
                     patrimonial_codes=frozenset()) -> list[str]:
     """Liste triée des taxons Tadarida présents parmi les lignes qui passent les
     filtres AUTRES que le taxon (pour peupler dynamiquement le menu). Pur/testable.
@@ -127,7 +136,9 @@ def eligible_taxons(rows: list, col_idx: dict, *, proba_min: float = 0.0,
         if not row_passes_filters(
             r, ci, taxon_filter="Tous", proba_min=proba_min,
             hide_cleaned=hide_cleaned, wav_present=wp,
-            only_unvalidated=only_unvalidated, only_patrimonial=only_patrimonial,
+            only_unvalidated=only_unvalidated,
+            only_observer_taxon=only_observer_taxon,
+            only_patrimonial=only_patrimonial,
             patrimonial_codes=patrimonial_codes,
         ):
             continue
@@ -136,6 +147,112 @@ def eligible_taxons(rows: list, col_idx: dict, *, proba_min: float = 0.0,
         if t:
             taxons.add(str(t))
     return sorted(taxons, key=str.lower)
+
+
+HEADING_LABELS = {
+    "heure": "Heure",
+    "duree": "Durée (s)",
+    "freq": "Fréq. méd. (kHz)",
+    "tad_taxon": "Taxon Tadarida",
+    "tad_proba": "Proba",
+    "obs_taxon": "Taxon observateur",
+    "obs_conf": "Confiance",
+    "groupe": "Groupe",
+}
+
+
+def heure_from_filename(filename: str) -> str | None:
+    """HH:MM:SS extrait du bloc ``_HHMMSS`` du nom de fichier, ou None."""
+    try:
+        for p in str(filename or "").split("_"):
+            if len(p) == 6 and p.isdigit():
+                return f"{p[:2]}:{p[2:4]}:{p[4:]}"
+    except Exception:
+        return None
+    return None
+
+
+def contact_sort_value(row: list, col_idx: dict, column: str):
+    """Valeur comparable pour une colonne d'affichage. ``None`` si vide/illisible.
+
+    PURE → testable. Types : str (heure, taxons, groupe, confiance) ou float
+    (durée, freq, proba).
+    """
+    ci = col_idx
+
+    def _get(key):
+        j = ci.get(key)
+        return row[j] if (j is not None and j < len(row)) else None
+
+    def _f(v):
+        if v in (None, ""):
+            return None
+        try:
+            return float(v)
+        except (TypeError, ValueError):
+            return None
+
+    if column == "heure":
+        return heure_from_filename(_get("nom du fichier") or "")
+    if column == "duree":
+        a, b = _f(_get("temps_debut")), _f(_get("temps_fin"))
+        if a is None or b is None:
+            return None
+        return b - a
+    if column == "freq":
+        return _f(_get("frequence_mediane"))
+    if column == "tad_taxon":
+        v = _get("tadarida_taxon")
+        return str(v).strip().lower() if v not in (None, "") else None
+    if column == "tad_proba":
+        return _f(_get("tadarida_probabilite"))
+    if column == "obs_taxon":
+        v = _get("observateur_taxon")
+        return str(v).strip().lower() if v not in (None, "") else None
+    if column == "obs_conf":
+        v = _get("observateur_probabilite")
+        return str(v).strip().lower() if v not in (None, "") else None
+    if column == "groupe":
+        tad = _get("tadarida_taxon")
+        return classify_taxon(str(tad)) if tad else None
+    return None
+
+
+def sort_filtered_indexes(indexes: list[int], rows: list, col_idx: dict,
+                          column: str, *, descending: bool = False) -> list[int]:
+    """Trie les index filtrés. Les valeurs manquantes restent en fin. PURE."""
+    present: list[tuple[int, object]] = []
+    missing: list[int] = []
+    for i in indexes:
+        if i < 0 or i >= len(rows):
+            missing.append(i)
+            continue
+        v = contact_sort_value(rows[i], col_idx, column)
+        if v is None or v == "":
+            missing.append(i)
+        else:
+            present.append((i, v))
+    present.sort(key=lambda t: t[1], reverse=descending)
+    return [i for i, _ in present] + missing
+
+
+def count_observer_progress(headers: list, rows: list) -> dict:
+    """``n_validated`` / ``n_total`` d'après ``observateur_taxon``. PURE.
+
+    ``n_total`` = lignes non vides. Une ligne est validée si la colonne
+    observateur est renseignée (même logique que le pied de Valider).
+    """
+    lower = [str(h).lower().strip() for h in (headers or [])]
+    i_obs = lower.index("observateur_taxon") if "observateur_taxon" in lower else None
+    n_total = 0
+    n_val = 0
+    for r in rows or []:
+        if not r or all(c in (None, "") for c in r):
+            continue
+        n_total += 1
+        if i_obs is not None and i_obs < len(r) and r[i_obs] not in (None, ""):
+            n_val += 1
+    return {"n_validated": n_val, "n_total": n_total}
 
 
 class ValidationView(ctk.CTkToplevel):
@@ -181,6 +298,8 @@ class ValidationView(ctk.CTkToplevel):
 
         # Mapping index colonne -> clé logique
         self.col_idx: dict[str, int] = {}
+        self._sort_col: str | None = None
+        self._sort_desc = False
 
         self._build_ui()
         self.after(100, self._load_xlsx)
@@ -247,7 +366,7 @@ class ValidationView(ctk.CTkToplevel):
         ctk.CTkCheckBox(
             filters, text="Non validés seulement",
             variable=self.only_unvalidated_var,
-            command=self._on_filters_changed,
+            command=self._on_unvalidated_toggle,
         ).grid(row=0, column=5, padx=(0, 12), pady=8)
 
         self.only_patrimonial_var = ctk.BooleanVar(value=False)
@@ -268,12 +387,20 @@ class ValidationView(ctk.CTkToplevel):
         # 2e ligne de filtres : masquer les contacts dont le WAV a été supprimé
         # au nettoyage. Activée seulement si un nettoyage a manifestement eu lieu
         # (voir _compute_wav_presence).
+        self.only_observer_taxon_var = ctk.BooleanVar(value=False)
+        ctk.CTkCheckBox(
+            filters, text="Taxon observateur renseigné uniquement",
+            variable=self.only_observer_taxon_var,
+            command=self._on_observer_filter_toggle,
+        ).grid(row=1, column=0, columnspan=3,
+               padx=(10, 12), pady=(0, 8), sticky="w")
+
         self.hide_cleaned_var = ctk.BooleanVar(value=False)
         self.hide_cleaned_chk = ctk.CTkCheckBox(
             filters, text="Masquer les sons supprimés au nettoyage",
             variable=self.hide_cleaned_var, command=self._apply_filters,
         )
-        self.hide_cleaned_chk.grid(row=1, column=0, columnspan=6,
+        self.hide_cleaned_chk.grid(row=1, column=3, columnspan=5,
                                     padx=(10, 12), pady=(0, 8), sticky="w")
         self.hide_cleaned_chk.configure(state="disabled")
 
@@ -297,14 +424,11 @@ class ValidationView(ctk.CTkToplevel):
         self.tree.column("#0", width=42, minwidth=42, stretch=False, anchor="center")
         self.tree.heading("#0", text="⬆")
         self._build_dot_images()
-        self.tree.heading("heure", text="Heure")
-        self.tree.heading("duree", text="Durée (s)")
-        self.tree.heading("freq", text="Fréq. méd. (kHz)")
-        self.tree.heading("tad_taxon", text="Taxon Tadarida")
-        self.tree.heading("tad_proba", text="Proba")
-        self.tree.heading("obs_taxon", text="Taxon observateur")
-        self.tree.heading("obs_conf", text="Confiance")
-        self.tree.heading("groupe", text="Groupe")
+        for col, label in HEADING_LABELS.items():
+            self.tree.heading(
+                col, text=label,
+                command=lambda c=col: self._on_sort_heading(c),
+            )
         self.tree.column("heure", width=80, anchor="center")
         self.tree.column("duree", width=70, anchor="center")
         self.tree.column("freq", width=120, anchor="center")
@@ -700,9 +824,44 @@ class ValidationView(ctk.CTkToplevel):
         self.proba_slider.set(0.0)
         self.proba_lbl.configure(text="0.00")
         self.only_unvalidated_var.set(False)
+        self.only_observer_taxon_var.set(False)
         self.only_patrimonial_var.set(False)
         self.hide_cleaned_var.set(False)
+        self._sort_col = None
+        self._sort_desc = False
+        self._refresh_heading_labels()
         self._on_filters_changed()
+
+    def _on_unvalidated_toggle(self):
+        if self.only_unvalidated_var.get():
+            self.only_observer_taxon_var.set(False)
+        self._on_filters_changed()
+
+    def _on_observer_filter_toggle(self):
+        if self.only_observer_taxon_var.get():
+            self.only_unvalidated_var.set(False)
+        self._on_filters_changed()
+
+    def _on_sort_heading(self, col: str):
+        """Clic en-tête : asc → desc → ordre d'origine."""
+        if self._sort_col == col:
+            if not self._sort_desc:
+                self._sort_desc = True
+            else:
+                self._sort_col = None
+                self._sort_desc = False
+        else:
+            self._sort_col = col
+            self._sort_desc = False
+        self._refresh_heading_labels()
+        self._apply_filters()
+
+    def _refresh_heading_labels(self):
+        for col, label in HEADING_LABELS.items():
+            mark = ""
+            if col == self._sort_col:
+                mark = " ▼" if self._sort_desc else " ▲"
+            self.tree.heading(col, text=label + mark)
 
     def _filter_kwargs(self) -> dict:
         """Paramètres de filtrage courants (lus des widgets) pour les fonctions
@@ -711,6 +870,7 @@ class ValidationView(ctk.CTkToplevel):
             proba_min=float(self.proba_slider.get()),
             hide_cleaned=self.hide_cleaned_var.get(),
             only_unvalidated=self.only_unvalidated_var.get(),
+            only_observer_taxon=self.only_observer_taxon_var.get(),
             only_patrimonial=self.only_patrimonial_var.get(),
             patrimonial_codes=PATRIMONIAL_CODES,
         )
@@ -747,6 +907,11 @@ class ValidationView(ctk.CTkToplevel):
         self.filtered_indexes = [
             i for i, r in enumerate(self.rows) if self._passes_filters(i, r)
         ]
+        if self._sort_col:
+            self.filtered_indexes = sort_filtered_indexes(
+                self.filtered_indexes, self.rows, self.col_idx,
+                self._sort_col, descending=self._sort_desc,
+            )
         self._refresh_table()
 
     def _refresh_table(self):
@@ -768,15 +933,7 @@ class ValidationView(ctk.CTkToplevel):
             obs_conf = r[ci["observateur_probabilite"]] if "observateur_probabilite" in ci else ""
 
             # Heure extraite depuis le nom de fichier : ..._YYYYMMDD_HHMMSS_NNN
-            heure = "?"
-            try:
-                parts = str(filename).split("_")
-                for p in parts:
-                    if len(p) == 6 and p.isdigit():
-                        heure = f"{p[:2]}:{p[2:4]}:{p[4:]}"
-                        break
-            except Exception:
-                pass
+            heure = heure_from_filename(str(filename)) or "?"
 
             duree = ""
             try:
