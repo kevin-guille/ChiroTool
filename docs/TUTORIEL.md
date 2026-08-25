@@ -810,6 +810,22 @@ elle crée beaucoup de fichiers d'un coup (renommage/expansion), qu'ils prennent
 Aucune donnée n'est perdue : relancer la préparation reprend là où elle s'était
 arrêtée.
 
+**« La préparation est très lente, ou plante, sur un SSD externe. »**
+Sous Windows, un disque (surtout externe) formaté en **EXFAT** tient très mal
+le renommage / TE×10 sur des milliers de WAV : fortes lenteurs, parfois un
+plantage. Ce n'est pas propre à ChiroTool (même constat avec Lupas Rename ou
+Kaleidoscope). Contournements :
+
+1. **Copier le dossier de nuit sur le disque local (NTFS)** avant de lancer
+   la préparation : c'est le geste le plus simple.
+2. Si vous le pouvez, formater le SSD en **NTFS** (sauvegarde d'abord). Ce
+   n'est pas obligatoire.
+3. Activer le **Mode compatible antivirus** dans les Préférences (ça lisse
+   le renommage ; ça n'annule pas le handicap EXFAT).
+
+Le NTFS est fortement recommandé pour les campagnes de plus de quelques
+centaines de WAV. Sinon on peut croire à tort que le logiciel est trop lent.
+
 **« L'upload s'est interrompu (PC éteint, coupure réseau). »**
 Aucun problème : la nuit s'affiche en orange ⏳ « à reprendre ». Re-cliquez
 « Upload + Tadarida » : seuls les fichiers manquants seront renvoyés.
@@ -867,6 +883,9 @@ ChiroTool couvre la grande majorité des cas, mais pas (encore) tout :
   contact par contact reste disponible en parallèle.
 - **Bouton 📍 Carte** : si les GPS n’ont jamais été mémorisés pour la session,
   choisissez une fois le point (pick carte ou create/reuse) pour les enregistrer.
+- **SSD / disques EXFAT sous Windows** : le renommage et le TE×10 y sont
+  souvent lents ou instables. Copier la nuit sur un volume NTFS (disque local)
+  avant de préparer ; voir [§12](#12--questions-fréquentes--dépannage).
 
 ---
 

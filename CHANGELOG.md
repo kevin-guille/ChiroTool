@@ -3,6 +3,24 @@
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 Les versions publiées suivent le SemVer du fichier `version.py` / tags GitHub.
 
+## [Unreleased]
+
+### Ajouté
+
+- **Valider** : tri au clic sur les en-têtes (asc / desc / ordre d'origine) ;
+  filtre « Taxon observateur renseigné uniquement » (issue #4).
+- **Vue session** : bilan `X / Y` contacts avec taxon observateur (xlsx en
+  arrière-plan, cache) et nombre d'identifications déjà envoyées si sidecar.
+
+### Documentation
+
+- FAQ tutoriel : SSD **EXFAT** sous Windows (lenteur / plantage au
+  renommage-TE×10 ; copie locale NTFS).
+
+### Tests
+
+- TE×10 : un WAV de 15 s raw produit **3** segments (pas de troncature).
+
 ## [0.6.0] — 2026-08-07
 
 Issue [#3](https://github.com/kevin-guille/ChiroTool/issues/3) (retours terrain)
