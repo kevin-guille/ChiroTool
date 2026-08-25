@@ -245,6 +245,10 @@ class ChiroToolApp(ctk.CTk):
         self.sessions: list[SessionState] = []
         self.session_cards: list[SessionCard] = []
         self.selected_card: SessionCard | None = None
+        # Cache (path → mtime, size, dict) du bilan X/Y validés, lecture xlsx async
+        self._obs_progress_cache: dict[str, tuple] = {}
+        self._obs_progress_token = 0
+        self._obs_progress_lbl = None
 
         # Fermeture propre (obligation utilisateur)
         self.protocol("WM_DELETE_WINDOW", self._on_close)
@@ -1341,8 +1345,33 @@ class ChiroToolApp(ctk.CTk):
                           anchor="nw", justify="left",
                           wraplength=600).grid(
                 row=i+1, column=1, sticky="ew", padx=(4, 12), pady=2)
+
+        # Bilan validation : xlsx lu en arrière-plan (8000 lignes ne doivent
+        # pas figer la Vue session). Cache mtime/size.
+        self._obs_progress_lbl = None
+        xlsx = None
+        try:
+            xlsx = find_observations_xlsx(s.path)
+        except Exception:
+            xlsx = None
+        next_row = len(rows) + 1
+        if xlsx is not None:
+            ctk.CTkLabel(meta_frame, text="Validation",
+                          font=ctk.CTkFont(size=11, weight="bold"),
+                          text_color=("gray30", "gray75"),
+                          anchor="nw", width=160).grid(
+                row=next_row, column=0, sticky="nw", padx=(12, 4), pady=2)
+            val_lbl = ctk.CTkLabel(
+                meta_frame, text="…",
+                font=ctk.CTkFont(size=11),
+                anchor="nw", justify="left", wraplength=600)
+            val_lbl.grid(row=next_row, column=1, sticky="ew",
+                         padx=(4, 12), pady=2)
+            self._obs_progress_lbl = val_lbl
+            self._fill_obs_progress(xlsx)
+            next_row += 1
         ctk.CTkLabel(meta_frame, text="").grid(
-            row=len(rows)+1, column=0, columnspan=2, pady=4)
+            row=next_row, column=0, columnspan=2, pady=4)
 
         # Barre d'actions : 3 étapes du pipeline en boutons séparés, chacun
         # activable individuellement. Le "prochain logique" selon l'état est
@@ -1435,6 +1464,78 @@ class ChiroToolApp(ctk.CTk):
                  "Synthèse de la nuit par espèce + niveaux d'activité")
         _btn("⋯ Détails", lambda: self._show_advanced(s),
              "Détails avancés : manifest, historique des actions, fichiers")
+
+    def _obs_progress_from_cache(self, xlsx: Path) -> dict | None:
+        try:
+            st = xlsx.stat()
+        except OSError:
+            return None
+        hit = self._obs_progress_cache.get(str(xlsx))
+        if hit and hit[0] == st.st_mtime and hit[1] == st.st_size:
+            return hit[2]
+        return None
+
+    def _fill_obs_progress(self, xlsx: Path) -> None:
+        """Affiche X/Y validés (cache hit immédiat, sinon thread)."""
+        self._obs_progress_token += 1
+        token = self._obs_progress_token
+        cached = self._obs_progress_from_cache(xlsx)
+        if cached is not None:
+            self._apply_obs_progress(token, cached)
+            return
+        threading.Thread(
+            target=self._obs_progress_worker, args=(xlsx, token),
+            daemon=True,
+        ).start()
+
+    def _obs_progress_worker(self, xlsx: Path, token: int) -> None:
+        prog = None
+        try:
+            from chirosurf_nights import rows_from_xlsx
+            from gui_validation import count_observer_progress
+            headers, rows = rows_from_xlsx(xlsx)
+            prog = count_observer_progress(headers, rows)
+            try:
+                from vigiechiro_api import load_observation_sidecar
+                from sync_state import SYNC_SYNCED
+                sync = (load_observation_sidecar(xlsx) or {}).get("sync") or {}
+                n_synced = sum(
+                    1 for rec in sync.values()
+                    if isinstance(rec, dict) and rec.get("state") == SYNC_SYNCED
+                )
+                if n_synced:
+                    prog["n_synced"] = n_synced
+            except Exception:
+                pass
+            try:
+                st = xlsx.stat()
+                self._obs_progress_cache[str(xlsx)] = (
+                    st.st_mtime, st.st_size, prog)
+            except OSError:
+                pass
+        except Exception:
+            prog = None
+        self.after(0, lambda p=prog, t=token: self._apply_obs_progress(t, p))
+
+    def _apply_obs_progress(self, token: int, prog: dict | None) -> None:
+        if token != self._obs_progress_token:
+            return
+        lbl = getattr(self, "_obs_progress_lbl", None)
+        if lbl is None:
+            return
+        try:
+            if not prog:
+                lbl.configure(text="illisible")
+                return
+            n_val = prog.get("n_validated", 0)
+            n_tot = prog.get("n_total", 0)
+            txt = f"{n_val} / {n_tot} contacts (taxon observateur)"
+            n_sync = prog.get("n_synced")
+            if n_sync:
+                txt += f"  ·  ⬆ {n_sync} envoyé(s)"
+            lbl.configure(text=txt)
+        except Exception:
+            pass
 
     def _naming_summary(self, s: SessionState) -> str:
         parts = []
