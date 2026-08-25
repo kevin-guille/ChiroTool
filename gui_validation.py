@@ -398,7 +398,7 @@ class ValidationView(ctk.CTkToplevel):
         self.hide_cleaned_var = ctk.BooleanVar(value=False)
         self.hide_cleaned_chk = ctk.CTkCheckBox(
             filters, text="Masquer les sons supprimés au nettoyage",
-            variable=self.hide_cleaned_var, command=self._apply_filters,
+            variable=self.hide_cleaned_var, command=self._on_filters_changed,
         )
         self.hide_cleaned_chk.grid(row=1, column=3, columnspan=5,
                                     padx=(10, 12), pady=(0, 8), sticky="w")
@@ -857,11 +857,16 @@ class ValidationView(ctk.CTkToplevel):
         self._apply_filters()
 
     def _refresh_heading_labels(self):
+        # Reposer ``command`` : selon les Tk, un ``heading(text=…)`` seul
+        # peut écraser le callback et le 2e clic ne trie plus.
         for col, label in HEADING_LABELS.items():
             mark = ""
             if col == self._sort_col:
                 mark = " ▼" if self._sort_desc else " ▲"
-            self.tree.heading(col, text=label + mark)
+            self.tree.heading(
+                col, text=label + mark,
+                command=lambda c=col: self._on_sort_heading(c),
+            )
 
     def _filter_kwargs(self) -> dict:
         """Paramètres de filtrage courants (lus des widgets) pour les fonctions
@@ -886,7 +891,7 @@ class ValidationView(ctk.CTkToplevel):
     def _rebuild_taxon_menu(self):
         """Recalcule les taxons proposés : uniquement ceux présents parmi les
         lignes qui passent les AUTRES filtres (proba, masquage nettoyage, non
-        validés, patrimoniaux). La liste reflète l'état courant des filtres."""
+        validés, taxon observateur, patrimoniaux)."""
         taxons = eligible_taxons(
             self.rows, self.col_idx, wav_present=self._wav_present,
             **self._filter_kwargs(),

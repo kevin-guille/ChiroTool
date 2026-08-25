@@ -988,6 +988,27 @@ class TestValidationFilters:
         assert d["n_total"] == 3
         assert d["n_validated"] == 1
 
+    def test_benjamin_vu_coherent_with_synthesis(self):
+        """_Vu issue #3 : synthèse « validés seulement » = compteur observateur."""
+        from pathlib import Path
+        from chirosurf_nights import read_csv
+        from synthesis import compute_night_synthesis
+        from gui_validation import count_observer_progress
+        sample = Path(__file__).resolve().parent.parent / (
+            "samples/issue3_benjamin/Nuit_1-observations_Vu.csv")
+        if not sample.is_file():
+            import pytest
+            pytest.skip("samples issue #3 absents")
+        headers, rows = read_csv(sample)
+        c = count_observer_progress(headers, rows)
+        s_all = compute_night_synthesis(headers, rows)
+        s_vo = compute_night_synthesis(headers, rows, validated_only=True)
+        assert c["n_total"] == 8000
+        assert c["n_validated"] == 16
+        assert s_all["validated_contacts"] == 16
+        assert s_vo["total_contacts"] == 16
+        assert s_all["total_contacts"] == 8000
+
 
 # =========================================================================
 # activity_graph : cascade des filtres (site → point → passage → nuit)
