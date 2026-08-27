@@ -68,9 +68,10 @@ Correctifs déjà dans le dépôt, visibles après `git pull` / prochain exe :
 |---|-----------|------------------|
 | 🏷️ | **Titley** Anabat Swift / Ranger (noms usine `YYYY-MM-DD HH-MM-SS`) | Plus besoin de passer par XnView ; TE×10 sans collision ; Préparer s’arrête si aucun nom n’est lisible ([#4](https://github.com/kevin-guille/ChiroTool/issues/4)) |
 | 📂 | **Démarrage** : plus de scan auto du dernier dossier | Un SSD EXFAT endormi ne fige plus l’UI ; **Parcourir** reste cliquable ([#5](https://github.com/kevin-guille/ChiroTool/issues/5)) |
-| 📅 | **Dates** : Summary multi-jours → dates prises sur les WAV | Une nuit extraite d’une pose longue n’hérite plus du premier jour du Summary |
+| 📅 | **Dates** : si Summary ≠ WAV (carte SD non formatée), avertissement Préparer + Upload | Les fichiers WAV font foi ; T° recoupées sur cette nuit |
 | 🔍 | **Valider** : tri, filtres observateur / chiros, bilan `X / Y` | Lecture plus rapide d’une nuit validée ([#4](https://github.com/kevin-guille/ChiroTool/issues/4)) |
-| 🌊 | **ChiroSurf nuits** : ▶ CSV brut, 📈 `_Vu` | Validation 10 %→75 % et graphes sans passer par l’explorateur |
+| 🧹 | **Nettoyer** à droite de **Valider** | Identifier d’abord, purger ensuite ([#4](https://github.com/kevin-guille/ChiroTool/issues/4)) |
+| 🌊 | **ChiroSurf nuits** : ▶ CSV brut, 📈 `_Vu` (aussi depuis Valider → CSV nuits) | Validation 10 %→75 % et graphes sans passer par l’explorateur |
 | 📈 | **Activité** : chiros seulement + taxons observateur | Les Nyclas (etc.) ajoutés à la main apparaissent dans les graphes |
 
 Préférences → Général : **Garder en mémoire le dernier dossier** (coché par défaut) réaffiche le chemin **sans** le rescanner.
@@ -112,10 +113,10 @@ Préférences → Général : **Garder en mémoire le dernier dossier** (coché 
 
 ### Après l’analyse
 
-- **Validation des contacts** (raccourcis, tri des colonnes, filtre taxon observateur, ouverture WAV dans ChiroSurf, envoi des identifications)
-- **Vue session** : bilan `X / Y` contacts avec taxon observateur (et envois Vigie-Chiro)
-- **ChiroSurf multi-nuits** : scission lazy `chirosurf/Nuit{n}_…csv` (nuit biologique) pour la méthode 10 %→75 %
-- **Graphes d’activité** et **synthèse** (référentiels national / région / milieu, filtre proba Tadarida, source `_Vu`)
+- **Validation des contacts** (raccourcis, tri des colonnes, filtres observateur / chiros, WAV ou **CSV nuits** dans ChiroSurf, envoi des identifications)
+- **Vue session** : bilan `X / Y` ; **Valider** puis **Nettoyer**
+- **ChiroSurf multi-nuits** : scission lazy `chirosurf/Nuit{n}_…csv` ; ▶ brut / 📈 `_Vu`
+- **Graphes d’activité** et **synthèse** (chiros seulement, taxons observateur, `_Vu`, référentiels national / région / milieu)
 - **Registre de campagne** multi-sites (SQLite, export CSV / xlsx)
 - **Export portable de sessions** (clé USB / partage : Data_k ± Data + métadonnées + `chirosurf/` si présent)
 - **Carte OSM** : pick depuis les meta (5 km), FOCUS session, carrés STOC, create/reuse (y compris autre observateur)

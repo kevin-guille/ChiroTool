@@ -409,7 +409,9 @@ seul.
 
 ### Étape 4 — Nettoyer
 
-Une fois le tableur récupéré, cliquez sur **« ▶ Nettoyer »**.
+Une fois le tableur récupéré, cliquez sur **« 🧹 Nettoyer »** (à **droite** de
+**🔍 Valider** : vous pouvez identifier d'abord, puis purger). Le bouton reste
+grisé tant que Tadarida n'a pas rendu le tableur.
 
 ChiroTool applique vos **seuils de confiance** (réglables dans Préférences →
 Nettoyage) pour décider quels WAV garder :
@@ -494,12 +496,14 @@ pouvez valider **de deux façons** (complémentaires, pas exclusives).
    - **« Taxon observateur renseigné uniquement »** : n'afficher que les lignes
      déjà validées (à la place de « Non validés seulement », les deux cases ne
      se cumulent pas).
+   - **« Chiros seulement »** : masquer orthoptères, bruit, oiseaux.
+   - **CSV nuits** : ouvre la liste des CSV ChiroSurf (même fenêtre que
+     **🌊 ChiroSurf nuits**).
 3. Sélectionnez un contact, puis :
    - Utilisez les **raccourcis clavier** `O` / `P` / `S` pour indiquer votre
      niveau de confiance (pOssible / Probable / Sûr).
-   - **Double-cliquez** sur une ligne pour ouvrir le WAV correspondant dans
-     **ChiroSurf** (à condition d'avoir indiqué le chemin de ChiroSurf dans
-     Préférences → Outils externes).
+   - **Double-cliquez** (ou **▶ ChiroSurf**) pour ouvrir le WAV dans
+     **ChiroSurf** (chemin dans Préférences → Outils).
 4. Vos validations sont sauvegardées dans un nouveau tableur suffixé de vos
    initiales (ex : `…_AB.xlsx`). Un bandeau **« ● modifications non
    enregistrées »** (titre + bouton *Enregistrer* orangé) vous rappelle de
@@ -635,6 +639,7 @@ Filtres utiles :
   **taxon observateur** est renseigné (ignore Tadarida seul). Après un `_Vu`
   ChiroSurf 10 % → 75 %, ce sont les contacts écoutés, pas toute l'activité
   statistiquement retenue.
+- **« Chiros seulement »** : masquer orthoptères, bruit, oiseaux.
 - **« Proba Tadarida ≥ »** : seuil optionnel (ex. `0.5` ou `50`) pour la synthèse
   **non validée** ; les lignes déjà validées par l'observateur passent toujours.
 
@@ -696,6 +701,10 @@ d'activité horaire** — parfait pour un rapport ou une analyse.
 - **Passages** (Pass1, Pass2…)
 - **Nuits** (une seule, ou plusieurs à cumuler)
 - **Taxons** (espèces et groupes)
+- **Chiros seulement** : masquer orthoptères, bruit, oiseaux
+- **Taxons observateur** : ne garder que les lignes où vous avez renseigné
+  l'espèce (ex. un Nyclas que Tadarida avait mis en Nycnoc). Si un dossier
+  `chirosurf/` contient des `_Vu`, ce sont eux qui sont lus (pas le xlsx brut).
 
 Chaque section se **replie** et affiche son état (`8 / 42`), pour garder le
 panneau lisible même sur une grosse campagne. Les listes longues (nuits, taxons)

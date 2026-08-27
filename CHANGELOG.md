@@ -40,12 +40,10 @@ Les versions publiées suivent le SemVer du fichier `version.py` / tags GitHub.
 
 ### Documentation
 
-- Tutoriel + PDF : tri / filtre Valider, bilan `X / Y` en Vue session,
-  comportement réel de « identifications validées seulement » sur un `_Vu`
-  ChiroSurf, découpage TE×10 en tranches de 5 s (tout le son conservé), FAQ
-  **EXFAT**, Titley, dates WAV si Summary multi-jours, démarrage sans scan
-  auto (issue #5). README : bloc **Depuis la v0.6** (Titley, #5, dates, Valider)
-  + Titley dans les enregistreurs compatibles. Landing : Titley.
+- Tutoriel + PDF : barre Valider puis Nettoyer, ChiroSurf ▶ / 📈 `_Vu`,
+  filtres chiros et taxons observateur (Valider, Synthèse, Activité),
+  Titley, dates Summary ≠ WAV, démarrage sans scan auto. README : bloc
+  **Depuis la v0.6**. Landing : Titley.
 
 ### Tests
 
