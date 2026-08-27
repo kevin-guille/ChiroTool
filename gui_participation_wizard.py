@@ -11,9 +11,9 @@ Ouvert avant l'upload API pour collecter :
   - commentaire libre
 
 Pré-remplissage :
-  1. Summary.txt de la session (températures début/fin)
+  1. Summary.txt (T°) ; dates WAV si le Summary couvre plusieurs jours (Jeanne)
   2. Ligne du Suivi correspondante (modèle enregistreur / micro via Feuil2)
-  3. Manifest existant (si l'utilisateur avait déjà saisi)
+  3. Manifest existant (si l'utilisateur avait déjà saisi ; dates périmées ignorées)
 
 Retour : ``payload`` compatible ``VigieChiroClient.create_participation``.
 """
@@ -25,9 +25,15 @@ from pathlib import Path
 
 import customtkinter as ctk
 
-from chiro_core import parse_summary_txt
+from chiro_core import (
+    _dir_has_wavs,
+    _find_raw_wav_subdir,
+    find_summary_file,
+    parse_summary_txt,
+    should_prefer_wav_dates,
+)
 from manifest import Manifest
-from naming import SessionMeta
+from naming import SessionMeta, wav_timestamp_range
 from vigiechiro_enums import (
     COUVERTURE_VALUES, DETECTEUR_ENREGISTREUR_TYPES, MICRO_MODELES, VENT_VALUES,
     couverture_from_label, couverture_labels, vent_from_label, vent_labels,
@@ -71,25 +77,58 @@ class ParticipationWizard(ctk.CTkToplevel):
 
     # -- Pré-remplissage ---------------------------------------------------
 
+    def _session_wav_names(self) -> list[str]:
+        """Noms WAV de la session (Data_k après TE×10, sinon Data/ ou racine)."""
+        names: list[str] = []
+        dirs: list[Path] = []
+        dk = self.session_path / "Data_k"
+        if dk.is_dir():
+            dirs.append(dk)
+        if _dir_has_wavs(self.session_path):
+            dirs.append(self.session_path)
+        sub = _find_raw_wav_subdir(self.session_path)
+        if sub is not None and sub not in dirs:
+            dirs.append(sub)
+        seen: set[str] = set()
+        for d in dirs:
+            try:
+                for p in d.iterdir():
+                    if p.is_file() and p.suffix.lower() == ".wav" and p.name not in seen:
+                        seen.add(p.name)
+                        names.append(p.name)
+            except OSError:
+                continue
+        return names
+
     def _collect_prefill(self) -> dict:
         """Agrège les valeurs pré-remplies depuis Summary.txt + Suivi + manifest."""
         pre: dict = {}
 
-        # 1. Summary.txt → temperatures, dates, GPS
-        for child in self.session_path.iterdir():
-            if (child.is_file() and
-                child.name.lower().endswith("_summary.txt")):
-                s = parse_summary_txt(child)
-                if s:
-                    if s.start_dt:
-                        pre["date_debut"] = s.start_dt
-                    if s.end_dt:
-                        pre["date_fin"] = s.end_dt
-                    if s.temp_start is not None:
-                        pre["temperature_debut"] = int(round(s.temp_start))
-                    if s.temp_end is not None:
-                        pre["temperature_fin"] = int(round(s.temp_end))
-                break
+        # 1. Summary.txt → températures ; dates WAV si le Summary n'est pas
+        #    celui de CETTE nuit (pose de plusieurs jours, une nuit extraite).
+        wav_min, wav_max = wav_timestamp_range(self._session_wav_names())
+        s = None
+        summ = find_summary_file(self.session_path)
+        if summ is None:
+            sub = _find_raw_wav_subdir(self.session_path)
+            if sub is not None:
+                summ = find_summary_file(sub)
+        if summ is not None:
+            s = parse_summary_txt(summ)
+            if s:
+                if s.temp_start is not None:
+                    pre["temperature_debut"] = int(round(s.temp_start))
+                if s.temp_end is not None:
+                    pre["temperature_fin"] = int(round(s.temp_end))
+                if s.start_dt:
+                    pre["date_debut"] = s.start_dt
+                if s.end_dt:
+                    pre["date_fin"] = s.end_dt
+        if should_prefer_wav_dates(s, wav_min) and wav_min:
+            pre["date_debut"] = wav_min
+            if wav_max:
+                pre["date_fin"] = wav_max
+            pre["_dates_from_wav"] = True
 
         # 2. Parc matériel local (Préférences → Mes matériels) PRIORITAIRE.
         # C'est la source canonique : modèle + micro à jour, pas dépendant
@@ -143,6 +182,9 @@ class ParticipationWizard(ctk.CTkToplevel):
             part_cached = m.meta.get("participation_payload") or {}
             if isinstance(part_cached, dict):
                 from datetime import datetime as _dt
+                wav_day = None
+                if pre.get("_dates_from_wav") and wav_min is not None:
+                    wav_day = wav_min.date().isoformat()
                 for k, v in part_cached.items():
                     if v is None:
                         continue
@@ -151,6 +193,13 @@ class ParticipationWizard(ctk.CTkToplevel):
                             v = _dt.fromisoformat(v)
                         except ValueError:
                             continue
+                    if k in ("date_debut", "date_fin") and wav_day:
+                        try:
+                            cached_day = v.date().isoformat() if hasattr(v, "date") else str(v)[:10]
+                        except Exception:
+                            cached_day = None
+                        if cached_day and cached_day != wav_day:
+                            continue  # dates Summary périmées, on garde les WAV
                     pre[k] = v
 
         return pre
@@ -220,6 +269,16 @@ class ParticipationWizard(ctk.CTkToplevel):
         self.date_fin_entry.grid(row=row, column=1, sticky="ew", padx=8, pady=4)
         row += 1
 
+        self._dates_hint = ctk.CTkLabel(
+            form, text="",
+            font=ctk.CTkFont(size=10),
+            text_color=("gray50", "gray60"),
+            anchor="w", justify="left", wraplength=480,
+        )
+        self._dates_hint.grid(row=row, column=0, columnspan=2,
+                              sticky="ew", padx=16, pady=(0, 4))
+        row += 1
+
         # --- Section météo (optionnelle : ne bloque pas l'upload) ---
         row = self._section(form, row, "Conditions météo (optionnel)")
         ctk.CTkLabel(
@@ -253,7 +312,7 @@ class ParticipationWizard(ctk.CTkToplevel):
         row += 1
 
         self._label(form, row, "Vent",
-                      help="Optionnel · portail web ensuite OK")
+                      help="Force du vent · optionnel")
         self.vent_label_var = ctk.StringVar(value=_UNSET)
         ctk.CTkOptionMenu(
             form, variable=self.vent_label_var, values=[_UNSET] + vent_labels(),
@@ -262,7 +321,7 @@ class ParticipationWizard(ctk.CTkToplevel):
         row += 1
 
         self._label(form, row, "Couverture nuageuse",
-                      help="Optionnel · portail web ensuite OK")
+                      help="Nuages (0 à 100 %) · optionnel")
         self.cov_label_var = ctk.StringVar(value=_UNSET)
         ctk.CTkOptionMenu(
             form, variable=self.cov_label_var,
@@ -407,16 +466,22 @@ class ParticipationWizard(ctk.CTkToplevel):
         return row + 1
 
     def _label(self, form, row: int, text: str, *, help: str = ""):
+        """Titre + aide empilés (deux labels dans la même cellule se recouvraient)."""
+        cell = ctk.CTkFrame(form, fg_color="transparent")
+        cell.grid(row=row, column=0, sticky="nw", padx=(16, 4), pady=(4, 0))
+        cell.grid_columnconfigure(0, weight=1)
         ctk.CTkLabel(
-            form, text=text, width=220, anchor="w",
+            cell, text=text, width=220, anchor="w", justify="left",
+            wraplength=200,
             font=ctk.CTkFont(size=12, weight="bold"),
-        ).grid(row=row, column=0, sticky="nw", padx=(16, 4), pady=(4, 0))
+        ).grid(row=0, column=0, sticky="w")
         if help:
             ctk.CTkLabel(
-                form, text=help, width=220, anchor="w",
+                cell, text=help, width=220, anchor="w", justify="left",
+                wraplength=200,
                 font=ctk.CTkFont(size=10),
                 text_color=("gray50", "gray60"),
-            ).grid(row=row, column=0, sticky="sw", padx=(16, 4))
+            ).grid(row=1, column=0, sticky="w")
 
     def _build_material_choices(self, base_list: list[str], *,
                                  attr: str, attr2: str | None = None) -> list[str]:
@@ -526,6 +591,15 @@ class ParticipationWizard(ctk.CTkToplevel):
             dt_fin = (dt_deb + timedelta(hours=11)).replace(minute=0)
         if dt_fin:
             self.date_fin_var.set(dt_fin.strftime("%Y-%m-%d %H:%M"))
+
+        if pre.get("_dates_from_wav"):
+            try:
+                self._dates_hint.configure(
+                    text="Dates prises sur les WAV : le Summary couvre plusieurs "
+                         "jours (ou un autre jour). Corrigez si besoin — une "
+                         "ancienne participation au mauvais jour ne sera pas réutilisée.")
+            except Exception:
+                pass
 
         if "temperature_debut" in pre:
             self.temp_deb_var.set(str(pre["temperature_debut"]))

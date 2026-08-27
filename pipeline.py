@@ -122,6 +122,40 @@ def _find_existing_participation(client, *, site_id: str, point: str,
     return None
 
 
+def _calendar_day(value) -> str | None:
+    """Jour calendaire ``YYYY-MM-DD`` depuis datetime ou string ISO. None si vide."""
+    if value is None:
+        return None
+    try:
+        if hasattr(value, "date"):
+            return value.date().isoformat()
+        s = str(value).strip()
+        return s[:10] if len(s) >= 10 else None
+    except Exception:
+        return None
+
+
+def _participation_id_is_stale(meta: dict, desired_debut) -> bool:
+    """True si l'id stocké pointe vers une *autre* nuit que ``desired_debut``.
+
+    Cas Jeanne : une participation a été créée avec les dates Summary (plusieurs
+    jours), puis l'utilisateur corrige. Sans ce test, le pipeline réutilise
+    l'ancienne participation (``vigiechiro_participation_id`` déjà en manifest).
+    Sans date stockée, on ne casse pas : mieux un doublon évité qu'un faux drop.
+    """
+    desired = _calendar_day(desired_debut)
+    if not desired or not isinstance(meta, dict):
+        return False
+    stored = _calendar_day(meta.get("vigiechiro_participation_date"))
+    if stored is None:
+        pp = meta.get("participation_payload") or {}
+        if isinstance(pp, dict):
+            stored = _calendar_day(pp.get("date_debut"))
+    if stored is None:
+        return False
+    return stored != desired
+
+
 def _participation_window(date_debut, date_fin=None):
     """Calcule ``(date_debut, date_fin)`` pour la création d'une participation.
 
@@ -430,6 +464,23 @@ def run_phase_upload(session: Path, meta: SessionMeta, dry_run: bool,
 
     # create_participation
     part_id = m.meta.get("vigiechiro_participation_id")
+    pp = participation_payload or {}
+    desired_debut = pp.get("date_debut") or meta.date_debut
+    if part_id and _participation_id_is_stale(m.meta, desired_debut):
+        out["steps"].append({
+            "step": "drop_stale_participation",
+            "old_id": part_id,
+            "old_day": _calendar_day(
+                m.meta.get("vigiechiro_participation_date")
+                or (m.meta.get("participation_payload") or {}).get("date_debut")
+            ),
+            "desired_day": _calendar_day(desired_debut),
+        })
+        part_id = None
+        # set_meta ignore les None : il faut retirer les clés.
+        m.meta.pop("vigiechiro_participation_id", None)
+        m.meta.pop("vigiechiro_participation_date", None)
+        m.save(session)
     if not part_id:
         if dry_run:
             out["steps"].append({"step": "create_participation", "dry_run": True,
@@ -437,8 +488,7 @@ def run_phase_upload(session: Path, meta: SessionMeta, dry_run: bool,
                                              "date_debut": meta.date_debut.isoformat() if meta.date_debut else None}})
             return out
         # Payload enrichi (wizard GUI) ou défauts
-        pp = participation_payload or {}
-        date_debut = pp.get("date_debut") or meta.date_debut
+        date_debut = desired_debut
         # Fenêtre temporelle (helper pur testable). Le dédoublonnage matche par
         # JOUR calendaire (cf _find_existing_participation), donc décaler l'heure
         # dans la même journée ne casse pas la détection de doublon.
@@ -472,7 +522,10 @@ def run_phase_upload(session: Path, meta: SessionMeta, dry_run: bool,
                         "step": "reuse_existing_participation",
                         "participation_id": part_id_existing,
                     })
-                    m.set_meta(vigiechiro_participation_id=part_id_existing)
+                    m.set_meta(
+                        vigiechiro_participation_id=part_id_existing,
+                        vigiechiro_participation_date=_calendar_day(date_debut),
+                    )
                     m.save(session)
                     part_id = part_id_existing
         except Exception as e:
@@ -497,7 +550,10 @@ def run_phase_upload(session: Path, meta: SessionMeta, dry_run: bool,
             part_id = part.get("_id") or part.get("id")
             if not part_id:
                 return {"phase": "upload", "error": f"pas d'_id dans la réponse : {part}"}
-            m.set_meta(vigiechiro_participation_id=part_id)
+            m.set_meta(
+                vigiechiro_participation_id=part_id,
+                vigiechiro_participation_date=_calendar_day(date_debut),
+            )
             m.save(session)
             out["steps"].append({"step": "create_participation",
                                  "participation_id": part_id})

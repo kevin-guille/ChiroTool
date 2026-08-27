@@ -77,6 +77,26 @@ AUDIOMOTH_TWAV_RE = re.compile(
     re.IGNORECASE,
 )
 
+# Titley Anabat Swift / Ranger (Insight), noms usine — issue #4 Mickaël 2026-08-27.
+#   2026-08-21 20-45-29.wav
+#   2026-08-21_20-45-29.wav
+#   669178 2026-08-21 20-45-29.wav
+#   669178_2026-08-21_20-45-29.wav
+# Ce n'est pas un « format » WAV différent (PCM standard) : seul le NOM diffère
+# de Wildlife / AudioMoth / Vigie-Chiro. Le n° d'enregistreur en préfixe n'est
+# PAS une série Wildlife ; la série vient du wizard / parc matériel.
+TITLEY_RE = re.compile(
+    r"""^
+    (?:(?P<device>[A-Za-z0-9]+)[ _])?
+    (?P<y>\d{4})-(?P<m>\d{2})-(?P<d>\d{2})
+    [ _]
+    (?P<h>\d{2})[-:](?P<mi>\d{2})[-:](?P<s>\d{2})
+    (?:_(?P<suffix>\d{3}))?
+    \.(?P<ext>wav|w4v)$
+    """,
+    re.IGNORECASE | re.VERBOSE,
+)
+
 
 def is_audiomoth_twav(name: str) -> bool:
     """True si le nom est un AudioMoth BRUT « T.WAV » (déclenché/concaténé), qui
@@ -87,12 +107,13 @@ def is_audiomoth_twav(name: str) -> bool:
 def classify_wav_name(name: str) -> str:
     """Retourne 'vigiechiro', 'raw', 'audiomoth_twav' ou 'unknown'.
 
-    'raw' couvre Wildlife (SERIAL_date_time) ET AudioMoth EXPANDÉ (date_time_ms).
+    'raw' couvre Wildlife (SERIAL_date_time), AudioMoth EXPANDÉ (date_time_ms)
+    et Titley Swift/Ranger (YYYY-MM-DD HH-MM-SS).
     'audiomoth_twav' = AudioMoth brut concaténé (à expandre d'abord).
     """
     if VIGIECHIRO_RE.match(name):
         return "vigiechiro"
-    if RAW_RE.match(name) or AUDIOMOTH_RE.match(name):
+    if RAW_RE.match(name) or AUDIOMOTH_RE.match(name) or TITLEY_RE.match(name):
         return "raw"
     if AUDIOMOTH_TWAV_RE.match(name):
         return "audiomoth_twav"
@@ -269,6 +290,36 @@ def parse_summary_txt(path: Path) -> SummaryInfo | None:
         info.temp_max = max(temps)
     info.n_fs_files_total = fs_total
     return info
+
+
+def should_prefer_wav_dates(
+    summary: SummaryInfo | None,
+    wav_min: datetime | None,
+    *,
+    max_span_hours: float = 18.0,
+) -> bool:
+    """True si les dates de participation / dossier doivent venir des WAV.
+
+    Cas Jeanne : un Summary SM4 couvre plusieurs jours de pose, mais le dossier
+    ne contient qu'une nuit. Utiliser ``start_dt`` du Summary crée une
+    participation au mauvais jour et bloque l'upload.
+
+    - pas de WAV horodaté → False (on garde le Summary) ;
+    - pas de Summary mais des WAV → True ;
+    - jour calendaire WAV ≠ jour de début Summary → True ;
+    - Summary plus long qu'une nuit (défaut 18 h) → True.
+    """
+    if wav_min is None:
+        return False
+    if summary is None or summary.start_dt is None:
+        return True
+    if wav_min.date() != summary.start_dt.date():
+        return True
+    if summary.end_dt is not None:
+        span_h = (summary.end_dt - summary.start_dt).total_seconds() / 3600.0
+        if span_h > max_span_hours:
+            return True
+    return False
 
 
 # ---------------------------------------------------------------------------

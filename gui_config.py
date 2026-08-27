@@ -46,6 +46,8 @@ def config_dir() -> Path:
 class Settings:
     last_workspace: str | None = None           # dossier racine ouvert
     recent_workspaces: list[str] = field(default_factory=list)
+    # Si False : ne pas mémoriser / restaurer le dernier dossier (issue #5).
+    remember_last_workspace: bool = True
     appearance: str = "system"                  # system | light | dark
     # Seuils cleanup mémorisés
     threshold_chiros: float = 0.5
@@ -96,20 +98,27 @@ def load_settings() -> Settings:
 
 def save_settings(s: Settings) -> None:
     p = _settings_file()
+    data = asdict(s)
+    if not getattr(s, "remember_last_workspace", True):
+        data["last_workspace"] = None
+        data["recent_workspaces"] = []
     tmp = p.with_suffix(p.suffix + ".tmp")
-    tmp.write_text(json.dumps(asdict(s), indent=2, ensure_ascii=False),
+    tmp.write_text(json.dumps(data, indent=2, ensure_ascii=False),
                    encoding="utf-8")
     tmp.replace(p)
 
 
 def remember_workspace(path: str, s: Settings, keep: int = 8) -> None:
-    """Ajoute `path` en tête de recent_workspaces."""
+    """Mémorise le dossier courant. Si ``remember_last_workspace`` est False,
+    le chemin reste en mémoire pour la session mais n'est pas persisté."""
     p = str(Path(path).resolve())
+    s.last_workspace = p
+    if not getattr(s, "remember_last_workspace", True):
+        return
     if p in s.recent_workspaces:
         s.recent_workspaces.remove(p)
     s.recent_workspaces.insert(0, p)
     s.recent_workspaces = s.recent_workspaces[:keep]
-    s.last_workspace = p
 
 
 # ---------------------------------------------------------------------------

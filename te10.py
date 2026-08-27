@@ -86,6 +86,14 @@ except ImportError:
 
 
 TIMESTAMP_RE = re.compile(r"^(?P<prefix>.*_)(?P<date>\d{8})_(?P<time>\d{6})(?P<rest>.*)$")
+# Titley Swift/Ranger : YYYY-MM-DD HH-MM-SS (espace ou underscore, ± n° en tête).
+# Si le rename n'a pas encore tourné, TE×10 doit quand même incrémenter l'heure
+# des tranches — sinon Rust/Python réécrivent le même nom et n'en gardent qu'une.
+_TITLEY_STEM_RE = re.compile(
+    r"^(?P<prefix>.*?)(?P<y>\d{4})-(?P<m>\d{2})-(?P<d>\d{2})"
+    r"(?P<sep>[ _])(?P<h>\d{2})(?P<tsep>[-:])(?P<mi>\d{2})(?P=tsep)(?P<s>\d{2})"
+    r"(?P<rest>.*)$"
+)
 
 
 @dataclass
@@ -102,14 +110,32 @@ def _reframe_timestamp(name_stem: str, offset_seconds: int) -> str:
     """
     Ajoute `offset_seconds` au timestamp YYYYMMDD_HHMMSS encodé dans le stem.
     Exemple : ('Car..._20250919_200134', 5) -> 'Car..._20250919_200139'.
+    Gère aussi les stems Titley ``YYYY-MM-DD HH-MM-SS``.
     """
     m = TIMESTAMP_RE.match(name_stem)
-    if m is None:
-        # Pas de timestamp détectable : on retourne tel quel + offset en suffixe
-        return name_stem if offset_seconds == 0 else f"{name_stem}+{offset_seconds}s"
-    dt = datetime.strptime(m.group("date") + m.group("time"), "%Y%m%d%H%M%S")
-    dt = dt + timedelta(seconds=offset_seconds)
-    return f'{m.group("prefix")}{dt:%Y%m%d_%H%M%S}{m.group("rest")}'
+    if m is not None:
+        dt = datetime.strptime(m.group("date") + m.group("time"), "%Y%m%d%H%M%S")
+        dt = dt + timedelta(seconds=offset_seconds)
+        return f'{m.group("prefix")}{dt:%Y%m%d_%H%M%S}{m.group("rest")}'
+    tm = _TITLEY_STEM_RE.match(name_stem)
+    if tm is not None:
+        try:
+            dt = datetime(
+                int(tm.group("y")), int(tm.group("m")), int(tm.group("d")),
+                int(tm.group("h")), int(tm.group("mi")), int(tm.group("s")),
+            )
+        except ValueError:
+            dt = None
+        if dt is not None:
+            dt = dt + timedelta(seconds=offset_seconds)
+            tsep = tm.group("tsep")
+            return (
+                f'{tm.group("prefix")}{dt:%Y}-{dt:%m}-{dt:%d}'
+                f'{tm.group("sep")}{dt:%H}{tsep}{dt:%M}{tsep}{dt:%S}'
+                f'{tm.group("rest")}'
+            )
+    # Pas de timestamp détectable : on retourne tel quel + offset en suffixe
+    return name_stem if offset_seconds == 0 else f"{name_stem}+{offset_seconds}s"
 
 
 def plan_file(src: Path, out_dir: Path, factor: int, segment_s: float) -> list[SegmentPlan]:

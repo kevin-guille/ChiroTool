@@ -250,6 +250,28 @@ def rename_session(
     out["unreadable"] = unreadable
     out["collisions"] = sorted(collisions)
 
+    # Aucun nom lisible (Titley usine avant le parse, Peersonic, …) : on arrête
+    # AVANT d'enregistrer rename=ok et de lancer TE×10. Sinon Data_k n'a qu'une
+    # tranche par fichier (collision de noms, issue #4 Mickaël).
+    if unreadable and not plan and not same:
+        sample = ", ".join(unreadable[:3])
+        extra = "…" if len(unreadable) > 3 else ""
+        out["errors"].append(
+            f"Aucun nom de fichier lisible ({len(unreadable)} WAV). "
+            f"Ex. : {sample}{extra}. "
+            "Formats reconnus : Wildlife (SM4…), AudioMoth expandé, "
+            "Titley Swift/Ranger (YYYY-MM-DD HH-MM-SS), Vigie-Chiro. "
+            "Sinon, passer par XnView vers YYYYMMDD_HHMMSS.wav."
+        )
+        return out
+    if unreadable:
+        sample = ", ".join(unreadable[:3])
+        extra = "…" if len(unreadable) > 3 else ""
+        out["warnings"].append(
+            f"{len(unreadable)} fichier(s) au nom non reconnu (ignorés) : "
+            f"{sample}{extra}"
+        )
+
     # CRITIQUE : collisions de noms (plusieurs fichiers sources → même nom cible)
     # signifient une perte de données garantie (le 2e rename écraserait le 1er).
     # On bloque l'exécution et on remonte une erreur explicite.
@@ -484,27 +506,27 @@ def try_auto_meta(session: Path) -> tuple[SessionMeta | None, list[str]]:
     else:
         msgs.append("aucune série détectable dans les WAV")
 
-    # Date début : Summary (nom OU contenu, racine OU sous-dossier) ou 1er WAV
+    # Date début : WAV si le Summary couvre une autre période (Jeanne),
+    # sinon Summary, sinon 1er WAV.
     date_debut: datetime | None = None
-    from chiro_core import find_summary_file
+    from chiro_core import find_summary_file, should_prefer_wav_dates
+    from naming import wav_timestamp_range
+    wav_min, _wav_max = wav_timestamp_range(wav_names)
     summ = find_summary_file(session) or (
         find_summary_file(wav_dir) if wav_dir != session else None)
-    if summ is not None:
-        s = parse_summary_txt(summ)
-        if s and s.start_dt:
-            date_debut = s.start_dt
-            msgs.append(f"date début détectée via {summ.name} : {date_debut:%Y-%m-%d}")
-    if date_debut is None and wav_names:
-        # fallback : plus petit timestamp dans les noms
-        from naming import extract_timestamp_from_name
-        dts = []
-        for n in wav_names:
-            ti = extract_timestamp_from_name(n)
-            if ti:
-                dts.append(ti[0])
-        if dts:
-            date_debut = min(dts)
-            msgs.append(f"date début détectée via noms WAV : {date_debut:%Y-%m-%d}")
+    summary_info = parse_summary_txt(summ) if summ is not None else None
+    if should_prefer_wav_dates(summary_info, wav_min) and wav_min:
+        date_debut = wav_min
+        why = "Summary multi-jours / autre jour que les WAV" if summary_info else "noms WAV"
+        msgs.append(f"date début détectée via {why} : {date_debut:%Y-%m-%d}")
+    elif summary_info and summary_info.start_dt:
+        date_debut = summary_info.start_dt
+        msgs.append(
+            f"date début détectée via {summ.name} : {date_debut:%Y-%m-%d}"
+        )
+    elif wav_min is not None:
+        date_debut = wav_min
+        msgs.append(f"date début détectée via noms WAV : {date_debut:%Y-%m-%d}")
 
     # Lookup Suivi avec ce qu'on a
     # Méta PARTIELLE à partir de ce qu'on a détecté, sans dépendre d'aucun

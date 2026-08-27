@@ -360,10 +360,10 @@ class ChiroToolApp(ctk.CTk):
             # L'ouverture auto du workspace se fera après la fermeture du wizard
             return
 
-        # Pas d'onboarding → ouverture auto du dernier workspace si présent
-        if (self.settings.last_workspace
-                and Path(self.settings.last_workspace).is_dir()):
-            self._scan_workspace(self.settings.last_workspace)
+        # Pas d'auto-scan du dernier dossier (issue #5) : un SSD EXFAT / un
+        # volume endormi figeait l'UI (Path.is_dir + scan) et Parcourir
+        # restait grisé. Le chemin est déjà dans la barre ; Scanner ou
+        # Parcourir au choix.
 
     def _on_onboarding_done(self, settings):
         """Callback à la fermeture du wizard : on applique les settings.
@@ -376,8 +376,12 @@ class ChiroToolApp(ctk.CTk):
             self.workspace_var.set(settings.last_workspace or "(aucun)")
         except Exception:
             pass
-        if settings.last_workspace and Path(settings.last_workspace).is_dir():
-            self.after(100, lambda: self._scan_workspace(settings.last_workspace))
+        # Ne pas appeler Path.is_dir() ici (SSD EXFAT / volume endormi,
+        # même piège que le scan auto au démarrage). Le scan tourne déjà
+        # dans un thread ; un chemin mort échoue là-bas sans figer l'UI.
+        if settings.last_workspace:
+            ws = settings.last_workspace
+            self.after(100, lambda p=ws: self._scan_workspace(p))
 
     # -- UI -----------------------------------------------------------------
 
@@ -409,7 +413,9 @@ class ChiroToolApp(ctk.CTk):
                               font=ctk.CTkFont(size=18, weight="bold"))
         title.grid(row=0, column=0, padx=(4, 20), sticky="w")
 
-        self.workspace_var = ctk.StringVar(value=self.settings.last_workspace or "(aucun)")
+        _remember = getattr(self.settings, "remember_last_workspace", True)
+        _last = self.settings.last_workspace if _remember else None
+        self.workspace_var = ctk.StringVar(value=_last or "(aucun)")
         ws_label = ctk.CTkLabel(bar, text="Dossier :",
                                  font=ctk.CTkFont(size=12))
         ws_label.grid(row=0, column=1, padx=(0, 6), sticky="w")
@@ -1044,11 +1050,22 @@ class ChiroToolApp(ctk.CTk):
     # -- Handlers -----------------------------------------------------------
 
     def _on_browse(self):
-        initial = self.settings.last_workspace or str(Path.home())
-        path = filedialog.askdirectory(
-            title="Dossier racine à scanner",
-            initialdir=initial if Path(initial).is_dir() else None,
-        )
+        # Ne pas appeler Path.is_dir() sur last_workspace : un SSD EXFAT
+        # débranché / endormi bloque le thread UI plusieurs dizaines de s.
+        cur = self.workspace_var.get().strip()
+        if cur and cur != "(aucun)":
+            initial = cur
+        elif getattr(self.settings, "remember_last_workspace", True):
+            initial = self.settings.last_workspace or str(Path.home())
+        else:
+            initial = str(Path.home())
+        try:
+            path = filedialog.askdirectory(
+                title="Dossier racine à scanner",
+                initialdir=initial or None,
+            )
+        except Exception:
+            path = filedialog.askdirectory(title="Dossier racine à scanner")
         if path:
             self.workspace_var.set(path)
             self._scan_workspace(path)
@@ -1085,12 +1102,17 @@ class ChiroToolApp(ctk.CTk):
     # -- Scan ---------------------------------------------------------------
 
     def _scan_workspace(self, path: str):
-        """Lance un scan du dossier dans un thread pour ne pas figer l'UI."""
+        """Lance un scan du dossier dans un thread pour ne pas figer l'UI.
+
+        Parcourir reste cliquable : un scan EXFAT long ne doit pas empêcher
+        de choisir un autre dossier (issue #5). Un jeton invalide les
+        résultats d'un scan dépassé.
+        """
+        self._scan_gen = getattr(self, "_scan_gen", 0) + 1
+        gen = self._scan_gen
         self._scan_in_progress = True
-        # Grise les boutons pendant le scan pour éviter un second thread concurrent
         try:
             self.scan_btn.configure(state="disabled", text="⏳ Scan…")
-            self.browse_btn.configure(state="disabled")
         except Exception:
             pass
         self.sessions_count_lbl.configure(text="scan en cours…")
@@ -1119,18 +1141,22 @@ class ChiroToolApp(ctk.CTk):
             except Exception:
                 err = traceback.format_exc()
                 def _on_err():
+                    if gen != getattr(self, "_scan_gen", 0):
+                        return
                     self._scan_in_progress = False
                     try:
                         self.scan_btn.configure(state="normal", text="🔄 Scanner")
-                        self.browse_btn.configure(state="normal")
                     except Exception:
                         pass
                     messagebox.showerror("Erreur scan",
                                           f"Échec du scan :\n\n{err[:500]}")
                 self.after(0, _on_err)
                 return
-            # Retour au thread UI
-            self.after(0, lambda: self._on_scan_done(path, states))
+            def _done():
+                if gen != getattr(self, "_scan_gen", 0):
+                    return
+                self._on_scan_done(path, states)
+            self.after(0, _done)
 
         threading.Thread(target=_worker, daemon=True).start()
 
@@ -1205,11 +1231,10 @@ class ChiroToolApp(ctk.CTk):
             text=f"scanné : {path}  ·  {len(states)} session(s)"
         )
 
-        # Dé-griser les boutons et autoriser de nouveaux scans
+        # Dé-griser Scanner (Parcourir n'est plus grisé pendant le scan)
         self._scan_in_progress = False
         try:
             self.scan_btn.configure(state="normal", text="🔄 Scanner")
-            self.browse_btn.configure(state="normal")
         except Exception:
             pass
 

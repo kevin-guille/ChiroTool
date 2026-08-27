@@ -120,6 +120,22 @@ class TestNaming:
         assert compute_new_wav_name(meta, "garbage_no_date.wav") is None
 
 
+class TestRememberWorkspace:
+    def test_disabled_keeps_session_path_skips_recents(self, tmp_path):
+        from gui_config import Settings, remember_workspace
+        s = Settings(remember_last_workspace=False)
+        remember_workspace(str(tmp_path), s)
+        assert Path(s.last_workspace) == tmp_path.resolve()
+        assert s.recent_workspaces == []
+
+    def test_enabled_updates_recents(self, tmp_path):
+        from gui_config import Settings, remember_workspace
+        s = Settings(remember_last_workspace=True)
+        remember_workspace(str(tmp_path), s)
+        assert s.last_workspace is not None
+        assert s.recent_workspaces[0] == s.last_workspace
+
+
 # =========================================================================
 # taxons
 # =========================================================================
@@ -1567,6 +1583,177 @@ class TestAudioMoth:
         assert extract_serial_from_name("2MU08078_20260623_211115.wav") == "2MU08078"
         new = compute_new_wav_name(self._meta(), "2MU08078_20260623_211115.wav")
         assert "_20260623_211115" in new and new.startswith("Car430658-2022-Pass1-Z1-")
+
+
+# =========================================================================
+# Titley Swift / Ranger (issue #4, diagnostic Mickaël 2026-08-27)
+# =========================================================================
+
+class TestTitleyNaming:
+    def _meta(self):
+        from naming import SessionMeta
+        return SessionMeta(
+            date_debut=datetime(2026, 8, 21), n_site_tadarida="630230",
+            n_point_fixe="Z1", n_passage=1, n_enregistreur=5,
+            n_serie="SWIFT01", nom_contrat="T")
+
+    def _wav(self, path: Path, frames: int = 100, sr: int = 8000):
+        import wave
+        with wave.open(str(path), "wb") as w:
+            w.setnchannels(1)
+            w.setsampwidth(2)
+            w.setframerate(sr)
+            w.writeframes(b"\x01\x02" * frames)
+
+    def test_timestamp_space_and_underscore(self):
+        from naming import extract_timestamp_from_name
+        ts = extract_timestamp_from_name("2026-08-21 20-45-29.wav")
+        assert ts is not None and ts[0] == datetime(2026, 8, 21, 20, 45, 29)
+        ts2 = extract_timestamp_from_name("2026-08-21_20-45-29.wav")
+        assert ts2 is not None and ts2[0] == datetime(2026, 8, 21, 20, 45, 29)
+
+    def test_timestamp_with_device_prefix(self):
+        from naming import extract_serial_from_name, extract_timestamp_from_name
+        n = "669178 2026-08-21 20-45-29.wav"
+        ts = extract_timestamp_from_name(n)
+        assert ts is not None and ts[0] == datetime(2026, 8, 21, 20, 45, 29)
+        assert extract_serial_from_name(n) is None  # pas une série Wildlife
+
+    def test_classified_raw(self):
+        from chiro_core import classify_wav_name
+        assert classify_wav_name("2026-08-21 20-45-29.wav") == "raw"
+        assert classify_wav_name("669178_2026-08-21_20-45-29.wav") == "raw"
+
+    def test_compute_new_wav_name(self):
+        from naming import compute_new_wav_name
+        new = compute_new_wav_name(self._meta(), "2026-08-21 20-45-29.wav")
+        assert new is not None
+        assert new.startswith("Car630230-2026-Pass1-Z1-SWIFT01_")
+        assert "_20260821_204529" in new
+
+    def test_rename_titley_executes(self, tmp_path):
+        from rename import rename_session
+        sess = tmp_path / "swift"
+        sess.mkdir()
+        self._wav(sess / "2026-08-21 20-45-29.wav")
+        res = rename_session(sess, self._meta(), dry_run=False, rename_folder=False)
+        assert not res.get("errors"), res.get("errors")
+        assert res.get("unreadable") == []
+        assert res["executed"] == 1
+        leftover = [p.name for p in sess.iterdir() if p.suffix.lower() == ".wav"]
+        assert leftover == ["Car630230-2026-Pass1-Z1-SWIFT01_20260821_204529.wav"]
+
+    def test_rename_stops_if_no_name_readable(self, tmp_path):
+        from manifest import Manifest
+        from rename import rename_session
+        sess = tmp_path / "bad"
+        sess.mkdir()
+        self._wav(sess / "garbage.wav")
+        res = rename_session(sess, self._meta(), dry_run=False, rename_folder=False)
+        assert res.get("errors")
+        assert "Aucun nom de fichier lisible" in res["errors"][0]
+        m = Manifest.load(sess)
+        assert m is None or not m.is_done("rename")
+
+    def test_plan_file_titley_15s_distinct_names(self, tmp_path):
+        """Défense TE×10 : même sans rename, les 3 tranches ont des noms distincts."""
+        from te10 import plan_file
+        sr = 8000
+        src = tmp_path / "2026-08-21 20-45-29.wav"
+        self._wav(src, frames=15 * sr, sr=sr)
+        plans = plan_file(src, tmp_path / "out", 10, 5.0)
+        assert len(plans) == 3
+        names = [p.dst.name for p in plans]
+        assert len(set(names)) == 3
+        assert "20-45-29" in names[0]
+        assert "20-45-34" in names[1]
+        assert "20-45-39" in names[2]
+
+
+# =========================================================================
+# Dates Summary vs WAV (Jeanne)
+# =========================================================================
+
+class TestWavDatesOverSummary:
+    def test_same_night_keeps_summary(self):
+        from chiro_core import SummaryInfo, should_prefer_wav_dates
+        s = SummaryInfo(
+            path=Path("x"),
+            start_dt=datetime(2026, 8, 21, 20, 0),
+            end_dt=datetime(2026, 8, 22, 6, 0),
+        )
+        wav = datetime(2026, 8, 21, 20, 45)
+        assert should_prefer_wav_dates(s, wav) is False
+
+    def test_other_calendar_day_prefers_wav(self):
+        from chiro_core import SummaryInfo, should_prefer_wav_dates
+        s = SummaryInfo(
+            path=Path("x"),
+            start_dt=datetime(2026, 8, 18, 19, 0),
+            end_dt=datetime(2026, 8, 22, 6, 0),
+        )
+        wav = datetime(2026, 8, 21, 20, 45)
+        assert should_prefer_wav_dates(s, wav) is True
+
+    def test_long_span_same_start_day_prefers_wav(self):
+        from chiro_core import SummaryInfo, should_prefer_wav_dates
+        s = SummaryInfo(
+            path=Path("x"),
+            start_dt=datetime(2026, 8, 21, 0, 0),
+            end_dt=datetime(2026, 8, 23, 6, 0),
+        )
+        wav = datetime(2026, 8, 21, 20, 45)
+        assert should_prefer_wav_dates(s, wav) is True
+
+    def test_no_wav_keeps_summary(self):
+        from chiro_core import SummaryInfo, should_prefer_wav_dates
+        s = SummaryInfo(path=Path("x"), start_dt=datetime(2026, 8, 18, 19, 0))
+        assert should_prefer_wav_dates(s, None) is False
+
+    def test_try_auto_meta_uses_wav_when_summary_spans(self, tmp_path):
+        from rename import try_auto_meta
+        sess = tmp_path / "jeanne"
+        sess.mkdir()
+        import wave
+        wav = sess / "SMU03126_20260821_204529.wav"
+        with wave.open(str(wav), "wb") as w:
+            w.setnchannels(1)
+            w.setsampwidth(2)
+            w.setframerate(8000)
+            w.writeframes(b"\x00\x00" * 10)
+        (sess / "SMU03126_Summary.txt").write_text(
+            "DATE,TIME,LAT,NS,LON,EW,POWER(V),TEMP(C),#FSFILES,#ZCFILES,#SCRUBBED\n"
+            "2026-08-18,19:00:00,45.0,N,5.0,E,4.1,15.0,1,0,0\n"
+            "2026-08-22,06:00:00,45.0,N,5.0,E,4.0,12.0,1,0,0\n",
+            encoding="utf-8",
+        )
+        meta, msgs = try_auto_meta(sess)
+        assert meta is not None
+        assert meta.date_debut is not None
+        assert meta.date_debut.date() == datetime(2026, 8, 21).date()
+        assert any("WAV" in m or "multi" in m.lower() for m in msgs)
+
+    def test_stale_participation_id(self):
+        from pipeline import _participation_id_is_stale
+        meta = {
+            "vigiechiro_participation_id": "abc",
+            "vigiechiro_participation_date": "2026-08-18",
+        }
+        assert _participation_id_is_stale(meta, datetime(2026, 8, 21, 20, 45)) is True
+        assert _participation_id_is_stale(meta, datetime(2026, 8, 18, 19, 0)) is False
+
+    def test_stale_from_payload_only(self):
+        from pipeline import _participation_id_is_stale
+        meta = {
+            "vigiechiro_participation_id": "abc",
+            "participation_payload": {"date_debut": "2026-08-18T19:00:00"},
+        }
+        assert _participation_id_is_stale(meta, datetime(2026, 8, 21, 20, 45)) is True
+
+    def test_no_stored_date_not_stale(self):
+        from pipeline import _participation_id_is_stale
+        meta = {"vigiechiro_participation_id": "abc"}
+        assert _participation_id_is_stale(meta, datetime(2026, 8, 21)) is False
 
 
 class TestObservationSidecar:

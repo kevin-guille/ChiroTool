@@ -2,7 +2,7 @@
 gui_preferences.py — fenêtre Préférences (CTkToplevel modale).
 
 Onglets :
-  - Général       : thème, ouverture auto
+  - Général       : thème, mémoriser le dossier, mises à jour
   - API           : token Vigie-Chiro (save/delete via keyring) + test de validité
   - Nettoyage     : 4 sliders seuils + politique silencieux / taxon inconnu
   - Outils        : chemin ChiroSurf (ouverture directe depuis la validation)
@@ -111,46 +111,65 @@ class PreferencesDialog(ctk.CTkToplevel):
                       font=ctk.CTkFont(size=10),
                       text_color=("gray50", "gray60")).pack(side="left", padx=8)
 
+        # --- Dossier
+        ctk.CTkLabel(tab, text="Dossier",
+                      font=ctk.CTkFont(size=14, weight="bold"),
+                      anchor="w").grid(row=2, column=0, sticky="ew",
+                                        padx=16, pady=(16, 4))
+        self.remember_ws_var = ctk.BooleanVar(
+            value=getattr(self.settings, "remember_last_workspace", True))
+        ctk.CTkSwitch(
+            tab, text="Garder en mémoire le dernier dossier",
+            variable=self.remember_ws_var, command=self._on_remember_ws_toggle,
+        ).grid(row=3, column=0, sticky="w", padx=16, pady=(0, 2))
+        ctk.CTkLabel(
+            tab, text="Au prochain lancement, le chemin est réaffiché "
+                      "(sans scan automatique). Décochez si vous changez "
+                      "souvent de disque.",
+            font=ctk.CTkFont(size=10), text_color=("gray50", "gray60"),
+            anchor="w", justify="left", wraplength=560,
+        ).grid(row=4, column=0, sticky="ew", padx=16, pady=(0, 8))
+
         # --- Mises à jour
         ctk.CTkLabel(tab, text="Mises à jour",
                       font=ctk.CTkFont(size=14, weight="bold"),
-                      anchor="w").grid(row=2, column=0, sticky="ew",
+                      anchor="w").grid(row=5, column=0, sticky="ew",
                                         padx=16, pady=(16, 4))
         self.autoupd_var = ctk.BooleanVar(
             value=getattr(self.settings, "auto_update_check", True))
         ctk.CTkSwitch(
             tab, text="Vérifier les mises à jour au démarrage",
             variable=self.autoupd_var, command=self._on_autoupd_toggle,
-        ).grid(row=3, column=0, sticky="w", padx=16, pady=(0, 2))
+        ).grid(row=6, column=0, sticky="w", padx=16, pady=(0, 2))
         ctk.CTkLabel(
             tab, text="Vérification en arrière-plan (sans ralentir le lancement). "
                       "Au plus une fois par jour.",
             font=ctk.CTkFont(size=10), text_color=("gray50", "gray60"),
-            anchor="w").grid(row=4, column=0, sticky="ew", padx=16, pady=(0, 8))
+            anchor="w").grid(row=7, column=0, sticky="ew", padx=16, pady=(0, 8))
 
         # --- Traitement
         ctk.CTkLabel(tab, text="Traitement",
                       font=ctk.CTkFont(size=14, weight="bold"),
-                      anchor="w").grid(row=5, column=0, sticky="ew",
+                      anchor="w").grid(row=8, column=0, sticky="ew",
                                         padx=16, pady=(16, 4))
         self.avsafe_var = ctk.BooleanVar(
             value=getattr(self.settings, "av_safe_mode", False))
         ctk.CTkSwitch(
             tab, text="Mode compatible antivirus (préparation ralentie)",
             variable=self.avsafe_var, command=self._on_avsafe_toggle,
-        ).grid(row=6, column=0, sticky="w", padx=16, pady=(0, 2))
+        ).grid(row=9, column=0, sticky="w", padx=16, pady=(0, 2))
         ctk.CTkLabel(
             tab, text="Lisse le renommage (petits lots + pauses) pour éviter que "
                       "l'antivirus ne ferme l'application pendant la préparation. "
-                      "À n'activer que si tu rencontres ce souci — la préparation "
+                      "À n'activer que si tu rencontres ce souci : la préparation "
                       "devient plus lente.",
             font=ctk.CTkFont(size=10), text_color=("gray50", "gray60"),
             anchor="w", justify="left", wraplength=560).grid(
-            row=7, column=0, sticky="ew", padx=16, pady=(0, 8))
+            row=10, column=0, sticky="ew", padx=16, pady=(0, 8))
 
         ctk.CTkLabel(tab, text="Stockage des préférences",
                       font=ctk.CTkFont(size=14, weight="bold"),
-                      anchor="w").grid(row=8, column=0, sticky="ew",
+                      anchor="w").grid(row=11, column=0, sticky="ew",
                                         padx=16, pady=(16, 4))
 
         from gui_config import storage_info
@@ -165,7 +184,17 @@ class PreferencesDialog(ctk.CTkToplevel):
                       font=ctk.CTkFont(size=11),
                       text_color=("gray30", "gray70"),
                       justify="left", anchor="w", wraplength=560).grid(
-            row=9, column=0, sticky="ew", padx=16, pady=(0, 16))
+            row=12, column=0, sticky="ew", padx=16, pady=(0, 16))
+
+    def _on_remember_ws_toggle(self):
+        """Persiste le choix de mémoriser le dernier dossier."""
+        from gui_config import save_settings
+        on = bool(self.remember_ws_var.get())
+        self.settings.remember_last_workspace = on
+        try:
+            save_settings(self.settings)
+        except Exception:
+            pass
 
     def _on_avsafe_toggle(self):
         """Persiste le mode compatible antivirus et l'applique immédiatement via
@@ -1139,6 +1168,7 @@ class PreferencesDialog(ctk.CTkToplevel):
 
         # Settings
         self.settings.appearance = self.theme_var.get()
+        self.settings.remember_last_workspace = bool(self.remember_ws_var.get())
         self.settings.threshold_chiros = round(self.threshold_sliders["chiros"][0].get(), 2)
         self.settings.threshold_orthos = round(self.threshold_sliders["orthos"][0].get(), 2)
         self.settings.threshold_micromam = round(self.threshold_sliders["micromam"][0].get(), 2)

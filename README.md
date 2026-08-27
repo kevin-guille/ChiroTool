@@ -60,7 +60,20 @@ La **v0.6** répond à l’issue [#3](https://github.com/kevin-guille/ChiroTool/
 | 📊 | Synthèse **`_Vu`** + filtre **proba Tadarida min** | Lecture activité après validation ChiroSurf |
 | 🌤 | **Météo non bloquante** (T° Summary ; vent/couverture optionnels) | Upload même sans saisie terrain complète |
 
-👉 Détail : [Changelog](CHANGELOG.md) · [SPEC](docs/SPEC_v06_parcours.md) · [Releases](https://github.com/kevin-guille/ChiroTool/releases)
+### Depuis la v0.6 (sur `main`, pas encore de tag)
+
+Correctifs déjà dans le dépôt, visibles après `git pull` / prochain exe :
+
+| | Correctif | Bénéfice terrain |
+|---|-----------|------------------|
+| 🏷️ | **Titley** Anabat Swift / Ranger (noms usine `YYYY-MM-DD HH-MM-SS`) | Plus besoin de passer par XnView ; TE×10 sans collision ; Préparer s’arrête si aucun nom n’est lisible ([#4](https://github.com/kevin-guille/ChiroTool/issues/4)) |
+| 📂 | **Démarrage** : plus de scan auto du dernier dossier | Un SSD EXFAT endormi ne fige plus l’UI ; **Parcourir** reste cliquable ([#5](https://github.com/kevin-guille/ChiroTool/issues/5)) |
+| 📅 | **Dates** : Summary multi-jours → dates prises sur les WAV | Une nuit extraite d’une pose longue n’hérite plus du premier jour du Summary |
+| 🔍 | **Valider** : tri des colonnes, filtre taxon observateur, bilan `X / Y` | Lecture plus rapide d’une nuit validée ([#4](https://github.com/kevin-guille/ChiroTool/issues/4)) |
+
+Préférences → Général : **Garder en mémoire le dernier dossier** (coché par défaut) réaffiche le chemin **sans** le rescanner.
+
+👉 Détail : [Changelog](CHANGELOG.md) · [Tutoriel](docs/TUTORIEL.md) · [SPEC](docs/SPEC_v06_parcours.md) · [Releases](https://github.com/kevin-guille/ChiroTool/releases)
 
 ---
 
@@ -88,9 +101,9 @@ La **v0.6** répond à l’issue [#3](https://github.com/kevin-guille/ChiroTool/
 
 ### Chaîne de traitement
 
-- **Renommage automatique** au format Vigie-Chiro (y compris auto-réparation de noms proches)
-- **Expansion temporelle TE×10** intégrée, validée *bit-à-bit* (remplace Kaleidoscope)
-- **Participation + upload** via l’API (workers parallèles, reprise, trigger compute)
+- **Renommage automatique** au format Vigie-Chiro (Wildlife, AudioMoth expandé, Titley Swift/Ranger, auto-réparation de noms proches)
+- **Expansion temporelle TE×10** intégrée, validée *bit-à-bit* (remplace Kaleidoscope) : tout le son est conservé (tranches de 5 s)
+- **Participation + upload** via l’API (workers parallèles, reprise, trigger compute ; dates WAV si le Summary couvre plusieurs jours)
 - **Suivi Tadarida** et récupération des observations
 - **Vérifier / Réparer** une nuit (diagnostic API + disque, alignement d’état, fetch / trigger avec confirmation)
 - **Nettoyage par seuils** (chiros / orthos / micromammifères / oiseaux) avec aperçu et garde-fous
@@ -110,21 +123,23 @@ La **v0.6** répond à l’issue [#3](https://github.com/kevin-guille/ChiroTool/
 - Application **locale et portable** (exe one-file ou Python)
 - **Accélération Rust optionnelle** pour le TE×10 (fallback Python transparent)
 - Mode **compatible antivirus** pour les postes verrouillés
+- Pas de **scan automatique** du dernier dossier au démarrage (SSD EXFAT / volume endormi) ; option pour mémoriser seulement le chemin
 - Manifest de session + vérifications pour un traitement **idempotent**
 
 ---
 
 ## Enregistreurs compatibles
 
-Tout enregistreur dont les fichiers sont nommés `…AAAAMMJJ_HHMMSS….wav` :
+Tout enregistreur dont les fichiers sont **horodatés** dans le nom :
 
 | Famille | Modèles / notes |
 |---------|-----------------|
-| **Wildlife Acoustics** | SM2 / SM3 / SM4(BAT) / Mini Bat |
+| **Wildlife Acoustics** | SM2 / SM3 / SM4(BAT) / Mini Bat (`SERIE_YYYYMMDD_HHMMSS.wav`) |
 | **Autres horodatés** | Passive Recorder, Bat Recorder, etc. |
 | **AudioMoth** | Fichiers *déjà expandés* via l’AudioMoth Configuration App (*File → Expand*). ChiroTool assure ensuite renommage + TE×10 (alternative à Kaleidoscope, devenu payant pour l’AudioMoth). |
+| **Titley** | Anabat Swift / Ranger, nom usine `YYYY-MM-DD HH-MM-SS.wav` (espace ou underscore, n° d’enregistreur optionnel). |
 
-Les formats à noms **non datés** (ex. Peersonic, Pettersson D500x) nécessitent un renommage préalable et ne sont pas encore pris en charge directement.
+Les formats à noms **non datés** (ex. Peersonic, Pettersson D500x) nécessitent un renommage préalable (XnView vers `YYYYMMDD_HHMMSS.wav`).
 
 ---
 

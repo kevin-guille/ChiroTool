@@ -158,7 +158,76 @@ fn reframe_timestamp(stem: &str, offset_seconds: i64) -> String {
             return out;
         }
     }
+    // Titley Swift/Ranger : YYYY-MM-DD HH-MM-SS (espace ou underscore).
+    // Sans ça, toutes les tranches d'un WAV > 5 s s'écrivent au même nom.
+    if let Some(out) = reframe_titley(stem, offset_seconds) {
+        return out;
+    }
     stem.to_string()
+}
+
+/// `YYYY-MM-DD[ _]HH[-:]MM[-:]SS` n'importe où dans le stem (n° en tête OK).
+fn reframe_titley(stem: &str, offset_seconds: i64) -> Option<String> {
+    let bytes = stem.as_bytes();
+    if bytes.len() < 19 {
+        return None;
+    }
+    for i in (0..=bytes.len() - 19).rev() {
+        let slice = &bytes[i..i + 19];
+        if slice[4] != b'-' || slice[7] != b'-' {
+            continue;
+        }
+        let sep = slice[10];
+        if sep != b' ' && sep != b'_' {
+            continue;
+        }
+        let tsep1 = slice[13];
+        let tsep2 = slice[16];
+        if !((tsep1 == b'-' || tsep1 == b':') && tsep1 == tsep2) {
+            continue;
+        }
+        if !(slice[0..4].iter().all(|b| b.is_ascii_digit())
+            && slice[5..7].iter().all(|b| b.is_ascii_digit())
+            && slice[8..10].iter().all(|b| b.is_ascii_digit())
+            && slice[11..13].iter().all(|b| b.is_ascii_digit())
+            && slice[14..16].iter().all(|b| b.is_ascii_digit())
+            && slice[17..19].iter().all(|b| b.is_ascii_digit()))
+        {
+            continue;
+        }
+        let date = format!(
+            "{}{}{}",
+            std::str::from_utf8(&slice[0..4]).ok()?,
+            std::str::from_utf8(&slice[5..7]).ok()?,
+            std::str::from_utf8(&slice[8..10]).ok()?
+        );
+        let time = format!(
+            "{}{}{}",
+            std::str::from_utf8(&slice[11..13]).ok()?,
+            std::str::from_utf8(&slice[14..16]).ok()?,
+            std::str::from_utf8(&slice[17..19]).ok()?
+        );
+        let new_ts = shift_timestamp(&date, &time, offset_seconds)?;
+        // new_ts = YYYYMMDD_HHMMSS → reformater en Titley avec les mêmes séps.
+        let reformatted = format!(
+            "{}-{}-{}{}{}{}{}{}{}",
+            &new_ts[0..4],
+            &new_ts[4..6],
+            &new_ts[6..8],
+            sep as char,
+            &new_ts[9..11],
+            tsep1 as char,
+            &new_ts[11..13],
+            tsep1 as char,
+            &new_ts[13..15],
+        );
+        let mut out = String::with_capacity(stem.len());
+        out.push_str(&stem[..i]);
+        out.push_str(&reformatted);
+        out.push_str(&stem[i + 19..]);
+        return Some(out);
+    }
+    None
 }
 
 /// Décale un timestamp `"20250919"` + `"200134"` de `offset` secondes.

@@ -570,7 +570,7 @@
     </div>
     <div class="feat">
       <div class="f"><div class="ic">🏷️</div><h3>Renommage normé</h3>
-        <p>Métadonnées détectées (site, point, passage, série) et noms au format Vigie-Chiro. Wildlife, Passive/Bat Recorder, AudioMoth expandé.</p></div>
+        <p>Métadonnées détectées (site, point, passage, série) et noms au format Vigie-Chiro. Wildlife, Passive/Bat Recorder, AudioMoth expandé, Titley Swift/Ranger.</p></div>
       <div class="f"><div class="ic">⏱️</div><h3>Expansion TE×10</h3>
         <p>Intégrée, reproduisant Kaleidoscope bit-à-bit. Accélération Rust optionnelle, fallback Python transparent.</p></div>
       <div class="f"><div class="ic">☁️</div><h3>Upload &amp; Tadarida</h3>
@@ -678,8 +678,8 @@
       <div class="eyebrow">Matériel</div>
       <h2>Enregistreurs compatibles</h2>
       <p class="lead-c">
-        Tout enregistreur dont les fichiers sont nommés
-        <code>…AAAAMMJJ_HHMMSS….wav</code>.
+        Tout enregistreur dont les fichiers sont <strong>horodatés</strong> dans le nom
+        (<code>YYYYMMDD_HHMMSS</code> ou Titley <code>YYYY-MM-DD HH-MM-SS</code>).
       </p>
     </div>
     <div class="table-wrap">
@@ -702,12 +702,18 @@
               (<em>File → Expand</em>). ChiroTool assure ensuite renommage + TE×10
               (alternative à Kaleidoscope pour l’AudioMoth).</td>
           </tr>
+          <tr>
+            <td><strong>Titley</strong></td>
+            <td>Anabat Swift / Ranger, nom usine
+              <code>YYYY-MM-DD HH-MM-SS.wav</code> (espace ou underscore,
+              n° d’enregistreur optionnel).</td>
+          </tr>
         </tbody>
       </table>
     </div>
     <p class="note">
-      Formats à noms non datés (ex. Peersonic, Pettersson D500x) : renommage préalable requis ;
-      pas encore pris en charge directement.
+      Formats à noms non datés (ex. Peersonic, Pettersson D500x) : renommage préalable
+      (XnView vers <code>YYYYMMDD_HHMMSS.wav</code>).
     </p>
   </div>
 </section>

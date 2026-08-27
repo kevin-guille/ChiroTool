@@ -160,7 +160,10 @@ exemple : `D:\Chiros-2026\`. À l'intérieur, vous aurez un sous-dossier par
 contrat/campagne.
 
 C'est dans ce dossier que ChiroTool rangera son index interne et ses sauvegardes
-(dans un sous-dossier `_chirotool/` qu'il ne faut pas supprimer).
+(dans un sous-dossier `_chirotool/` qu'il ne faut pas supprimer). À cet accueil,
+le dossier est scanné tout de suite. **Aux lancements suivants**, le chemin
+peut être réaffiché sans scan automatique (voir [§5](#5--comprendre-linterface)
+et Préférences → **Garder en mémoire le dernier dossier**).
 
 > 📸 **[Capture 03 — Assistant d'accueil, étape 2 : Dossier de travail]**
 
@@ -188,7 +191,11 @@ La fenêtre se compose de trois zones :
 
 **① La barre du haut** — choisir le dossier de travail (`Parcourir…`), le
 scanner (`🔄 Scanner`), accéder aux préférences (`⚙`) et aux informations
-(`ℹ`).
+(`ℹ`). Aux lancements suivants, ChiroTool **ne rescane pas** tout seul le
+dernier dossier (un SSD EXFAT endormi bloquait l'interface). Si
+**Préférences → Général → Garder en mémoire le dernier dossier** est coché
+(défaut), le chemin est réaffiché : `Scanner` pour le recharger, `Parcourir`
+pour un autre. Décochez la case pour partir de `(aucun)`.
 
 **② La liste des sessions (à gauche)** — toutes vos nuits, regroupées par
 campagne. Une pastille de couleur indique l'état de chaque nuit :
@@ -267,8 +274,11 @@ un envoi, le nombre d'identifications remontées à Vigie-Chiro). Inutile d'ouvr
 Cliquez sur **« ▶ Préparer »**.
 
 ChiroTool va d'abord chercher à **deviner automatiquement** les métadonnées de la
-nuit (site, point, passage, enregistreur…) à partir du nom du dossier, du fichier
-`Summary.txt` et de votre tableur de suivi.
+nuit (site, point, passage, enregistreur…) à partir du nom du dossier, des noms
+de WAV (Wildlife, AudioMoth expandé, Titley Swift/Ranger), du fichier
+`Summary.txt` et de votre tableur de suivi. Si le Summary couvre **plusieurs
+jours** (pose longue, une seule nuit dans le dossier), la date retenue est
+celle des WAV, pas le premier jour du Summary.
 
 - **Si tout est trouvé** : une fenêtre de confirmation s'affiche, vous validez.
 - **Si une info manque** : l'assistant de saisie des métadonnées s'ouvre.
@@ -324,8 +334,12 @@ Une **barre de progression** vous indique l'avancement en temps réel.
 Cliquez sur **« ▶ Upload + Tadarida »**.
 
 Un **assistant de participation** s'ouvre. Il pré-remplit ce qu'il **sait
-réellement** : la météo si votre `Summary.txt` la contient, le matériel depuis
-votre parc, les dates depuis les enregistrements.
+réellement** : les T° si votre `Summary.txt` les contient, le matériel depuis
+votre parc, les dates du Summary **si c'est une seule nuit**. Si le Summary
+couvre **plusieurs jours** (pose longue, une seule nuit extraite) — ou un
+autre jour que les fichiers — les dates viennent des WAV. Vous pouvez encore
+les corriger ; une participation déjà créée au mauvais jour n'est pas
+réutilisée.
 
 > 📸 **[Capture 09 — Assistant « Nouvelle participation Vigie-Chiro »]**
 
@@ -832,6 +846,27 @@ elle crée beaucoup de fichiers d'un coup (renommage/expansion), qu'ils prennent
 Aucune donnée n'est perdue : relancer la préparation reprend là où elle s'était
 arrêtée.
 
+**« Au lancement, le logiciel ne répond pas / Parcourir est grisé. »**
+ChiroTool **n'ouvre plus** tout seul le dernier dossier : un SSD EXFAT
+endormi ou un gros scan bloquait l'interface et grisait Parcourir.
+**Parcourir reste cliquable** pendant un scan. Si **Préférences → Général →
+Garder en mémoire le dernier dossier** est coché (défaut), le chemin
+reste affiché : **Parcourir** pour un autre dossier, **Scanner** pour
+recharger celui-ci. Décochez pour partir de `(aucun)` au prochain lancement.
+
+**« Mes fichiers Anabat Swift / Ranger ne sont pas reconnus. »**
+Les noms usine `YYYY-MM-DD HH-MM-SS.wav` (espace ou underscore, éventuellement
+précédés du n° d'enregistreur) sont lus. Un WAV plus long que 5 s est découpé
+en tranches horodatées (tout le son est conservé). Si **Préparer s'arrête**
+faute de nom lisible, passez une fois par XnView vers `YYYYMMDD_HHMMSS.wav`
+et joignez un exemple de nom à une [issue](https://github.com/kevin-guille/ChiroTool/issues).
+
+**« L'upload refuse, ou les dates de participation sont fausses. »**
+Si le `Summary.txt` couvre plusieurs jours alors que le dossier n'a qu'une
+nuit, ChiroTool prend les dates sur les WAV (pas le premier jour du Summary).
+Corrigez-les dans l'assistant si besoin : une participation déjà créée au
+mauvais jour n'est plus réutilisée.
+
 **« La préparation est très lente, ou plante, sur un SSD externe. »**
 Sous Windows, un disque (surtout externe) formaté en **EXFAT** tient très mal
 le renommage / TE×10 sur des milliers de WAV : fortes lenteurs, parfois un
@@ -890,11 +925,12 @@ diagnostiquer.
 ChiroTool couvre la grande majorité des cas, mais pas (encore) tout :
 
 - **Enregistreurs compatibles** : Wildlife (SM2/3/4/Mini Bat), Passive Recorder,
-  Bat Recorder et **AudioMoth**. Les fichiers AudioMoth bruts `…HHMMSS**T**.WAV`
-  (déclenchés, événements concaténés) doivent d'abord être **« expandés »** dans
-  l'AudioMoth Configuration App (*File → Expand*) : ChiroTool les détecte et
-  demande cette étape avant tout traitement. Les enregistreurs à noms **non datés**
-  (ex. Peersonic, Pettersson D500x) nécessitent un renommage préalable.
+  Bat Recorder, **AudioMoth** (fichiers *expandés*) et **Titley** Anabat Swift /
+  Ranger (`YYYY-MM-DD HH-MM-SS`, voir [§12](#12--questions-fréquentes--dépannage)).
+  Les AudioMoth bruts `…HHMMSS**T**.WAV` doivent d'abord être expandés
+  (Configuration App → *Expand*). Les noms **non datés** (Peersonic,
+  Pettersson D500x) nécessitent un renommage préalable (XnView vers
+  `YYYYMMDD_HHMMSS.wav`). Si **aucun** nom n'est lisible, Préparer s'arrête.
 - **Fichiers compressés `.w4v` / `.wac`** : non décompressés (utilisez Kaleidoscope
   en amont).
 - **Modifier une participation déjà créée** (météo erronée…) : via le portail web.
@@ -925,25 +961,33 @@ Rappel des apports de la **v0.6** (détail dans le flux ci-dessus) :
 
 **Depuis la v0.6** (code local, pas encore de tag de release) :
 
-- **Valider** : tri au clic sur les en-têtes ; filtre « Taxon observateur renseigné uniquement ».
+- **Valider** : tri au clic sur les en-têtes ; filtre « Taxon observateur renseigné uniquement » (issue #4).
 - **Vue session** : bilan `X / Y` contacts validés (et envois Vigie-Chiro s'il y en a).
+- **Démarrage** : plus de scan auto du dernier dossier ; Préférences →
+  « Garder en mémoire le dernier dossier » (issue #5).
+- **Upload** : libellés Vent / Couverture nuageuse lisibles.
+- **Titley Swift / Ranger** : noms usine `YYYY-MM-DD HH-MM-SS` lus ; TE×10
+  sans collision ; Préparer s'arrête si aucun nom n'est lisible (issue #4).
+- **Dates** : si le Summary couvre plusieurs jours, date de dossier et de
+  participation prises sur les WAV ; une participation au mauvais jour n'est
+  pas réutilisée.
 - FAQ **EXFAT** (SSD externes sous Windows).
 
 Conception / dev : [`SPEC_v06_parcours.md`](SPEC_v06_parcours.md) · issues
 [#3](https://github.com/kevin-guille/ChiroTool/issues/3),
-[#4](https://github.com/kevin-guille/ChiroTool/issues/4).
+[#4](https://github.com/kevin-guille/ChiroTool/issues/4),
+[#5](https://github.com/kevin-guille/ChiroTool/issues/5).
 
-### Suite possible
+### Suite
 
-- Synthèse `_Vu` : option « nuit validée statistiquement » (10 % → 75 %), en
-  attente du cadrage terrain (issue #3).
-- Ouverture ChiroSurf sur le CSV de la nuit (pas seulement le dossier / un WAV).
-- Anabat Ranger / Swift : renommage et fichiers > 5 s (besoin d'exemples, issue #4).
-- Robustesse / UX du **mode batch** : données complémentaires de participation
-  (template avant lot, auto Summary / matériels, éventuel rattrapage).
-- Journal d'upload rouvrable, reprise après coupure plus lisible.
-- Export multi-nuits compilé (espèces × nuits en colonnes).
-- Captures d'écran tutoriel (pick carte, ChiroSurf nuits, diagnostic).
+- Synthèse `_Vu` « nuit validée statistiquement » (10 % → 75 %), en attente
+  du cadrage terrain (issue #3).
+- Ouvrir ChiroSurf sur le CSV de la nuit.
+- Filtre chiros (Activité, ChiroSurf nuits) et taxons observateur dans
+  Activité (issue #4.9–10).
+- Onglet Nettoyer à droite de Valider (issue #4.5, bas).
+- Robustesse / UX du **mode batch**, journal d'upload, export multi-nuits,
+  captures tuto (pick carte, ChiroSurf nuits, diagnostic).
 
 ---
 

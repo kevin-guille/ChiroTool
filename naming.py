@@ -32,7 +32,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Iterable
 
-from chiro_core import AUDIOMOTH_RE, RAW_RE, VIGIECHIRO_RE
+from chiro_core import AUDIOMOTH_RE, RAW_RE, TITLEY_RE, VIGIECHIRO_RE
 
 
 # ---------------------------------------------------------------------------
@@ -173,8 +173,8 @@ def extract_timestamp_from_name(name: str) -> tuple[datetime, int | None] | None
     None si aucun format reconnu.
     """
     # Ordre : Vigie-Chiro, puis Wildlife (série en tête), puis AudioMoth (date en
-    # tête, sans série) en dernier — AudioMoth ne matche que les noms date-first
-    # que RAW_RE ne couvre pas, donc aucun risque de collision.
+    # tête, sans série), puis Titley Swift/Ranger (YYYY-MM-DD HH-MM-SS).
+    # Les motifs ne se recouvrent pas.
     for rx in (VIGIECHIRO_RE, RAW_RE, AUDIOMOTH_RE):
         m = rx.match(name)
         if m:
@@ -189,7 +189,29 @@ def extract_timestamp_from_name(name: str) -> tuple[datetime, int | None] | None
             # à distinguer côté regex. Les noms Vigie-Chiro officiels n'en ont
             # quasiment jamais et Kaleidoscope met systématiquement 000.
             return dt, None
+    m = TITLEY_RE.match(name)
+    if m:
+        try:
+            dt = datetime(
+                int(m.group("y")), int(m.group("m")), int(m.group("d")),
+                int(m.group("h")), int(m.group("mi")), int(m.group("s")),
+            )
+        except ValueError:
+            return None
+        return dt, None
     return None
+
+
+def wav_timestamp_range(names: Iterable[str]) -> tuple[datetime | None, datetime | None]:
+    """Min / max des timestamps extraits des noms WAV. (None, None) si aucun."""
+    dts: list[datetime] = []
+    for n in names:
+        ti = extract_timestamp_from_name(n)
+        if ti:
+            dts.append(ti[0])
+    if not dts:
+        return None, None
+    return min(dts), max(dts)
 
 
 def extract_serial_from_name(name: str) -> str | None:
@@ -230,7 +252,7 @@ def compute_new_wav_name(meta: SessionMeta, original_name: str,
     seg = None
     if keep_segment_suffix:
         m = (VIGIECHIRO_RE.match(original_name) or RAW_RE.match(original_name)
-             or AUDIOMOTH_RE.match(original_name))
+             or AUDIOMOTH_RE.match(original_name) or TITLEY_RE.match(original_name))
         if m:
             suf = m.groupdict().get("suffix")
             if suf is not None:

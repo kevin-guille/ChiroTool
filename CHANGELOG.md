@@ -16,17 +16,35 @@ Les versions publiées suivent le SemVer du fichier `version.py` / tags GitHub.
 
 - **Valider** : le 2e clic sur un en-tête conserve le tri (callback heading
   reposé après mise à jour du libellé ▲ / ▼).
+- **Upload / participation** : libellés Vent et Couverture nuageuse lisibles
+  (titre + aide empilés, plus superposés).
+- **Démarrage** (issue #5) : plus de scan auto du dernier dossier (EXFAT /
+  SSD endormi figeait l'UI et grisait Parcourir). Préférences → Général :
+  « Garder en mémoire le dernier dossier » (coché par défaut) ; décoché,
+  le chemin n'est plus restauré. Parcourir reste cliquable pendant un scan.
+- **Titley Swift / Ranger** (issue #4) : noms usine `YYYY-MM-DD HH-MM-SS`
+  (espace ou underscore, ± n° d'enregistreur) lus au renommage ; TE×10
+  incrémente l'heure des tranches (plus de collision / perte des 5 s
+  suivantes) ; **Préparer s'arrête** si aucun nom n'est lisible.
+- **Dates Summary vs une nuit** (Jeanne) : si le Summary couvre plusieurs
+  jours, date de dossier / participation prise sur les WAV ; une
+  participation déjà créée au mauvais jour n'est plus réutilisée.
 
 ### Documentation
 
-- Tutoriel : tri / filtre Valider, bilan `X / Y` en Vue session, comportement
-  réel de « identifications validées seulement » sur un `_Vu` ChiroSurf,
-  découpage TE×10 en tranches de 5 s (tout le son conservé), FAQ **EXFAT**.
+- Tutoriel + PDF : tri / filtre Valider, bilan `X / Y` en Vue session,
+  comportement réel de « identifications validées seulement » sur un `_Vu`
+  ChiroSurf, découpage TE×10 en tranches de 5 s (tout le son conservé), FAQ
+  **EXFAT**, Titley, dates WAV si Summary multi-jours, démarrage sans scan
+  auto (issue #5). README : bloc **Depuis la v0.6** (Titley, #5, dates, Valider)
+  + Titley dans les enregistreurs compatibles. Landing : Titley.
 
 ### Tests
 
 - TE×10 : un WAV de 15 s raw produit **3** segments (pas de troncature).
 - Cohérence synthèse / compteur observateur sur le `_Vu` Nuit_1 issue #3.
+- Titley : parse noms, rename, TE×10 15 s sans collision, stop si illisible.
+- Dates Jeanne : Summary multi-jours → WAV ; participation périmée non réutilisée.
 
 ## [0.6.0] — 2026-08-07
 
