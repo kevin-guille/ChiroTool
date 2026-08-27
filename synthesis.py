@@ -59,7 +59,8 @@ def _tadarida_proba(row: list, ci: dict[str, int]) -> float | None:
 
 def compute_night_synthesis(headers: list, rows: list, *,
                             validated_only: bool = False,
-                            min_tadarida_proba: float | None = None) -> dict:
+                            min_tadarida_proba: float | None = None,
+                            chiros_only: bool = False) -> dict:
     """Récapitulatif par espèce d'une nuit.
 
     ``validated_only`` : ne compter que les contacts **validés par l'observateur**
@@ -108,6 +109,8 @@ def compute_night_synthesis(headers: list, rows: list, *,
             continue
         if validated_only and not validated:
             continue                              # ignore les non-validés (Tadarida seul)
+        if chiros_only and classify_taxon(taxon) != "chiros":
+            continue
         if thr is not None and not validated:
             p = _tadarida_proba(row, ci)
             if p is None or p < thr:

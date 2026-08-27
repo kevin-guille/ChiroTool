@@ -237,6 +237,15 @@ def resolve_meta(
                 nom_contrat=m.meta.get("nom_contrat"),
             )
             msgs.append("meta issue du manifest existant")
+            try:
+                from rename import inspect_summary_vs_wav
+                info = inspect_summary_vs_wav(session)
+                if info.get("warning"):
+                    msgs.append(info["warning"].splitlines()[0])
+                if info.get("prefer_wav") and info.get("wav_min"):
+                    meta.date_debut = info["wav_min"]
+            except Exception:
+                pass
             return meta, msgs
 
     # 3. Auto via Suivi

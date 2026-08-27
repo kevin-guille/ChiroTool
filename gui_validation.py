@@ -68,6 +68,37 @@ PATRIMONIAL_CODES = {
 CONFIDENCE_VALUES = ("POSSIBLE", "PROBABLE", "SUR")
 
 
+def launch_chirosurf(exe: str | None, target: Path, *, parent=None) -> bool:
+    """Lance ChiroSurf sur un WAV ou un CSV. True si le process a démarré."""
+    target = Path(target)
+    if not target.is_file():
+        messagebox.showwarning(
+            "Fichier introuvable",
+            f"Impossible d'ouvrir :\n{target}",
+            parent=parent,
+        )
+        return False
+    if not exe or not Path(exe).is_file():
+        if messagebox.askyesno(
+            "ChiroSurf non configuré",
+            "Le chemin vers ChiroSurf.exe n'est pas configuré.\n"
+            "Ouvrir les préférences ?",
+            parent=parent,
+        ):
+            if parent is not None:
+                try:
+                    parent.event_generate("<<OpenPreferences>>")
+                except Exception:
+                    pass
+        return False
+    try:
+        subprocess.Popen([exe, str(target)], shell=False, close_fds=True)
+        return True
+    except Exception as e:
+        messagebox.showerror("Échec ouverture ChiroSurf", str(e), parent=parent)
+        return False
+
+
 # ---------------------------------------------------------------------------
 # Logique de filtrage PURE (sans GUI) — testable unitairement
 # ---------------------------------------------------------------------------
@@ -77,6 +108,7 @@ def row_passes_filters(row: list, col_idx: dict, *, taxon_filter: str = "Tous",
                        wav_present: bool = True, only_unvalidated: bool = False,
                        only_observer_taxon: bool = False,
                        only_patrimonial: bool = False,
+                       only_chiros: bool = False,
                        patrimonial_codes=frozenset()) -> bool:
     """La ligne d'observations passe-t-elle les filtres actifs ?
 
@@ -112,6 +144,10 @@ def row_passes_filters(row: list, col_idx: dict, *, taxon_filter: str = "Tous",
         return False
     if only_patrimonial and (str(tad) or "").lower() not in patrimonial_codes:
         return False
+    if only_chiros:
+        code = str(obs or tad or "").strip()
+        if classify_taxon(code) != "chiros":
+            return False
     return True
 
 
@@ -120,6 +156,7 @@ def eligible_taxons(rows: list, col_idx: dict, *, proba_min: float = 0.0,
                     only_unvalidated: bool = False,
                     only_observer_taxon: bool = False,
                     only_patrimonial: bool = False,
+                    only_chiros: bool = False,
                     patrimonial_codes=frozenset()) -> list[str]:
     """Liste triée des taxons Tadarida présents parmi les lignes qui passent les
     filtres AUTRES que le taxon (pour peupler dynamiquement le menu). Pur/testable.
@@ -139,6 +176,7 @@ def eligible_taxons(rows: list, col_idx: dict, *, proba_min: float = 0.0,
             only_unvalidated=only_unvalidated,
             only_observer_taxon=only_observer_taxon,
             only_patrimonial=only_patrimonial,
+            only_chiros=only_chiros,
             patrimonial_codes=patrimonial_codes,
         ):
             continue
@@ -392,8 +430,15 @@ class ValidationView(ctk.CTkToplevel):
             filters, text="Taxon observateur renseigné uniquement",
             variable=self.only_observer_taxon_var,
             command=self._on_observer_filter_toggle,
-        ).grid(row=1, column=0, columnspan=3,
+        ).grid(row=1, column=0, columnspan=2,
                padx=(10, 12), pady=(0, 8), sticky="w")
+
+        self.only_chiros_var = ctk.BooleanVar(value=False)
+        ctk.CTkCheckBox(
+            filters, text="Chiros seulement",
+            variable=self.only_chiros_var,
+            command=self._on_filters_changed,
+        ).grid(row=1, column=2, padx=(0, 12), pady=(0, 8), sticky="w")
 
         self.hide_cleaned_var = ctk.BooleanVar(value=False)
         self.hide_cleaned_chk = ctk.CTkCheckBox(
@@ -511,7 +556,14 @@ class ValidationView(ctk.CTkToplevel):
         ctk.CTkButton(
             edit, text="▶ ChiroSurf", width=120, height=30,
             command=self._open_in_chirosurf,
-        ).grid(row=1, column=7, padx=(0, 10), pady=8, sticky="e")
+        ).grid(row=1, column=7, padx=(0, 6), pady=8, sticky="e")
+        ctk.CTkButton(
+            edit, text="CSV nuits", width=100, height=30,
+            fg_color=("gray85", "gray25"),
+            text_color=("gray15", "gray90"),
+            hover_color=("gray75", "gray35"),
+            command=self._open_chirosurf_nights_dialog,
+        ).grid(row=1, column=8, padx=(0, 10), pady=8, sticky="e")
 
         # « Monter au genre » : son incertain entre 2 espèces d'un même genre
         # (ex. Pleaur/Pleaus → Plesp « Oreillard sp. »). Confiance courante conservée.
@@ -826,6 +878,7 @@ class ValidationView(ctk.CTkToplevel):
         self.only_unvalidated_var.set(False)
         self.only_observer_taxon_var.set(False)
         self.only_patrimonial_var.set(False)
+        self.only_chiros_var.set(False)
         self.hide_cleaned_var.set(False)
         self._sort_col = None
         self._sort_desc = False
@@ -877,6 +930,7 @@ class ValidationView(ctk.CTkToplevel):
             only_unvalidated=self.only_unvalidated_var.get(),
             only_observer_taxon=self.only_observer_taxon_var.get(),
             only_patrimonial=self.only_patrimonial_var.get(),
+            only_chiros=self.only_chiros_var.get(),
             patrimonial_codes=PATRIMONIAL_CODES,
         )
 
@@ -1239,22 +1293,19 @@ class ValidationView(ctk.CTkToplevel):
             )
             return
 
-        if not self.chirosurf_path or not Path(self.chirosurf_path).is_file():
-            if messagebox.askyesno(
-                "ChiroSurf non configuré",
-                "Le chemin vers ChiroSurf.exe n'est pas configuré.\n"
-                "Ouvrir les préférences ?"):
-                # Ping parent pour ouvrir ses préférences
-                self.master.event_generate("<<OpenPreferences>>")
-            return
+        launch_chirosurf(self.chirosurf_path, wav_path, parent=self)
 
-        try:
-            subprocess.Popen(
-                [self.chirosurf_path, str(wav_path)],
-                shell=False, close_fds=True,
-            )
-        except Exception as e:
-            messagebox.showerror("Échec ouverture ChiroSurf", str(e))
+    def _open_chirosurf_nights_dialog(self):
+        """Issue #4.8 : CSV par nuit → graphes / validation ChiroSurf."""
+        opener = getattr(self.master, "_open_chirosurf_nights_for_path", None)
+        if callable(opener):
+            opener(self.session_path)
+            return
+        messagebox.showinfo(
+            "ChiroSurf nuits",
+            "Revenez à la vue session et cliquez « 🌊 ChiroSurf nuits ».",
+            parent=self,
+        )
 
     def _find_wav(self, filename_stem: str) -> Path | None:
         """Trouve le WAV correspondant au stem (avec ou sans .wav)."""

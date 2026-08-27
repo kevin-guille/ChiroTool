@@ -74,6 +74,8 @@ class ActivityPanel(ctk.CTkFrame):
         self._filters_initialized = False
         self._bin_minutes = 30
         self._only_validated = False
+        self._chiros_only = False
+        self._observer_taxon = False
         # Mode d'agrégation : "cumul" (toute la sélection sommée) ou
         # "par_point" (1 courbe par point dans la sélection)
         self._group_by_point = False
@@ -112,7 +114,7 @@ class ActivityPanel(ctk.CTkFrame):
         )
         bin_menu.grid(row=0, column=2, padx=(0, 8))
 
-        # Toggle "uniquement validateur_taxon"
+        # Identification humaine : validateur_taxon OU observateur_taxon
         self.validated_var = ctk.BooleanVar(value=False)
         ctk.CTkCheckBox(
             bar, text="Validés humains seulement",
@@ -199,10 +201,26 @@ class ActivityPanel(ctk.CTkFrame):
             variable=self._group_by_point_var,
             command=self._on_group_toggle,
             font=ctk.CTkFont(size=11),
-        ).grid(row=2, column=0, sticky="w", padx=8, pady=(2, 6))
+        ).grid(row=2, column=0, sticky="w", padx=8, pady=(2, 2))
+
+        self.chiros_only_var = ctk.BooleanVar(value=False)
+        ctk.CTkCheckBox(
+            outer, text="Chiros seulement",
+            variable=self.chiros_only_var,
+            command=self._on_chiros_toggle,
+            font=ctk.CTkFont(size=11),
+        ).grid(row=3, column=0, sticky="w", padx=8, pady=(0, 2))
+
+        self.observer_taxon_var = ctk.BooleanVar(value=False)
+        ctk.CTkCheckBox(
+            outer, text="Taxons observateur",
+            variable=self.observer_taxon_var,
+            command=self._on_observer_toggle,
+            font=ctk.CTkFont(size=11),
+        ).grid(row=4, column=0, sticky="w", padx=8, pady=(0, 6))
 
         self._sections: dict[str, dict] = {}
-        row = 3
+        row = 5
         for key, title, searchable, collapsed in self._SECTION_DEFS:
             row = self._build_section(outer, row, key, title, searchable, collapsed)
 
@@ -401,6 +419,8 @@ class ActivityPanel(ctk.CTkFrame):
                     xlsx_paths,
                     bin_minutes=self._bin_minutes,
                     use_only_validated=self._only_validated,
+                    use_observer_taxon=self._observer_taxon,
+                    chiros_only=self._chiros_only,
                 )
             except Exception as e:
                 self.after(0, lambda: self.status_lbl.configure(
@@ -417,7 +437,7 @@ class ActivityPanel(ctk.CTkFrame):
         n_nights = len(list_nights(aggregated))
         n_contacts = sum(sum(bins) for bins in aggregated.values())
         self.status_lbl.configure(
-            text=f"{len(xlsx_paths)} xlsx · {n_nights} nuits · "
+            text=f"{len(xlsx_paths)} source(s) · {n_nights} nuits · "
                  f"{n_contacts:,} contacts",
             text_color=("gray40", "gray60"),
         )
@@ -445,28 +465,40 @@ class ActivityPanel(ctk.CTkFrame):
         self._redraw()
 
     def _discover_xlsx(self) -> list[Path]:
-        """Scan récursif (max 4 niveaux) du workspace pour trouver les xlsx
-        d'observations Vigie-Chiro. Filtre les ``_cleanup.xlsx`` (annotés)."""
+        """Scan xlsx d'observations + CSV ``_Vu`` ChiroSurf (issue #4.10).
+
+        Si une session a des ``chirosurf/*_Vu.csv``, on les prend **à la
+        place** du xlsx (évite de compter deux fois la même nuit).
+        """
         if self.workspace is None:
             return []
-        out: list[Path] = []
-        # Cherche participation-*-observations*.xlsx (incl. _<initiales>.xlsx
-        # pour les xlsx validés via ChiroSurf)
-        for p in self.workspace.rglob("participation-*observations*.xlsx"):
-            if "_cleanup" in p.name.lower():
+        xlsx: list[Path] = []
+        sessions_with_vu: set[Path] = set()
+        vu_csvs: list[Path] = []
+        for p in self.workspace.rglob("*"):
+            if not p.is_file():
                 continue
-            if "_backup" in p.name.lower():
-                continue
-            # Limite la profondeur (évite de scanner ~/AppData ou similaire
-            # par accident)
             try:
                 rel_depth = len(p.relative_to(self.workspace).parts)
-                if rel_depth > 5:
+                if rel_depth > 6:
                     continue
             except ValueError:
                 continue
-            out.append(p)
-        return sorted(out)
+            low = p.name.lower()
+            if p.suffix.lower() == ".csv" and low.endswith("_vu.csv") \
+                    and p.parent.name.lower() == "chirosurf":
+                vu_csvs.append(p)
+                sessions_with_vu.add(p.parent.parent)
+                continue
+            if p.suffix.lower() != ".xlsx":
+                continue
+            if "observations" not in low or not low.startswith("participation-"):
+                continue
+            if "_cleanup" in low or "_backup" in low:
+                continue
+            xlsx.append(p)
+        xlsx = [x for x in xlsx if x.parent not in sessions_with_vu]
+        return sorted(xlsx + vu_csvs)
 
     # =========================================================================
     # Filtres : checkboxes nuits + taxons
@@ -733,6 +765,14 @@ class ActivityPanel(ctk.CTkFrame):
 
     def _on_validated_toggle(self):
         self._only_validated = bool(self.validated_var.get())
+        self.refresh()
+
+    def _on_chiros_toggle(self):
+        self._chiros_only = bool(self.chiros_only_var.get())
+        self.refresh()
+
+    def _on_observer_toggle(self):
+        self._observer_taxon = bool(self.observer_taxon_var.get())
         self.refresh()
 
     # =========================================================================

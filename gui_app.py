@@ -847,6 +847,15 @@ class ChiroToolApp(ctk.CTk):
                     f"prépare cette nuit en simple-clic pour les saisir, puis "
                     f"relance le batch. Session ignorée.")
                 return {"skipped": "métadonnées incomplètes (saisie wizard requise)"}
+            try:
+                from rename import inspect_summary_vs_wav
+                info = inspect_summary_vs_wav(s.path)
+                if info.get("warning"):
+                    log(f"  ⚠ {s.name} : {info['warning'].splitlines()[0]}")
+                if info.get("prefer_wav") and info.get("wav_min"):
+                    meta.date_debut = info["wav_min"]
+            except Exception:
+                pass
             return _capture_stdout(
                 lambda: run_phase_prep(s.path, meta, dry_run=False,
                                          force=False, progress=progress),
@@ -1444,10 +1453,6 @@ class ChiroToolApp(ctk.CTk):
         _btn("☁ Upload", lambda: self._run_upload(s),
              "Envoi vers Vigie-Chiro + lancement de l'analyse Tadarida",
              is_primary=(next_step == "upload"), enabled=can_upload)
-        _btn("🧹 Nettoyer", lambda: self._run_cleanup(s),
-             "Purge des contacts sous les seuils de confiance "
-             "(aperçu du volume avant toute suppression)",
-             is_primary=(next_step == "cleanup"), enabled=can_cleanup)
 
         # Réparation d'état : surtout utile en ⏳ (participation connue sans
         # xlsx) ou dès qu'une participation_id existe. Toujours visible après
@@ -1476,9 +1481,18 @@ class ChiroToolApp(ctk.CTk):
             _btn("🔍 Valider", lambda: self._open_validation_view(s),
                  "Vue de validation des contacts (ChiroSurf) + envoi des "
                  "identifications validées au serveur", accent="#1f6feb")
-            _btn("🌊 ChiroSurf nuits", lambda: self._open_chirosurf_nights(s),
+        # Nettoyer à droite de Valider (issue #4.5) : on identifie d'abord,
+        # on purge ensuite. Le bouton reste grisé tant que Tadarida n'a pas
+        # rendu le tableur.
+        _btn("🧹 Nettoyer", lambda: self._run_cleanup(s),
+             "Purge des contacts sous les seuils de confiance "
+             "(aperçu du volume avant toute suppression)",
+             is_primary=(next_step == "cleanup"), enabled=can_cleanup)
+        if has_obs:
+            _btn("🌊 ChiroSurf nuits",
+                 lambda: self._open_chirosurf_nights_for_path(s.path, s.name),
                  "Scinder multi-nuits pour ChiroSurf (méthode 10 %→75 %) "
-                 "et importer les _Vu")
+                 "et ouvrir les CSV (validation / graphes)")
 
         _btn("✎ Métadonnées", lambda: self._edit_meta(s),
              "Modifier les métadonnées de la session (site, point, passage, série…)")
@@ -1663,7 +1677,8 @@ class ChiroToolApp(ctk.CTk):
         if dts:
             prefill.date_debut = min(dts)
 
-        return open_wizard(self, prefill=prefill, session_name=s.name)
+        return open_wizard(self, prefill=prefill, session_name=s.name,
+                           session_path=s.path)
 
     # -- Actions réelles ----------------------------------------------------
 
@@ -1671,12 +1686,30 @@ class ChiroToolApp(ctk.CTk):
         meta = self._resolve_meta_interactive(s)
         if meta is None:
             return
+        warn_block = ""
+        date_s = (meta.date_debut.strftime("%Y-%m-%d")
+                  if meta.date_debut else "?")
+        try:
+            from rename import inspect_summary_vs_wav
+            info = inspect_summary_vs_wav(s.path)
+            if info.get("prefer_wav") and info.get("wav_min"):
+                wav_min = info["wav_min"]
+                if (meta.date_debut is None
+                        or meta.date_debut.date() != wav_min.date()):
+                    meta.date_debut = wav_min
+                    date_s = wav_min.strftime("%Y-%m-%d")
+            if info.get("warning"):
+                warn_block = "\n\n⚠ " + info["warning"] + "\n"
+        except Exception:
+            pass
         # Confirmation
         if not messagebox.askyesno(
             "Confirmer la préparation",
             f"Session : {s.name}\n"
+            f"Date : {date_s}\n"
             f"Meta : site {meta.n_site_tadarida} / {meta.n_point_fixe} / "
-            f"Pass{meta.n_passage} / enr#{meta.n_enregistreur} ({meta.n_serie})\n\n"
+            f"Pass{meta.n_passage} / enr#{meta.n_enregistreur} ({meta.n_serie})"
+            f"{warn_block}\n"
             f"Actions :\n"
             f"  • renommage du dossier au format canonique\n"
             f"  • renommage des {s.n_wav} WAV au format Vigie-Chiro\n"
@@ -1965,14 +1998,27 @@ class ChiroToolApp(ctk.CTk):
             return
 
         # Si la participation a déjà été créée (visible dans le manifest),
-        # on skip le wizard et on continue l'upload sur celle-ci.
+        # on skip le wizard SAUF si le Summary ne colle pas aux WAV (on
+        # veut que l'utilisateur voit les dates) ou si l'ID est d'un autre jour.
         from manifest import Manifest
         m = Manifest.load(s.path)
         existing_participation_id = (m.meta or {}).get("vigiechiro_participation_id") if m else None
+        skip_wizard = bool(existing_participation_id)
+        try:
+            from rename import inspect_summary_vs_wav
+            from pipeline import _participation_id_is_stale
+            info = inspect_summary_vs_wav(s.path)
+            desired = info.get("wav_min") or meta.date_debut
+            if info.get("warning"):
+                skip_wizard = False
+            if (existing_participation_id and m
+                    and _participation_id_is_stale(m.meta or {}, desired)):
+                skip_wizard = False
+        except Exception:
+            pass
 
         participation_payload = None
-        if not existing_participation_id:
-            # Nouveau : ouvrir le wizard pour collecter météo + matos + commentaire
+        if not skip_wizard:
             from gui_participation_wizard import open_participation_wizard
             participation_payload = open_participation_wizard(
                 self, session_path=s.path, meta=meta)
@@ -2122,8 +2168,13 @@ class ChiroToolApp(ctk.CTk):
         SynthesisView(self, session_path=s.path, xlsx_path=xlsx)
 
     def _open_chirosurf_nights(self, s: SessionState):
-        """Prépare / liste les CSV nuit pour ChiroSurf (SPEC P4 / issue #3)."""
-        xlsx = find_observations_xlsx(s.path)
+        self._open_chirosurf_nights_for_path(s.path, s.name)
+
+    def _open_chirosurf_nights_for_path(self, session_path, session_name: str | None = None):
+        """Prépare / liste les CSV nuit pour ChiroSurf (SPEC P4 / issues #3, #4.8)."""
+        session_path = Path(session_path)
+        name = session_name or session_path.name
+        xlsx = find_observations_xlsx(session_path)
         if xlsx is None:
             messagebox.showwarning(
                 "Pas d'observations",
@@ -2133,7 +2184,7 @@ class ChiroToolApp(ctk.CTk):
             return
         try:
             from chirosurf_nights import prepare_chirosurf_nights
-            nights = prepare_chirosurf_nights(s.path, xlsx, force_raw=False)
+            nights = prepare_chirosurf_nights(session_path, xlsx, force_raw=False)
         except Exception as e:
             messagebox.showerror(
                 "ChiroSurf nuits",
@@ -2149,8 +2200,8 @@ class ChiroToolApp(ctk.CTk):
 
         # Dialog simple liste + actions
         dlg = ctk.CTkToplevel(self)
-        dlg.title(f"ChiroSurf — nuits · {s.name}")
-        dlg.geometry("560x420")
+        dlg.title(f"ChiroSurf — nuits · {name}")
+        dlg.geometry("640x440")
         dlg.transient(self)
         dlg.after(50, dlg.grab_set)
         ctk.CTkLabel(
@@ -2158,10 +2209,11 @@ class ChiroToolApp(ctk.CTk):
             font=ctk.CTkFont(size=14, weight="bold"), anchor="w",
         ).pack(fill="x", padx=14, pady=(12, 4))
         ctk.CTkLabel(
-            dlg, text="Ouvre le CSV brut (sans _Vu) dans ChiroSurf. "
-                      "Le fichier _Vu est écrit dans le même dossier.",
+            dlg, text="▶ ChiroSurf ouvre le CSV brut (validation 10 %→75 %). "
+                      "Après validation, 📈 _Vu ouvre le fichier annoté pour "
+                      "les graphes. Le _Vu est écrit dans le même dossier.",
             font=ctk.CTkFont(size=11), text_color=("gray40", "gray70"),
-            wraplength=520, anchor="w", justify="left",
+            wraplength=600, anchor="w", justify="left",
         ).pack(fill="x", padx=14, pady=(0, 8))
 
         box = ctk.CTkScrollableFrame(dlg, fg_color="transparent")
@@ -2180,15 +2232,18 @@ class ChiroToolApp(ctk.CTk):
 
         def _regen():
             try:
-                prepare_chirosurf_nights(s.path, xlsx, force_raw=True)
+                prepare_chirosurf_nights(session_path, xlsx, force_raw=True)
                 messagebox.showinfo(
                     "Régénéré",
                     "CSV bruts régénérés (les _Vu existants sont conservés).",
                     parent=dlg)
                 dlg.destroy()
-                self._open_chirosurf_nights(s)
+                self._open_chirosurf_nights_for_path(session_path, name)
             except Exception as e:
                 messagebox.showerror("Erreur", str(e), parent=dlg)
+
+        from gui_validation import launch_chirosurf
+        exe = self.settings.chirosurf_path
 
         for nf in nights:
             row = ctk.CTkFrame(box, fg_color=("#eef5ff", "#16263d"), corner_radius=6)
@@ -2201,14 +2256,45 @@ class ChiroToolApp(ctk.CTk):
             def _open_synth(n=nf.night_index):
                 dlg.destroy()
                 SynthesisView(
-                    self, session_path=s.path, xlsx_path=xlsx,
+                    self, session_path=session_path, xlsx_path=xlsx,
                     prefer_vu_night=n,
                 )
 
+            def _open_raw(p=nf.raw_path):
+                if not p.is_file():
+                    messagebox.showwarning(
+                        "CSV absent",
+                        "Régénérez les CSV bruts d'abord.",
+                        parent=dlg,
+                    )
+                    return
+                launch_chirosurf(exe, p, parent=dlg)
+
+            def _open_vu(p=nf.vu_path, has=nf.has_vu):
+                if not has or not p.is_file():
+                    messagebox.showinfo(
+                        "Pas encore de _Vu",
+                        "Ouvrez d'abord le CSV brut dans ChiroSurf et "
+                        "validez (10 %→75 %). Le _Vu apparaît à côté.",
+                        parent=dlg,
+                    )
+                    return
+                launch_chirosurf(exe, p, parent=dlg)
+
             ctk.CTkButton(
-                row, text="Synthèse", width=90, height=28,
+                row, text="Synthèse", width=88, height=28,
                 command=_open_synth,
-            ).pack(side="right", padx=6, pady=6)
+            ).pack(side="right", padx=(4, 6), pady=6)
+            ctk.CTkButton(
+                row, text="📈 _Vu", width=78, height=28,
+                fg_color=("#2ea043" if nf.has_vu else ("gray85", "gray25")),
+                text_color=("white" if nf.has_vu else ("gray15", "gray90")),
+                command=_open_vu,
+            ).pack(side="right", padx=2, pady=6)
+            ctk.CTkButton(
+                row, text="▶ ChiroSurf", width=100, height=28,
+                command=_open_raw,
+            ).pack(side="right", padx=2, pady=6)
 
         footer = ctk.CTkFrame(dlg, fg_color="transparent")
         footer.pack(fill="x", padx=12, pady=10)
@@ -2309,7 +2395,8 @@ class ChiroToolApp(ctk.CTk):
             except Exception:
                 prefill = None
 
-        meta = open_wizard(self, prefill=prefill, session_name=s.name)
+        meta = open_wizard(self, prefill=prefill, session_name=s.name,
+                           session_path=s.path)
         if meta is None:
             return
         m = Manifest.load_or_create(s.path)

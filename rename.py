@@ -476,6 +476,38 @@ def rename_session(
 # Auto-résolution depuis le Suivi (best-effort)
 # ---------------------------------------------------------------------------
 
+def inspect_summary_vs_wav(session: Path) -> dict:
+    """Compare le Summary.txt aux timestamps des WAV du dossier.
+
+    Les WAV font foi. Un Summary cumulatif (carte SD non formatée) déclenche
+    ``prefer_wav`` + ``warning`` (texte utilisateur).
+    """
+    from chiro_core import (
+        find_summary_file,
+        list_session_wav_names,
+        parse_summary_txt,
+        should_prefer_wav_dates,
+        summary_vs_wav_warning,
+    )
+    from naming import wav_timestamp_range
+
+    session = Path(session)
+    wav_min, wav_max = wav_timestamp_range(list_session_wav_names(session))
+    wav_dir = session if _dir_has_wavs(session) else _find_raw_wav_subdir(session)
+    summ = find_summary_file(session) or (
+        find_summary_file(wav_dir) if wav_dir is not None and wav_dir != session else None)
+    summary_info = parse_summary_txt(summ) if summ is not None else None
+    prefer = bool(should_prefer_wav_dates(summary_info, wav_min) and wav_min)
+    return {
+        "summary": summary_info,
+        "summary_path": summ,
+        "wav_min": wav_min,
+        "wav_max": wav_max,
+        "prefer_wav": prefer,
+        "warning": summary_vs_wav_warning(summary_info, wav_min, wav_max),
+    }
+
+
 def try_auto_meta(session: Path) -> tuple[SessionMeta | None, list[str]]:
     """
     Tente de reconstruire les metadata depuis :
@@ -506,23 +538,24 @@ def try_auto_meta(session: Path) -> tuple[SessionMeta | None, list[str]]:
     else:
         msgs.append("aucune série détectable dans les WAV")
 
-    # Date début : WAV si le Summary couvre une autre période (Jeanne),
-    # sinon Summary, sinon 1er WAV.
-    date_debut: datetime | None = None
-    from chiro_core import find_summary_file, should_prefer_wav_dates
-    from naming import wav_timestamp_range
-    wav_min, _wav_max = wav_timestamp_range(wav_names)
-    summ = find_summary_file(session) or (
-        find_summary_file(wav_dir) if wav_dir != session else None)
-    summary_info = parse_summary_txt(summ) if summ is not None else None
-    if should_prefer_wav_dates(summary_info, wav_min) and wav_min:
+    info = inspect_summary_vs_wav(session)
+    date_debut = None
+    wav_min = info.get("wav_min")
+    summary_info = info.get("summary")
+    if info.get("prefer_wav") and wav_min:
         date_debut = wav_min
-        why = "Summary multi-jours / autre jour que les WAV" if summary_info else "noms WAV"
-        msgs.append(f"date début détectée via {why} : {date_debut:%Y-%m-%d}")
+        if info.get("warning"):
+            msgs.append(
+                "⚠ Summary ≠ WAV (carte SD souvent non formatée) — "
+                f"date prise sur les fichiers : {date_debut:%Y-%m-%d}"
+            )
+        else:
+            msgs.append(f"date début détectée via noms WAV : {date_debut:%Y-%m-%d}")
     elif summary_info and summary_info.start_dt:
         date_debut = summary_info.start_dt
+        summ_name = Path(info["summary_path"]).name if info.get("summary_path") else "Summary"
         msgs.append(
-            f"date début détectée via {summ.name} : {date_debut:%Y-%m-%d}"
+            f"date début détectée via {summ_name} : {date_debut:%Y-%m-%d}"
         )
     elif wav_min is not None:
         date_debut = wav_min

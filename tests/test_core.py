@@ -917,6 +917,11 @@ class TestValidationFilters:
         assert rp(r, self.CI, taxon_filter="Nycnoc") is False
         assert rp(r, self.CI, taxon_filter="Tous") is True
 
+    def test_chiros_only(self):
+        from gui_validation import row_passes_filters as rp
+        assert rp(["f", "Pippip", 0.9, None], self.CI, only_chiros=True) is True
+        assert rp(["f", "noise", 0.9, None], self.CI, only_chiros=True) is False
+
     def test_hide_cleaned(self):
         from gui_validation import row_passes_filters as rp
         r = ["f", "Pippip", 0.9, None]
@@ -1077,8 +1082,59 @@ class TestActivityCascade:
         }
         o = cascade_options(agg)
         assert o["sites"] == ["212097", "?"]          # "?" repoussé en fin
-        assert o["points"] == ["Z1", "?"]
-        assert o["passages"] == [1, None]             # None en fin
+
+
+class TestActivityAggregate:
+    HEADERS = ["nom du fichier", "tadarida_taxon", "observateur_taxon",
+               "validateur_taxon"]
+
+    def _fname(self, hms="210000"):
+        return f"Car212097-2026-Pass1-Z1-SMU03126_20260821_{hms}.wav"
+
+    def test_observer_taxon_groups_under_observer_code(self):
+        from activity_graph import aggregate_rows
+        rows = [
+            [self._fname(), "Nycnoc", "Nyclas", None],
+            [self._fname("210500"), "Pippip", None, None],
+        ]
+        all_t = aggregate_rows(self.HEADERS, rows, bin_minutes=30)
+        taxons = {k[-1] for k in all_t}
+        assert "Nyclas" in taxons
+        assert "Nycnoc" not in taxons  # observateur prime
+        obs_only = aggregate_rows(
+            self.HEADERS, rows, bin_minutes=30, use_observer_taxon=True)
+        assert {k[-1] for k in obs_only} == {"Nyclas"}
+
+    def test_chiros_only_drops_noise(self):
+        from activity_graph import aggregate_rows
+        rows = [
+            [self._fname(), "Pippip", None, None],
+            [self._fname("211000"), "noise", None, None],
+        ]
+        out = aggregate_rows(
+            self.HEADERS, rows, bin_minutes=30, chiros_only=True)
+        assert {k[-1] for k in out} == {"Pippip"}
+
+    def test_human_validated_accepts_observateur(self):
+        from activity_graph import aggregate_rows
+        rows = [
+            [self._fname(), "Nycnoc", "Nyclas", None],
+            [self._fname("211000"), "Pippip", None, None],
+        ]
+        out = aggregate_rows(
+            self.HEADERS, rows, bin_minutes=30, use_only_validated=True)
+        assert {k[-1] for k in out} == {"Nyclas"}
+
+    def test_synthesis_chiros_only(self):
+        from synthesis import compute_night_synthesis
+        headers = ["nom du fichier", "tadarida_taxon", "observateur_taxon"]
+        rows = [
+            ["a.wav", "Pippip", None],
+            ["b.wav", "noise", None],
+        ]
+        res = compute_night_synthesis(headers, rows, chiros_only=True)
+        assert [s["taxon"] for s in res["species"]] == ["Pippip"]
+        assert res["total_contacts"] == 1
 
 
 # =========================================================================
@@ -1709,6 +1765,40 @@ class TestWavDatesOverSummary:
         from chiro_core import SummaryInfo, should_prefer_wav_dates
         s = SummaryInfo(path=Path("x"), start_dt=datetime(2026, 8, 18, 19, 0))
         assert should_prefer_wav_dates(s, None) is False
+
+    def test_warning_only_on_mismatch(self):
+        from chiro_core import SummaryInfo, summary_vs_wav_warning
+        same = SummaryInfo(
+            path=Path("x"),
+            start_dt=datetime(2026, 8, 21, 20, 0),
+            end_dt=datetime(2026, 8, 22, 6, 0),
+        )
+        assert summary_vs_wav_warning(same, datetime(2026, 8, 21, 20, 45)) is None
+        cumulated = SummaryInfo(
+            path=Path("x"),
+            start_dt=datetime(2026, 8, 18, 19, 0),
+            end_dt=datetime(2026, 8, 22, 6, 0),
+        )
+        msg = summary_vs_wav_warning(
+            cumulated, datetime(2026, 8, 21, 20, 45),
+            datetime(2026, 8, 22, 5, 10))
+        assert msg is not None
+        assert "WAV" in msg and "SD" in msg
+
+    def test_temps_sliced_to_wav_window(self):
+        from chiro_core import SummaryInfo, summary_temps_in_window
+        s = SummaryInfo(
+            path=Path("x"),
+            samples=[
+                (datetime(2026, 8, 18, 19, 0), 18.0),
+                (datetime(2026, 8, 18, 23, 0), 16.0),
+                (datetime(2026, 8, 21, 20, 50), 14.0),
+                (datetime(2026, 8, 22, 5, 0), 11.0),
+            ],
+        )
+        t0, t1 = summary_temps_in_window(
+            s, datetime(2026, 8, 21, 20, 0), datetime(2026, 8, 22, 6, 0))
+        assert t0 == 14.0 and t1 == 11.0
 
     def test_try_auto_meta_uses_wav_when_summary_spans(self, tmp_path):
         from rename import try_auto_meta

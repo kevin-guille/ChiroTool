@@ -26,11 +26,11 @@ from pathlib import Path
 import customtkinter as ctk
 
 from chiro_core import (
-    _dir_has_wavs,
-    _find_raw_wav_subdir,
     find_summary_file,
+    list_session_wav_names,
     parse_summary_txt,
     should_prefer_wav_dates,
+    summary_temps_in_window,
 )
 from manifest import Manifest
 from naming import SessionMeta, wav_timestamp_range
@@ -79,26 +79,7 @@ class ParticipationWizard(ctk.CTkToplevel):
 
     def _session_wav_names(self) -> list[str]:
         """Noms WAV de la session (Data_k après TE×10, sinon Data/ ou racine)."""
-        names: list[str] = []
-        dirs: list[Path] = []
-        dk = self.session_path / "Data_k"
-        if dk.is_dir():
-            dirs.append(dk)
-        if _dir_has_wavs(self.session_path):
-            dirs.append(self.session_path)
-        sub = _find_raw_wav_subdir(self.session_path)
-        if sub is not None and sub not in dirs:
-            dirs.append(sub)
-        seen: set[str] = set()
-        for d in dirs:
-            try:
-                for p in d.iterdir():
-                    if p.is_file() and p.suffix.lower() == ".wav" and p.name not in seen:
-                        seen.add(p.name)
-                        names.append(p.name)
-            except OSError:
-                continue
-        return names
+        return list_session_wav_names(self.session_path)
 
     def _collect_prefill(self) -> dict:
         """Agrège les valeurs pré-remplies depuis Summary.txt + Suivi + manifest."""
@@ -129,6 +110,15 @@ class ParticipationWizard(ctk.CTkToplevel):
             if wav_max:
                 pre["date_fin"] = wav_max
             pre["_dates_from_wav"] = True
+            t0, t1 = summary_temps_in_window(s, wav_min, wav_max)
+            if t0 is not None:
+                pre["temperature_debut"] = int(round(t0))
+            else:
+                pre.pop("temperature_debut", None)
+            if t1 is not None:
+                pre["temperature_fin"] = int(round(t1))
+            else:
+                pre.pop("temperature_fin", None)
 
         # 2. Parc matériel local (Préférences → Mes matériels) PRIORITAIRE.
         # C'est la source canonique : modèle + micro à jour, pas dépendant
@@ -595,9 +585,12 @@ class ParticipationWizard(ctk.CTkToplevel):
         if pre.get("_dates_from_wav"):
             try:
                 self._dates_hint.configure(
-                    text="Dates prises sur les WAV : le Summary couvre plusieurs "
-                         "jours (ou un autre jour). Corrigez si besoin — une "
-                         "ancienne participation au mauvais jour ne sera pas réutilisée.")
+                    text="⚠ Summary ≠ WAV (carte SD souvent non formatée : "
+                         "l'ancienne nuit reste dans le Summary). Dates prises "
+                         "sur les fichiers. Vérifiez les T° — elles peuvent "
+                         "mélanger plusieurs nuits.",
+                    text_color=("#b45309", "#fbbf24"),
+                )
             except Exception:
                 pass
 
@@ -792,6 +785,20 @@ class ParticipationWizard(ctk.CTkToplevel):
         if errs:
             self.err_lbl.configure(text="⚠  " + "\n⚠  ".join(errs))
             return
+
+        if self._prefill.get("_dates_from_wav"):
+            from tkinter import messagebox
+            if not messagebox.askyesno(
+                "Summary et WAV différents",
+                "Le Summary.txt ne correspond pas aux WAV de ce dossier "
+                "(carte SD souvent non formatée entre deux nuits : "
+                "l'ancienne pose reste dans le Summary).\n\n"
+                "Les dates affichées viennent des fichiers WAV — ce sont "
+                "eux qui font foi. Vérifiez aussi les températures, puis "
+                "continuez ?",
+                parent=self,
+            ):
+                return
 
         # Construction du payload — n'envoyer que les champs météo réellement
         # renseignés (pas de None / pas de fausses valeurs par défaut).

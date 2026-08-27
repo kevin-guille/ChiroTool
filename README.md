@@ -69,7 +69,9 @@ Correctifs déjà dans le dépôt, visibles après `git pull` / prochain exe :
 | 🏷️ | **Titley** Anabat Swift / Ranger (noms usine `YYYY-MM-DD HH-MM-SS`) | Plus besoin de passer par XnView ; TE×10 sans collision ; Préparer s’arrête si aucun nom n’est lisible ([#4](https://github.com/kevin-guille/ChiroTool/issues/4)) |
 | 📂 | **Démarrage** : plus de scan auto du dernier dossier | Un SSD EXFAT endormi ne fige plus l’UI ; **Parcourir** reste cliquable ([#5](https://github.com/kevin-guille/ChiroTool/issues/5)) |
 | 📅 | **Dates** : Summary multi-jours → dates prises sur les WAV | Une nuit extraite d’une pose longue n’hérite plus du premier jour du Summary |
-| 🔍 | **Valider** : tri des colonnes, filtre taxon observateur, bilan `X / Y` | Lecture plus rapide d’une nuit validée ([#4](https://github.com/kevin-guille/ChiroTool/issues/4)) |
+| 🔍 | **Valider** : tri, filtres observateur / chiros, bilan `X / Y` | Lecture plus rapide d’une nuit validée ([#4](https://github.com/kevin-guille/ChiroTool/issues/4)) |
+| 🌊 | **ChiroSurf nuits** : ▶ CSV brut, 📈 `_Vu` | Validation 10 %→75 % et graphes sans passer par l’explorateur |
+| 📈 | **Activité** : chiros seulement + taxons observateur | Les Nyclas (etc.) ajoutés à la main apparaissent dans les graphes |
 
 Préférences → Général : **Garder en mémoire le dernier dossier** (coché par défaut) réaffiche le chemin **sans** le rescanner.
 

@@ -134,6 +134,30 @@ def parse_filename_time(name: str) -> tuple[str, int] | None:
     return date_s, h * 60 + mn
 
 
+def _header_index(header_row) -> dict[str, int]:
+    """Indices de colonnes, insensible à la casse / espaces."""
+    idx: dict[str, int] = {}
+    for i, h in enumerate(header_row or ()):
+        if h is None:
+            continue
+        key = str(h).strip().lower()
+        if key:
+            idx[key] = i
+    return idx
+
+
+def is_chiro_taxon(taxon: str | None) -> bool:
+    """True si le code est un chiroptère (liste SpeciesList / préfixes)."""
+    from taxons import classify_taxon
+    return classify_taxon(taxon) == "chiros"
+
+
+def _cell(row, i: int | None):
+    if i is None or i < 0 or i >= len(row):
+        return None
+    return row[i]
+
+
 def best_taxon(row_lookup: dict, idx_validateur: int | None,
                 idx_observateur: int | None,
                 idx_tadarida: int | None) -> str | None:
@@ -164,103 +188,153 @@ def _bin_count(bin_size: int) -> int:
     return 1440 // bin_size
 
 
-def aggregate_xlsx(xlsx_path: Path, *,
-                    bin_minutes: int = 30,
-                    taxon_filter: str | None = None,
-                    use_only_validated: bool = False
-                    ) -> dict[tuple[str, str, int | None, str, str], list[int]]:
-    """Agrège un xlsx d'observations en
+def aggregate_rows(headers, rows, *,
+                   bin_minutes: int = 30,
+                   taxon_filter: str | None = None,
+                   use_only_validated: bool = False,
+                   use_observer_taxon: bool = False,
+                   chiros_only: bool = False,
+                   ) -> dict[tuple[str, str, int | None, str, str], list[int]]:
+    """Agrège des lignes d'observations en
     ``{(site, point, passage, night_date, taxon): bins}``.
 
-    - ``site`` : numéro à 6 chiffres (carré STOC). "?" si non extractible
-    - ``point`` : "Z3", "A1", … "?" si non extractible
-    - ``passage`` : entier (1, 2, …) ou None si non extractible
-    - ``night_date`` : "YYYY-MM-DD"
-    - ``taxon`` : nom du taxon (validateur > observateur > tadarida)
-
-    Le contexte (site, point, passage) est extrait du **nom de fichier** de
-    chaque contact (format canonique Vigie-Chiro Car<SITE>-<YYYY>-Pass<N>-
-    <POINT>-...). Les contacts dont le nom n'est pas au format canonique
-    sont quand même comptés sous la clé spéciale ("?", "?", None, …) pour
-    ne pas les perdre, mais ils ne seront pas filtrables par site/point.
-
-    - ``bin_minutes`` : taille d'une tranche (5, 15, 30, 60)
-    - ``taxon_filter`` : si fourni, ne garde que les contacts de ce taxon
-    - ``use_only_validated`` : si True, ignore les contacts sans validateur_taxon
+    - ``use_only_validated`` : ignore les contacts sans identification
+      humaine (``validateur_taxon`` **ou** ``observateur_taxon``).
+    - ``use_observer_taxon`` : ne garder que les lignes avec
+      ``observateur_taxon`` et grouper sous ce code (issue #4.10).
+    - ``chiros_only`` : ignorer orthoptères / bruit / oiseaux (issue #4.9).
     """
-    import openpyxl
     if bin_minutes <= 0 or 1440 % bin_minutes != 0:
         raise ValueError("bin_minutes doit diviser 1440 (1, 5, 15, 30, 60…)")
-    wb = openpyxl.load_workbook(xlsx_path, read_only=True, data_only=True)
-    try:
-        ws = wb.active
-        rows = ws.iter_rows(values_only=True)
-        try:
-            header = next(rows)
-        except StopIteration:
-            return {}
-        idx = {h: i for i, h in enumerate(header) if h}
-        idx_filename = idx.get("nom du fichier")
-        idx_validateur = idx.get("validateur_taxon")
-        idx_observateur = idx.get("observateur_taxon")
-        idx_tadarida = idx.get("tadarida_taxon")
-        if idx_filename is None:
-            return {}
+    idx = _header_index(headers)
+    idx_filename = idx.get("nom du fichier")
+    if idx_filename is None:
+        idx_filename = idx.get("fichier")
+    if idx_filename is None:
+        idx_filename = idx.get("filename")
+    idx_validateur = idx.get("validateur_taxon")
+    idx_observateur = idx.get("observateur_taxon")
+    idx_tadarida = idx.get("tadarida_taxon")
+    if idx_filename is None:
+        return {}
 
-        nbins = _bin_count(bin_minutes)
-        result: dict[tuple[str, str, int | None, str, str], list[int]] = {}
+    nbins = _bin_count(bin_minutes)
+    result: dict[tuple[str, str, int | None, str, str], list[int]] = {}
 
-        for r in rows:
-            if not r or len(r) <= idx_filename:
+    for r in rows:
+        if not r or len(r) <= idx_filename:
+            continue
+        fname = r[idx_filename]
+        if not fname:
+            continue
+        fname_s = str(fname)
+        parsed_time = parse_filename_time(fname_s)
+        if not parsed_time:
+            continue
+        date_s, mins = parsed_time
+        night_date = _night_date_iso(date_s, mins)
+
+        ctx = parse_filename_context(fname_s)
+        if ctx is not None:
+            site = ctx["site"]
+            point = ctx["point"]
+            passage = ctx["passage"]
+        else:
+            site, point, passage = "?", "?", None
+
+        obs = _cell(r, idx_observateur)
+        obs_s = str(obs).strip() if obs not in (None, "") else ""
+        val = _cell(r, idx_validateur)
+        val_s = str(val).strip() if val not in (None, "") else ""
+
+        if use_observer_taxon:
+            if not obs_s:
                 continue
-            fname = r[idx_filename]
-            if not fname:
+            taxon = obs_s
+        else:
+            if use_only_validated and not (val_s or obs_s):
                 continue
-            fname_s = str(fname)
-            parsed_time = parse_filename_time(fname_s)
-            if not parsed_time:
-                continue
-            date_s, mins = parsed_time
-            # Notion de NUIT biologique : un contact après minuit (avant ~12h)
-            # appartient à la nuit commencée la veille au soir. Sans ce
-            # rattachement, les contacts de 22h le 3 sept et 02h le 4 sept
-            # (même nuit) seraient comptés sur deux dates différentes.
-            night_date = _night_date_iso(date_s, mins)
-
-            # Extrait le contexte site/point/passage. Pour un fichier non
-            # canonique on tombe sur ("?", "?", None) — ces lignes restent
-            # comptées mais hors filtres site/point.
-            ctx = parse_filename_context(fname_s)
-            if ctx is not None:
-                site = ctx["site"]
-                point = ctx["point"]
-                passage = ctx["passage"]
-            else:
-                site, point, passage = "?", "?", None
-
-            row_lookup = {i: r[i] if i < len(r) else None for i in idx.values()}
-            if use_only_validated:
-                v = row_lookup.get(idx_validateur)
-                if not v or not str(v).strip():
-                    continue
-
+            row_lookup = {i: r[i] if i < len(r) else None for i in range(len(r))}
             taxon = best_taxon(row_lookup, idx_validateur,
                                 idx_observateur, idx_tadarida) or "(?)"
 
-            if taxon_filter and taxon != taxon_filter:
-                continue
+        if taxon_filter and taxon != taxon_filter:
+            continue
+        if chiros_only and not is_chiro_taxon(taxon):
+            continue
 
-            key = (site, point, passage, night_date, taxon)
-            if key not in result:
-                result[key] = [0] * nbins
-            result[key][_bin_index(mins, bin_minutes)] += 1
+        key = (site, point, passage, night_date, taxon)
+        if key not in result:
+            result[key] = [0] * nbins
+        result[key][_bin_index(mins, bin_minutes)] += 1
 
-        return result
+    return result
+
+
+def _iter_table_file(path: Path):
+    """Yield (headers, rows) depuis un xlsx ou un CSV ChiroSurf."""
+    path = Path(path)
+    if path.suffix.lower() == ".csv":
+        import csv
+        text = path.read_text(encoding="utf-8", errors="replace")
+        lines = text.splitlines()
+        if not lines:
+            return
+        first = lines[0]
+        delim = ";" if first.count(";") >= first.count(",") else ","
+        reader = csv.reader(lines, delimiter=delim)
+        headers = next(reader, None)
+        if not headers:
+            return
+        rows = [list(r) for r in reader if r and any(str(c).strip() for c in r)]
+        yield headers, rows
+        return
+    import openpyxl
+    wb = openpyxl.load_workbook(path, read_only=True, data_only=True)
+    try:
+        ws = wb.active
+        it = ws.iter_rows(values_only=True)
+        try:
+            header = next(it)
+        except StopIteration:
+            return
+        yield header, it
     finally:
         try:
             wb.close()
         except Exception:
             pass
+
+
+def aggregate_xlsx(xlsx_path: Path, *,
+                    bin_minutes: int = 30,
+                    taxon_filter: str | None = None,
+                    use_only_validated: bool = False,
+                    use_observer_taxon: bool = False,
+                    chiros_only: bool = False,
+                    ) -> dict[tuple[str, str, int | None, str, str], list[int]]:
+    """Agrège un xlsx **ou** un CSV ``_Vu`` / nuit ChiroSurf."""
+    result: dict[tuple[str, str, int | None, str, str], list[int]] = {}
+    for headers, rows in _iter_table_file(Path(xlsx_path)):
+        partial = aggregate_rows(
+            headers, rows,
+            bin_minutes=bin_minutes,
+            taxon_filter=taxon_filter,
+            use_only_validated=use_only_validated,
+            use_observer_taxon=use_observer_taxon,
+            chiros_only=chiros_only,
+        )
+        for k, bins in partial.items():
+            if k not in result:
+                result[k] = list(bins)
+            else:
+                cur = result[k]
+                for i, n in enumerate(bins):
+                    if i < len(cur):
+                        cur[i] += n
+                    else:
+                        cur.append(n)
+    return result
 
 
 def aggregate_multi_xlsx(paths: Iterable[Path], **kwargs

@@ -8,14 +8,20 @@ Les versions publiées suivent le SemVer du fichier `version.py` / tags GitHub.
 ### Ajouté
 
 - **Valider** : tri au clic sur les en-têtes (asc / desc / ordre d'origine) ;
-  filtre « Taxon observateur renseigné uniquement » (issue #4).
+  filtre « Taxon observateur renseigné uniquement » ; filtre **Chiros
+  seulement** (issue #4).
 - **Vue session** : bilan `X / Y` contacts avec taxon observateur (xlsx en
   arrière-plan, cache) et nombre d'identifications déjà envoyées si sidecar.
+- **ChiroSurf nuits** : ouverture du CSV brut (▶ ChiroSurf) et du `_Vu`
+  (📈 graphes) depuis la liste des nuits et depuis Valider (issue #4.8).
+- **Activité** : filtres **Chiros seulement** et **Taxons observateur** ;
+  lecture des CSV `_Vu` (issue #4.9–10).
 
 ### Corrigé
 
 - **Valider** : le 2e clic sur un en-tête conserve le tri (callback heading
   reposé après mise à jour du libellé ▲ / ▼).
+- **Vue session** : bouton **Nettoyer** à droite de **Valider** (issue #4.5).
 - **Upload / participation** : libellés Vent et Couverture nuageuse lisibles
   (titre + aide empilés, plus superposés).
 - **Démarrage** (issue #5) : plus de scan auto du dernier dossier (EXFAT /
@@ -26,9 +32,11 @@ Les versions publiées suivent le SemVer du fichier `version.py` / tags GitHub.
   (espace ou underscore, ± n° d'enregistreur) lus au renommage ; TE×10
   incrémente l'heure des tranches (plus de collision / perte des 5 s
   suivantes) ; **Préparer s'arrête** si aucun nom n'est lisible.
-- **Dates Summary vs une nuit** (Jeanne) : si le Summary couvre plusieurs
-  jours, date de dossier / participation prise sur les WAV ; une
-  participation déjà créée au mauvais jour n'est plus réutilisée.
+- **Dates Summary vs une nuit** (Jeanne) : si le Summary ne correspond pas
+  aux WAV (carte SD non formatée, pose cumulée), **avertissement** à la
+  préparation et avant l'upload ; dates (et T° si recoupement) prises sur
+  les fichiers ; une participation déjà créée au mauvais jour n'est plus
+  réutilisée.
 
 ### Documentation
 

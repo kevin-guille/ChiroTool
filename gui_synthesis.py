@@ -108,6 +108,12 @@ class SynthesisView(ctk.CTkToplevel):
             variable=self.validated_only_var, command=self._recompute,
             font=ctk.CTkFont(size=11), checkbox_width=18, checkbox_height=18,
         ).grid(row=1, column=0, sticky="w", pady=(4, 0))
+        self.chiros_only_var = ctk.BooleanVar(value=False)
+        ctk.CTkCheckBox(
+            header, text="Chiros seulement",
+            variable=self.chiros_only_var, command=self._recompute,
+            font=ctk.CTkFont(size=11), checkbox_width=18, checkbox_height=18,
+        ).grid(row=1, column=1, sticky="w", pady=(4, 0), padx=(12, 0))
 
         # Filtre proba Tadarida min (synthèse non validée) — issue #3
         filt = ctk.CTkFrame(header, fg_color="transparent")
@@ -222,6 +228,7 @@ class SynthesisView(ctk.CTkToplevel):
     def _recompute(self):
         """(Re)calcule la synthèse selon filtres, puis niveaux d'activité."""
         vo = bool(self.validated_only_var.get()) if hasattr(self, "validated_only_var") else False
+        chiros = bool(self.chiros_only_var.get()) if hasattr(self, "chiros_only_var") else False
         thr = None
         if hasattr(self, "min_proba_var"):
             raw = (self.min_proba_var.get() or "").strip().replace(",", ".")
@@ -236,6 +243,7 @@ class SynthesisView(ctk.CTkToplevel):
             self._headers, self._rows,
             validated_only=vo,
             min_tadarida_proba=thr,
+            chiros_only=chiros,
         )
         self._apply_activity()
 

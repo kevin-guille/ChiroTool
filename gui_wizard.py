@@ -45,7 +45,8 @@ class SessionMetaWizard(ctk.CTkToplevel):
     la ``SessionMeta`` (ou None si annulé)."""
 
     def __init__(self, master, *, prefill: SessionMeta | None = None,
-                 session_name: str | None = None):
+                 session_name: str | None = None,
+                 session_path: Path | None = None):
         super().__init__(master)
         self.title("Métadonnées de la session")
         self.geometry("640x600")
@@ -58,12 +59,14 @@ class SessionMetaWizard(ctk.CTkToplevel):
         self._result: SessionMeta | None = None
         self.suivi = _load_suivi_safe()
         self.session_name = session_name or "(session)"
+        self.session_path = Path(session_path) if session_path else None
 
         self._build_ui()
         if prefill:
             self._fill_from(prefill)
         # Continuité carte → meta : préremplit site/point si absents du guess
         self._apply_active_point_prefill(prefill)
+        self._apply_summary_wav_hint()
 
         self.protocol("WM_DELETE_WINDOW", self._on_cancel)
         self._load_recent_points_async()
@@ -174,6 +177,16 @@ class SessionMetaWizard(ctk.CTkToplevel):
             hover_color=("gray75", "gray35"),
             command=self._open_date_picker,
         ).grid(row=0, column=1, padx=(4, 0))
+        row += 1
+
+        self._date_hint = ctk.CTkLabel(
+            form, text="",
+            font=ctk.CTkFont(size=10),
+            text_color=("#b45309", "#fbbf24"),
+            anchor="w", justify="left", wraplength=400,
+        )
+        self._date_hint.grid(row=row, column=0, columnspan=2,
+                             sticky="ew", padx=16, pady=(0, 4))
         row += 1
 
         # --- Site Tadarida ---
@@ -1008,6 +1021,34 @@ class SessionMetaWizard(ctk.CTkToplevel):
 
     # -- Pré-remplissage / watchers ----------------------------------------
 
+    def _summary_wav_warning(self) -> str | None:
+        if not self.session_path:
+            return None
+        try:
+            from rename import inspect_summary_vs_wav
+            return inspect_summary_vs_wav(self.session_path).get("warning")
+        except Exception:
+            return None
+
+    def _apply_summary_wav_hint(self):
+        warn = self._summary_wav_warning()
+        if not warn:
+            return
+        try:
+            from rename import inspect_summary_vs_wav
+            info = inspect_summary_vs_wav(self.session_path)
+            wav_min = info.get("wav_min")
+            if wav_min is not None:
+                self.date_var.set(wav_min.strftime("%Y-%m-%d"))
+            self._date_hint.configure(
+                text="⚠ Summary ≠ WAV (carte SD souvent non formatée). "
+                     "Date proposée = celle des fichiers.")
+        except Exception:
+            try:
+                self._date_hint.configure(text="⚠ " + warn.splitlines()[0])
+            except Exception:
+                pass
+
     def _fill_from(self, meta: SessionMeta):
         if meta.nom_contrat:
             self.contrat_var.set(meta.nom_contrat)
@@ -1212,14 +1253,16 @@ class SessionMetaWizard(ctk.CTkToplevel):
 
 
 def open_wizard(master, *, prefill: SessionMeta | None = None,
-                session_name: str | None = None) -> SessionMeta | None:
+                session_name: str | None = None,
+                session_path: Path | None = None) -> SessionMeta | None:
     """Helper : ouvre le wizard bloquant et retourne la SessionMeta ou None.
 
     Si un PointSelection a été retenu (pick carte / récent avec GPS), il est
     attaché sur ``meta._point_selection`` pour que l'appelant le fusionne
     dans le manifest (D8).
     """
-    dlg = SessionMetaWizard(master, prefill=prefill, session_name=session_name)
+    dlg = SessionMetaWizard(master, prefill=prefill, session_name=session_name,
+                            session_path=session_path)
     master.wait_window(dlg)
     meta = dlg.get()
     if meta is not None:

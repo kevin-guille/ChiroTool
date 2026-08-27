@@ -186,6 +186,9 @@ class SummaryInfo:
     start_dt: datetime | None = None
     end_dt: datetime | None = None
     n_lines: int = 0
+    # (datetime, T°) de chaque ligne — pour extraire UNE nuit d'un Summary
+    # cumulatif (carte SD non formatée). Non sérialisé dans SessionState.
+    samples: list[tuple[datetime, float | None]] = field(default_factory=list)
     temp_start: float | None = None
     temp_end: float | None = None
     temp_min: float | None = None
@@ -267,6 +270,8 @@ def parse_summary_txt(path: Path) -> SummaryInfo | None:
         if first is None:
             first = (dt, t, bat, cols[idx["lat"]], cols[idx["lon"]])
         last = (dt, t, bat)
+        if dt is not None:
+            info.samples.append((dt, t))
         info.n_lines += 1
 
     if first:
@@ -300,9 +305,9 @@ def should_prefer_wav_dates(
 ) -> bool:
     """True si les dates de participation / dossier doivent venir des WAV.
 
-    Cas Jeanne : un Summary SM4 couvre plusieurs jours de pose, mais le dossier
-    ne contient qu'une nuit. Utiliser ``start_dt`` du Summary crée une
-    participation au mauvais jour et bloque l'upload.
+    Les WAV du dossier sont la vérité. Un Summary SM4 peut couvrir plus que
+    cette nuit : carte SD non formatée entre deux poses (l'ancienne nuit
+    reste, la nouvelle s'ajoute), ou copie locale incomplète.
 
     - pas de WAV horodaté → False (on garde le Summary) ;
     - pas de Summary mais des WAV → True ;
@@ -320,6 +325,78 @@ def should_prefer_wav_dates(
         if span_h > max_span_hours:
             return True
     return False
+
+
+def _fmt_short_dt(dt: datetime | None) -> str:
+    return dt.strftime("%d/%m %H:%M") if dt is not None else "?"
+
+
+def summary_vs_wav_warning(
+    summary: SummaryInfo | None,
+    wav_min: datetime | None,
+    wav_max: datetime | None = None,
+) -> str | None:
+    """Message utilisateur si le Summary ne décrit pas les WAV du dossier.
+
+    None si rien à signaler (pas de Summary, pas de WAV, ou même nuit).
+    """
+    if summary is None or summary.start_dt is None or wav_min is None:
+        return None
+    if not should_prefer_wav_dates(summary, wav_min):
+        return None
+    wav_end = wav_max or wav_min
+    return (
+        f"Le Summary.txt ({_fmt_short_dt(summary.start_dt)} → "
+        f"{_fmt_short_dt(summary.end_dt)}) ne correspond pas aux WAV du "
+        f"dossier ({_fmt_short_dt(wav_min)} → {_fmt_short_dt(wav_end)}).\n\n"
+        "Les fichiers WAV font foi. Cause fréquente : carte SD non formatée "
+        "entre deux nuits — le Summary accumule l'ancienne pose.\n\n"
+        "La date retenue est celle des WAV. Vérifiez les températures "
+        "(le Summary peut mélanger plusieurs nuits)."
+    )
+
+
+def summary_temps_in_window(
+    summary: SummaryInfo | None,
+    t0: datetime | None,
+    t1: datetime | None,
+) -> tuple[float | None, float | None]:
+    """T° début/fin des lignes Summary dans [t0, t1]. (None, None) si rien."""
+    if summary is None or t0 is None or t1 is None:
+        return None, None
+    lo, hi = (t0, t1) if t0 <= t1 else (t1, t0)
+    temps = [
+        t for dt, t in (summary.samples or [])
+        if dt is not None and lo <= dt <= hi and t is not None
+    ]
+    if not temps:
+        return None, None
+    return temps[0], temps[-1]
+
+
+def list_session_wav_names(session: Path) -> list[str]:
+    """Noms WAV de la session (Data_k après TE×10, sinon Data/ ou racine)."""
+    session = Path(session)
+    dirs: list[Path] = []
+    dk = session / "Data_k"
+    if dk.is_dir():
+        dirs.append(dk)
+    if _dir_has_wavs(session):
+        dirs.append(session)
+    sub = _find_raw_wav_subdir(session)
+    if sub is not None and sub not in dirs:
+        dirs.append(sub)
+    names: list[str] = []
+    seen: set[str] = set()
+    for d in dirs:
+        try:
+            for p in d.iterdir():
+                if p.is_file() and p.suffix.lower() == ".wav" and p.name not in seen:
+                    seen.add(p.name)
+                    names.append(p.name)
+        except OSError:
+            continue
+    return names
 
 
 # ---------------------------------------------------------------------------
