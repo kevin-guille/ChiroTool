@@ -21,11 +21,15 @@ décrivant :
   sites précis et coordonnées GPS de points d'écoute avant de joindre une capture
   ou un fichier d'exemple.
 
-## Conception v0.6 (livrée)
+## Conception livrée (v0.6 + v0.7)
+
+Parcours PointSelection / carte / ChiroSurf : **v0.6**. Synthèse autonome
+(sélecteur de nuit, sans ChiroSurf), Titley, Valider, démarrage sans scan auto,
+WAC documenté : **v0.7** ([release](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.7.0)).
 
 | Document | Rôle |
 |----------|------|
-| [`docs/SPEC_v06_parcours.md`](docs/SPEC_v06_parcours.md) | **Source de vérité** parcours (PointSelection, carte pick/focus 5 km, ChiroSurf `Nuit{n}_`, export 3 modes) |
+| [`docs/SPEC_v06_parcours.md`](docs/SPEC_v06_parcours.md) | **Source de vérité** parcours (vagues A–C livrées ; D plus tard) |
 | [`CHANGELOG.md`](CHANGELOG.md) | Versions publiées + *Suite possible* |
 | [`docs/RELEASE_v0.6.0.md`](docs/RELEASE_v0.6.0.md) | Note de release GitHub v0.6 |
 | [`docs/RELEASE_v0.7.0.md`](docs/RELEASE_v0.7.0.md) | Note de release GitHub v0.7 |

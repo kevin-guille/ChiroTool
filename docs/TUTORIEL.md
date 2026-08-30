@@ -1054,10 +1054,11 @@ Conception / dev : [`SPEC_v06_parcours.md`](SPEC_v06_parcours.md) · issues
 [#5](https://github.com/kevin-guille/ChiroTool/issues/5),
 [#6](https://github.com/kevin-guille/ChiroTool/issues/6).
 
-### Suite
+### Suite (hors v0.7)
 
-- Robustesse / UX du **mode batch**, journal d'upload, export compilé
-  espèces × nuits, fusion `_Vu` → xlsx (choix produit, pas un oubli).
+- Robustesse / UX du **mode batch**, journal d'upload.
+- Export compilé espèces × nuits ; fusion `_Vu` → xlsx (choix produit).
+- Plusieurs instances de ChiroTool en parallèle (demande issue #4).
 
 ---
 

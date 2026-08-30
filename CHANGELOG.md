@@ -112,13 +112,15 @@ Issue [#3](https://github.com/kevin-guille/ChiroTool/issues/3) (retours terrain)
   optionnelle, FAQ) + PDF régénéré.
 - SPEC, samples issue #3, CONTRIBUTING, README, landing GitHub Pages.
 
-### Suite possible (post-0.6)
+### Suite possible (post-0.7)
 
 - Robustesse / UX **mode batch** (données complémentaires participation,
   template avant lot, journal d'upload).
 - Export multi-nuits compilé (espèces × nuits).
+- Fusion `_Vu` → xlsx (choix produit : la méthode 10 %→75 % n'alimente pas
+  l'envoi Vigie-Chiro aujourd'hui).
+- Lancer plusieurs instances de ChiroTool en parallèle (issue #4.2).
 - Modes export formalisés Léger / Travail / Complet.
-- Captures d'écran tutoriel (pick carte, ChiroSurf nuits, diagnostic).
 
 ## [0.5.0] — 2026-07-19
 

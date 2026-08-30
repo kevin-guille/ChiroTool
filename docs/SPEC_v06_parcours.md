@@ -2,8 +2,8 @@
 
 | | |
 |--|--|
-| **Statut** | **Livré en v0.6.0** (2026-08-07) : code, PDF tutoriel, release GitHub, landing Pages |
-| **Date** | 2026-08-04 (conception) · 2026-08-07 (publication) |
+| **Statut** | **Livré** : v0.6.0 (2026-08-07, vagues A–C) + **v0.7.0** (2026-08-30, Synthèse autonome, Titley, issues #4–#6) |
+| **Date** | 2026-08-04 (conception) · 2026-08-07 (v0.6) · 2026-08-30 (v0.7) |
 | **Contexte** | Issue [#3](https://github.com/kevin-guille/ChiroTool/issues/3) (retours terrain) + retours carte / meta |
 | **Principe** | Pragmatisme — une vérité disque, peu de fichiers, parcours unifiés, libellés humains d’abord |
 
@@ -263,7 +263,8 @@ Légende fichiers : `+` créé · `~` modifié · `=` inchangé · `→` lecture
 3. Option **identifications validées seulement** (existant).
 4. **Nouveau** : seuil **proba Tadarida minimale** (synthèse non validée).
 5. Référentiels d’activité : national / région (déjà via n° site) / milieu (existant) — **exposer**, ne pas réécrire.
-6. Plus tard : export compilé multi-nuits (espèces × nuits) en action explicite.
+6. Plus tard (hors v0.7) : export compilé multi-nuits (espèces × nuits) en action explicite.
+7. **v0.7** : sélecteur de nuit **dans** 📊 Synthèse (xlsx, `_Vu` si présent). ChiroSurf n’est pas requis. Cumul « toute la participation » sans classes d’activité.
 
 ---
 
@@ -324,14 +325,12 @@ Indépendant de P2–P5 ; livrable Vague A.
 
 ## 6. Ordre de livraison proposé
 
-| Vague | Contenu | Dépendances |
-|-------|---------|-------------|
-| **A — Ship** | Repair + export USB + fix reuse/create → active_point (commits locaux) | Push / release notes / réponse issue #3 |
-| **B — Point** | D8 lat/lon manifest · PointSelection · wizard 3 entrées · **FOCUS carte (§2)** · mode PICK branché | A optionnel mais souhaitable |
-| **C — ChiroSurf** | Split lazy · UI nuits · import `_Vu` · synthèse proba min | Fixtures `samples/issue3_benjamin/` |
-| **D — Polish** | Export multi-nuits compilé · libellés région · tutoriel captures | B+C |
-
-Le codage ne démarre qu’après **validation explicite** de ce document (éventuels amendements notés ci-dessous).
+| Vague | Contenu | État |
+|-------|---------|------|
+| **A — Ship** | Repair + export USB + fix reuse/create → active_point | **Livré v0.6** |
+| **B — Point** | D8 lat/lon manifest · PointSelection · wizard 3 entrées · FOCUS carte · mode PICK | **Livré v0.6** |
+| **C — ChiroSurf** | Split lazy · UI nuits · import `_Vu` · synthèse proba min | **Livré v0.6** ; v0.7 : Synthèse autonome (sélecteur de nuit, sans passer par ChiroSurf) |
+| **D — Polish** | Export multi-nuits compilé · fusion `_Vu` → xlsx · captures tuto | **Plus tard** (pas un oubli) |
 
 ---
 
@@ -358,6 +357,7 @@ Le tutoriel **ne décrit pas** les features non livrées comme déjà disponible
 | 2026-08-04 | doc | Statut **Validé** ; relais README / CHANGELOG / TUTORIEL §14 / samples README / CONTRIBUTING |
 | 2026-08-04 | doc | Tutoriel : pick intégré §6, ChiroSurf nuits §8 B, synthèse proba, FAQ ; README features |
 | 2026-08-04 | beta | FOCUS carte survit au load sites ; Recharger = tous sites ; repair token 401 + max_results 99 ; popup bouton bas ; pin unique multi-nuits |
+| 2026-08-30 | v0.7 | Synthèse ≠ ChiroSurf (sélecteur de nuit dans Synthèse) ; Titley ; Valider tri/filtres ; scan auto retiré (#5) ; WAC non natif, conversion documentée (#6). Vague D toujours plus tard. |
 
 ---
 
