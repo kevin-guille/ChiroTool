@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
 <title>ChiroTool — Automatiser le traitement Vigie-Chiro Point Fixe (chiroptères)</title>
-<meta name="description" content="ChiroTool v0.6 automatise le traitement des nuits chiroptères Vigie-Chiro Point Fixe (MNHN) : renommage, TE×10, upload, Tadarida, ChiroSurf multi-nuits, Vérifier/Réparer, carte pick/FOCUS, nettoyage sécurisé, validation et registre. Logiciel libre pour bureaux d'études et naturalistes.">
+<meta name="description" content="ChiroTool v0.7 automatise le traitement des nuits chiroptères Vigie-Chiro Point Fixe (MNHN) : renommage, TE×10, upload, Tadarida, synthèse par nuit, ChiroSurf optionnel, Titley, Vérifier/Réparer, carte, nettoyage sécurisé, validation et registre. Logiciel libre pour bureaux d'études et naturalistes.">
 <meta name="keywords" content="ChiroTool, Vigie-Chiro, Point Fixe, chiroptères, chauves-souris, Tadarida, Kaleidoscope, expansion temporelle, bioacoustique, ultrasons, MNHN, logiciel libre, open source, bureau d'études, Kevin Guille">
 <meta name="author" content="Kevin Guille">
 <link rel="canonical" href="https://kevin-guille.github.io/ChiroTool/">
@@ -13,13 +13,13 @@
 <!-- Open Graph / réseaux sociaux -->
 <meta property="og:type" content="website">
 <meta property="og:locale" content="fr_FR">
-<meta property="og:title" content="ChiroTool v0.6 — le traitement Vigie-Chiro Point Fixe automatisé">
+<meta property="og:title" content="ChiroTool v0.7 — le traitement Vigie-Chiro Point Fixe automatisé">
 <meta property="og:description" content="Logiciel libre pour naturalistes et BE : renommage, TE×10, upload, Tadarida, multi-nuits ChiroSurf, Vérifier/Réparer, carte, nettoyage avec garde-fous et registre — en une seule application.">
 <meta property="og:url" content="https://kevin-guille.github.io/ChiroTool/">
 <meta property="og:image" content="https://kevin-guille.github.io/ChiroTool/captures/05-fenetre-principale.png">
 <meta property="og:site_name" content="ChiroTool">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="ChiroTool v0.6 — traitement Vigie-Chiro Point Fixe automatisé">
+<meta name="twitter:title" content="ChiroTool v0.7 — traitement Vigie-Chiro Point Fixe automatisé">
 <meta name="twitter:description" content="Toute la chaîne Point Fixe en une app locale : pour les chiroptérologues, associations et bureaux d'études.">
 <meta name="twitter:image" content="https://kevin-guille.github.io/ChiroTool/captures/05-fenetre-principale.png">
 
@@ -36,7 +36,7 @@
       "operatingSystem": "Windows",
       "applicationCategory": "ScientificApplication",
       "applicationSubCategory": "Bioacoustique / traitement Vigie-Chiro",
-      "softwareVersion": "0.6.0",
+      "softwareVersion": "0.7.0",
       "description": "Logiciel libre qui automatise le traitement des enregistrements ultrason de chauves-souris pour le protocole Vigie-Chiro Point Fixe (MNHN) : renommage, expansion temporelle TE×10, participation et upload API, suivi Tadarida, ChiroSurf multi-nuits, Vérifier/Réparer, carte pick/FOCUS, nettoyage avec garde-fous, envoi des identifications, graphes d'activité, synthèse et registre de campagne.",
       "url": "https://kevin-guille.github.io/ChiroTool/",
       "downloadUrl": "https://github.com/kevin-guille/ChiroTool/releases",
@@ -245,7 +245,7 @@
   .stat .l{font-size:.9rem;color:var(--muted);margin-top:6px;display:block}
   .note{font-size:.86rem;color:var(--muted);margin-top:16px}
 
-  /* What's new v0.6 */
+  /* What's new v0.7 */
   .news-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
   .news{
     display:grid;grid-template-columns:auto 1fr;gap:14px;
@@ -375,12 +375,12 @@
     <a class="brand" href="#">
       <img src="captures/icon_256.png" alt="Logo ChiroTool">
       ChiroTool
-      <span class="ver">v0.6</span>
+      <span class="ver">v0.7</span>
     </a>
     <span class="spacer"></span>
     <div class="links">
       <a class="link hide-sm" href="#pourquoi">Pourquoi</a>
-      <a class="link hide-sm" href="#nouveautes">v0.6</a>
+      <a class="link hide-sm" href="#nouveautes">v0.7</a>
       <a class="link hide-sm" href="#fonctions">Fonctions</a>
       <a class="link hide-sm" href="#apercu">Aperçu</a>
       <a class="link hide-sm" href="#public">Pour qui</a>
@@ -393,7 +393,7 @@
 <header class="hero">
   <div class="wrap hero-grid">
     <div>
-      <div class="pill"><span class="dot"></span> v0.6 — multi-nuits &amp; reprise fiable</div>
+      <div class="pill"><span class="dot"></span> v0.7 — Synthèse, Titley &amp; ChiroSurf optionnel</div>
       <h1>Le traitement de vos nuits chiroptères, automatisé de A à Z.</h1>
       <p class="tag">Logiciel libre pour le protocole Vigie-Chiro Point Fixe (MNHN).</p>
       <p class="lead">
@@ -417,7 +417,7 @@
       <div class="hero-shot-wrap">
         <img class="hero-shot" src="captures/05-fenetre-principale.png"
              alt="Fenêtre principale de ChiroTool : liste des nuits et détail de session">
-        <div class="hero-badge">Interface v0.6 · multi-nuits &amp; carte</div>
+        <div class="hero-badge">Interface v0.7 · Synthèse &amp; Titley</div>
       </div>
     </div>
   </div>
@@ -499,63 +499,63 @@
   <div class="wrap">
     <div class="banner-v">
       <div>
-        <strong>Nouveautés v0.6</strong>
-        <span> — multi-nuits ChiroSurf, carte pick/FOCUS, Vérifier/Réparer et reprise d’upload fiable.</span>
+        <strong>Nouveautés v0.7</strong>
+        <span> — Synthèse par nuit (sans ChiroSurf), Titley Swift/Ranger, Valider, démarrage sans scan auto.</span>
       </div>
       <a class="btn outline sm" href="https://github.com/kevin-guille/ChiroTool/releases">Voir les releases →</a>
     </div>
 
     <div class="section-head">
       <div class="eyebrow">Ce qui change pour vous</div>
-      <h2>Multi-nuits, carte et reprise d’état.</h2>
+      <h2>Synthèse pour tout le monde. ChiroSurf, si vous l’utilisez.</h2>
       <p class="lead-c">
-        La v0.6 répond à l’usage LPO / MNHN (validation 10&nbsp;%→75&nbsp;% nuit par nuit)
-        et fiabilise le parcours point ↔ carte ↔ serveur après un upload partiel
-        ou une analyse relancée sur le portail.
+        La v0.7 distingue <strong>📊 Synthèse</strong> (récap + activité, choix de nuit)
+        et <strong>🌊 ChiroSurf nuits</strong> (CSV pour la méthode 10&nbsp;%→75&nbsp;%, optionnel).
+        Titley Swift/Ranger, tri dans Valider, plus de scan auto au démarrage.
       </p>
     </div>
 
     <div class="news-grid">
       <div class="news">
-        <div class="ic">🌊</div>
-        <div>
-          <h3>ChiroSurf multi-nuits</h3>
-          <p>Scission lazy en 1 CSV par nuit biologique (<code>Nuit{n}_…</code>) pour la méthode 10&nbsp;%→75&nbsp;%.</p>
-        </div>
-      </div>
-      <div class="news">
-        <div class="ic">🔧</div>
-        <div>
-          <h3>Vérifier / Réparer</h3>
-          <p>Diagnostic local ↔ serveur (couverture WAV, flags, fetch xlsx, trigger Tadarida avec confirmations).</p>
-        </div>
-      </div>
-      <div class="news">
-        <div class="ic">🗺️</div>
-        <div>
-          <h3>Pick &amp; FOCUS carte</h3>
-          <p>Choisir un point sur la carte (5&nbsp;km) pour les meta ; recentrer une nuit sans recharger toute la France.</p>
-        </div>
-      </div>
-      <div class="news">
-        <div class="ic">💾</div>
-        <div>
-          <h3>Export USB de sessions</h3>
-          <p>Paquet portable Data_k ± Data + métadonnées pour un collègue ou un poste hors ligne.</p>
-        </div>
-      </div>
-      <div class="news">
         <div class="ic">📊</div>
         <div>
-          <h3>Synthèse <code>_Vu</code></h3>
-          <p>Lecture des CSV validés ChiroSurf + filtre proba Tadarida minimale.</p>
+          <h3>Synthèse par nuit</h3>
+          <p>Récapitulatif et niveaux d’activité, avec choix de nuit. ChiroSurf n’est pas requis.</p>
         </div>
       </div>
       <div class="news">
-        <div class="ic">🌤</div>
+        <div class="ic">🌊</div>
         <div>
-          <h3>Météo non bloquante</h3>
-          <p>T° du Summary préremplies ; vent / couverture optionnels (complétables sur le portail).</p>
+          <h3>ChiroSurf, optionnel</h3>
+          <p>CSV par nuit biologique (coupure midi) pour la méthode 10&nbsp;%→75&nbsp;%. Distinct de la Synthèse.</p>
+        </div>
+      </div>
+      <div class="news">
+        <div class="ic">🏷️</div>
+        <div>
+          <h3>Titley Swift / Ranger</h3>
+          <p>Noms usine <code>YYYY-MM-DD HH-MM-SS</code> lus au renommage ; TE×10 sans collision.</p>
+        </div>
+      </div>
+      <div class="news">
+        <div class="ic">🔍</div>
+        <div>
+          <h3>Valider plus lisible</h3>
+          <p>Tri des colonnes, filtres observateur / chiros, bilan <code>X / Y</code> dans la vue session.</p>
+        </div>
+      </div>
+      <div class="news">
+        <div class="ic">📂</div>
+        <div>
+          <h3>Démarrage sans scan auto</h3>
+          <p>Un SSD EXFAT endormi ne fige plus l’interface ; Parcourir reste cliquable.</p>
+        </div>
+      </div>
+      <div class="news">
+        <div class="ic">📅</div>
+        <div>
+          <h3>Dates : les WAV font foi</h3>
+          <p>Si le Summary cumulé ne correspond pas aux fichiers, avertissement et dates prises sur les WAV.</p>
         </div>
       </div>
     </div>
@@ -690,7 +690,9 @@
         <tbody>
           <tr>
             <td><strong>Wildlife Acoustics</strong></td>
-            <td>SM2 / SM3 / SM4(BAT) / Mini Bat</td>
+            <td>SM2 / SM3 / SM4(BAT) / Mini Bat
+              (<code>SERIE_YYYYMMDD_HHMMSS.wav</code>). SM2 en <code>.wac</code> :
+              conversion en WAV d’abord (ci-dessous).</td>
           </tr>
           <tr>
             <td><strong>Autres horodatés</strong></td>
@@ -714,6 +716,11 @@
     <p class="note">
       Formats à noms non datés (ex. Peersonic, Pettersson D500x) : renommage préalable
       (XnView vers <code>YYYYMMDD_HHMMSS.wav</code>).
+      Les <strong><code>.wac</code></strong> (SM2 surtout) et <strong><code>.w4v</code></strong>
+      ne sont pas décompressés : Kaleidoscope Lite (expansion ×1, sans filtre bruit,
+      un WAV par trigger) puis Préparer dans ChiroTool — même logique que l’AudioMoth
+      <code>T.WAV</code> à expander. Détail dans le
+      <a href="ChiroTool-Tutoriel.pdf">tutoriel PDF</a>.
     </p>
   </div>
 </section>
@@ -721,7 +728,7 @@
 <section id="telecharger" class="dl">
   <div class="wrap">
     <div class="pill" style="margin:0 auto 18px"><span class="dot"></span> Prêt pour la saison Point Fixe</div>
-    <h2>Téléchargez ChiroTool v0.6</h2>
+    <h2>Téléchargez ChiroTool v0.7</h2>
     <p>
       Logiciel portable Windows (≈&nbsp;36&nbsp;Mo). Aucune installation,
       aucun droit administrateur. Traitez une nuit test dès ce soir.

@@ -3084,6 +3084,44 @@ class TestChiroSurfNights:
         nights2 = list_chirosurf_nights(session)
         assert len(nights2) == 2
 
+    def test_biological_night_cuts_at_noon(self):
+        from chirosurf_nights import biological_night_key
+        assert biological_night_key(
+            "Car381009-2026-Pass1-Z1-X_20260717_015900_000.wav") == "2026-07-16"
+        assert biological_night_key(
+            "Car381009-2026-Pass1-Z1-X_20260717_115959_000.wav") == "2026-07-16"
+        assert biological_night_key(
+            "Car381009-2026-Pass1-Z1-X_20260717_120000_000.wav") == "2026-07-17"
+        assert biological_night_key(
+            "Car381009-2026-Pass1-Z1-X_20260716_210000_000.wav") == "2026-07-16"
+
+    def test_synthesis_night_menu_and_resolve(self):
+        from pathlib import Path
+        from chirosurf_nights import (
+            read_csv, split_rows_by_biological_night,
+            synthesis_night_menu, resolve_synthesis_table,
+        )
+        sample = Path(__file__).resolve().parent.parent / (
+            "samples/issue3_benjamin/multi_nuits-observations.csv")
+        if not sample.is_file():
+            pytest.skip("samples issue #3 absents")
+        headers, rows = read_csv(sample)
+        slices = split_rows_by_biological_night(headers, rows)
+        menu = synthesis_night_menu(slices, vu_indexes={1})
+        keys = [k for k, _l in menu]
+        assert keys[0] == 0
+        assert 1 in keys and 2 in keys
+        assert any("_Vu" in lab for k, lab in menu if k == 1)
+        h1, r1, src1, mixed1 = resolve_synthesis_table(
+            headers, rows, night_index=1)
+        assert not mixed1
+        assert len(r1) == 8000
+        assert "Nuit 1" in src1
+        h0, r0, src0, mixed0 = resolve_synthesis_table(
+            headers, rows, night_index=0)
+        assert mixed0
+        assert len(r0) == 15839
+
 
 class TestSynthesisMinProba:
     def test_min_proba_keeps_validated(self):

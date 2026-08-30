@@ -1479,8 +1479,9 @@ class ChiroToolApp(ctk.CTk):
         has_obs = find_observations_xlsx(s.path) is not None
         if has_obs:
             _btn("🔍 Valider", lambda: self._open_validation_view(s),
-                 "Vue de validation des contacts (ChiroSurf) + envoi des "
-                 "identifications validées au serveur", accent="#1f6feb")
+                 "Validation contact par contact et envoi des identifications "
+                 "vers Vigie-Chiro. ChiroSurf n'est utilisé que pour écouter "
+                 "un WAV (optionnel).", accent="#1f6feb")
         # Nettoyer à droite de Valider (issue #4.5) : on identifie d'abord,
         # on purge ensuite. Le bouton reste grisé tant que Tadarida n'a pas
         # rendu le tableur.
@@ -1489,18 +1490,20 @@ class ChiroToolApp(ctk.CTk):
              "(aperçu du volume avant toute suppression)",
              is_primary=(next_step == "cleanup"), enabled=can_cleanup)
         if has_obs:
-            _btn("🌊 ChiroSurf nuits",
-                 lambda: self._open_chirosurf_nights_for_path(s.path, s.name),
-                 "Scinder multi-nuits pour ChiroSurf (méthode 10 %→75 %) "
-                 "et ouvrir les CSV (validation / graphes)")
+            _btn("📊 Synthèse", lambda: self._open_synthesis_view(s),
+                 "Récapitulatif par espèce et niveaux d'activité. "
+                 "Indépendant de ChiroSurf. Si plusieurs nuits, le choix "
+                 "se fait dans la fenêtre.")
 
         _btn("✎ Métadonnées", lambda: self._edit_meta(s),
              "Modifier les métadonnées de la session (site, point, passage, série…)")
         _btn("📍 Carte", lambda: self._view_on_map(s),
              "Voir le point d'écoute sur la carte")
         if has_obs:
-            _btn("📊 Synthèse", lambda: self._open_synthesis_view(s),
-                 "Synthèse de la nuit par espèce + niveaux d'activité")
+            _btn("🌊 ChiroSurf nuits",
+                 lambda: self._open_chirosurf_nights_for_path(s.path, s.name),
+                 "Optionnel : CSV par nuit pour la méthode ChiroSurf "
+                 "10 %→75 %. Pas nécessaire pour la Synthèse.")
         _btn("⋯ Détails", lambda: self._show_advanced(s),
              "Détails avancés : manifest, historique des actions, fichiers")
 
@@ -2205,13 +2208,15 @@ class ChiroToolApp(ctk.CTk):
         dlg.transient(self)
         dlg.after(50, dlg.grab_set)
         ctk.CTkLabel(
-            dlg, text="1 CSV par nuit biologique (méthode MNHN / ChiroSurf)",
+            dlg, text="CSV pour ChiroSurf (méthode 10 % → 75 %, optionnel)",
             font=ctk.CTkFont(size=14, weight="bold"), anchor="w",
         ).pack(fill="x", padx=14, pady=(12, 4))
         ctk.CTkLabel(
-            dlg, text="▶ ChiroSurf ouvre le CSV brut (validation 10 %→75 %). "
-                      "Après validation, 📈 _Vu ouvre le fichier annoté pour "
-                      "les graphes. Le _Vu est écrit dans le même dossier.",
+            dlg, text="Coupure à midi (nuit biologique) : le matin du 17 reste "
+                      "la nuit du 16. Deux lignes = fichiers ≥ 12 h le second jour. "
+                      "▶ ChiroSurf ouvre le CSV brut ; 📈 _Vu ouvre les graphes. "
+                      "Le récapitulatif par espèce, c'est 📊 Synthèse "
+                      "(indépendant de ChiroSurf).",
             font=ctk.CTkFont(size=11), text_color=("gray40", "gray70"),
             wraplength=600, anchor="w", justify="left",
         ).pack(fill="x", padx=14, pady=(0, 8))

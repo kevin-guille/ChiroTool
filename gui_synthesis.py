@@ -83,6 +83,14 @@ class SynthesisView(ctk.CTkToplevel):
         self.after(50, self.grab_set)
         self.focus()
 
+        self._xlsx_headers: list = []
+        self._xlsx_rows: list = []
+        self._slices: list = []
+        self._vu_by_night: dict[int, object] = {}
+        self._night_key = int(prefer_vu_night) if prefer_vu_night else 1
+        self._night_labels: dict[str, int] = {}
+        self._mixed_nights = False
+
         self._build_ui()
         self.after(80, self._load)
 
@@ -100,6 +108,21 @@ class SynthesisView(ctk.CTkToplevel):
             font=ctk.CTkFont(size=16, weight="bold"), anchor="w",
         ).grid(row=0, column=0, sticky="w")
 
+        # Sélecteur de nuit (multi-nuits bio) : indépendant de ChiroSurf.
+        self.night_row = ctk.CTkFrame(header, fg_color="transparent")
+        self.night_row.grid(row=1, column=0, columnspan=3, sticky="w", pady=(6, 0))
+        ctk.CTkLabel(
+            self.night_row, text="Nuit :", font=ctk.CTkFont(size=11),
+        ).pack(side="left")
+        self._night_var = ctk.StringVar(value="")
+        self._night_menu = ctk.CTkOptionMenu(
+            self.night_row, variable=self._night_var, width=340,
+            values=["—"], command=self._on_night_change,
+            font=ctk.CTkFont(size=12),
+        )
+        self._night_menu.pack(side="left", padx=(6, 0))
+        self.night_row.grid_remove()
+
         # Ne compter que les identifications VALIDÉES par l'observateur (ignore
         # les identifications automatiques Tadarida non revues).
         self.validated_only_var = ctk.BooleanVar(value=False)
@@ -107,17 +130,17 @@ class SynthesisView(ctk.CTkToplevel):
             header, text="Identifications validées seulement",
             variable=self.validated_only_var, command=self._recompute,
             font=ctk.CTkFont(size=11), checkbox_width=18, checkbox_height=18,
-        ).grid(row=1, column=0, sticky="w", pady=(4, 0))
+        ).grid(row=2, column=0, sticky="w", pady=(4, 0))
         self.chiros_only_var = ctk.BooleanVar(value=False)
         ctk.CTkCheckBox(
             header, text="Chiros seulement",
             variable=self.chiros_only_var, command=self._recompute,
             font=ctk.CTkFont(size=11), checkbox_width=18, checkbox_height=18,
-        ).grid(row=1, column=1, sticky="w", pady=(4, 0), padx=(12, 0))
+        ).grid(row=2, column=1, sticky="w", pady=(4, 0), padx=(12, 0))
 
         # Filtre proba Tadarida min (synthèse non validée) — issue #3
         filt = ctk.CTkFrame(header, fg_color="transparent")
-        filt.grid(row=2, column=0, sticky="w", pady=(4, 0))
+        filt.grid(row=3, column=0, sticky="w", pady=(4, 0))
         ctk.CTkLabel(filt, text="Proba Tadarida ≥", font=ctk.CTkFont(size=11)).pack(
             side="left")
         self.min_proba_var = ctk.StringVar(value="")
@@ -204,11 +227,11 @@ class SynthesisView(ctk.CTkToplevel):
 
     def _load(self):
         try:
-            from chirosurf_nights import load_table_for_synthesis
-            headers, rows, src = load_table_for_synthesis(
-                self.session_path, self.xlsx_path,
-                prefer_vu_night=self.prefer_vu_night,
+            from chirosurf_nights import (
+                list_chirosurf_nights, rows_from_xlsx,
+                split_rows_by_biological_night, synthesis_night_menu,
             )
+            headers, rows = rows_from_xlsx(self.xlsx_path)
         except Exception as e:
             messagebox.showerror("Lecture impossible",
                                  f"Impossible d'ouvrir les observations :\n{e}",
@@ -220,9 +243,61 @@ class SynthesisView(ctk.CTkToplevel):
             self.destroy()
             return
 
+        self._xlsx_headers = headers
+        self._xlsx_rows = rows
+        self._slices = split_rows_by_biological_night(headers, rows)
+        self._vu_by_night = {
+            nf.night_index: nf
+            for nf in list_chirosurf_nights(self.session_path)
+            if nf.has_vu and nf.vu_path.is_file()
+        }
+        if self.prefer_vu_night:
+            self._night_key = int(self.prefer_vu_night)
+        elif self._slices:
+            self._night_key = self._slices[0].night_index
+        else:
+            self._night_key = 0
+        self._fill_night_menu()
+        self._apply_night_source()
+
+    def _fill_night_menu(self):
+        from chirosurf_nights import synthesis_night_menu
+        items = synthesis_night_menu(
+            self._slices, vu_indexes=set(self._vu_by_night),
+        )
+        self._night_labels = {label: key for key, label in items}
+        if len(self._slices) <= 1:
+            self.night_row.grid_remove()
+            return
+        labels = [label for _k, label in items]
+        by_key = {key: label for key, label in items}
+        chosen = by_key.get(self._night_key) or (labels[1] if len(labels) > 1 else labels[0])
+        self._night_menu.configure(values=labels)
+        self._night_var.set(chosen)
+        self.night_row.grid()
+
+    def _on_night_change(self, value=None):
+        label = value if value is not None else self._night_var.get()
+        key = self._night_labels.get(label)
+        if key is None:
+            return
+        self._night_key = key
+        extra = f" · nuit {key}" if key else ""
+        self.title(f"Synthèse — {self.session_path.name}{extra}")
+        self._apply_night_source()
+
+    def _apply_night_source(self):
+        from chirosurf_nights import resolve_synthesis_table
+        vu = self._vu_by_night.get(self._night_key)
+        vu_path = vu.vu_path if vu is not None else None
+        headers, rows, src, mixed = resolve_synthesis_table(
+            self._xlsx_headers, self._xlsx_rows,
+            night_index=self._night_key, vu_path=vu_path,
+        )
         self._headers = headers
         self._rows = rows
         self._source_label = src
+        self._mixed_nights = mixed
         self._recompute()
 
     def _recompute(self):
@@ -257,11 +332,15 @@ class SynthesisView(ctk.CTkToplevel):
 
     def _apply_activity(self):
         """(Ré)annote la synthèse selon le contexte (saison/région/milieu) puis
-        rafraîchit. Sans référentiel chargé, l'affichage reste un simple comptage."""
-        if self.result and self._reference:
+        rafraîchit. Sans référentiel chargé, l'affichage reste un simple comptage.
+        Cumul multi-nuits : pas de classes (référentiel = contacts/nuit)."""
+        if self.result and self._reference and not self._mixed_nights:
             self._habitat = self._selected_habitat()
             annotate_synthesis(self.result, self._reference, saison=self._season,
                                region=self._region, habitat=self._habitat)
+        elif self.result:
+            for s in self.result.get("species", []):
+                s.pop("activite", None)
         self._refresh()
 
     def _on_habitat_change(self, _value=None):
@@ -287,7 +366,7 @@ class SynthesisView(ctk.CTkToplevel):
         res = self.result or {}
         species = res.get("species", [])
         by_group = res.get("by_group", {})
-        has_ref = bool(self._reference)
+        has_ref = bool(self._reference) and not self._mixed_nights
 
         for iid in self.tree.get_children():
             self.tree.delete(iid)
@@ -321,7 +400,12 @@ class SynthesisView(ctk.CTkToplevel):
             f"{res.get('total_fichiers', 0)} fichiers"
             + (f"  ·  source : {src}" if src else "")))
 
-        if has_ref:
+        if self._mixed_nights:
+            self.note_lbl.configure(text=(
+                "Cumul de plusieurs nuits biologiques : les classes d'activité "
+                "(contacts/nuit) ne s'appliquent pas. Choisissez une nuit dans le "
+                "menu pour l'interprétation. Indépendant de ChiroSurf."))
+        elif has_ref:
             self.note_lbl.configure(text=(
                 f"Activité — référentiel : {self._context_label()} (unité : {UNITE}). "
                 "Aide à l'interprétation espèce par espèce : ne pas comparer les "
@@ -347,7 +431,7 @@ class SynthesisView(ctk.CTkToplevel):
         )
         if not path:
             return
-        has_ref = bool(self._reference)
+        has_ref = bool(self._reference) and not self._mixed_nights
         try:
             with open(path, "w", newline="", encoding="utf-8-sig") as f:
                 w = csv.writer(f, delimiter=";")

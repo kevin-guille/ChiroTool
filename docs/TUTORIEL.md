@@ -8,7 +8,7 @@
 
 ![Icône ChiroTool](captures/icon_256.png)
 
-**Version 0.6** · Tutoriel utilisateur
+**Version 0.7** · Tutoriel utilisateur
 
 </div>
 
@@ -29,7 +29,7 @@
 11. [Travailler en équipe](#11--travailler-en-équipe)
 12. [Questions fréquentes & dépannage](#12--questions-fréquentes--dépannage)
 13. [Limites connues](#13--limites-connues)
-14. [Nouveautés v0.6](#14--nouveautés-v06-issue-3--suite)
+14. [Nouveautés v0.7](#14--nouveautés-v07)
 15. [Crédits & licence](#15--crédits--licence)
 
 ---
@@ -224,8 +224,8 @@ En bas de la **Vue session**, une barre unique regroupe tout ce que vous pouvez
 faire sur la nuit sélectionnée :
 
 > **▶ Préparer** · **☁ Upload** · **🔧 Vérifier / Réparer** · **🔍 Valider** ·
-> **🧹 Nettoyer** · **🌊 ChiroSurf nuits** · **✎ Métadonnées** · **📍 Carte** ·
-> **📊 Synthèse** · **⋯ Détails**
+> **🧹 Nettoyer** · **📊 Synthèse** · **✎ Métadonnées** · **📍 Carte** ·
+> **🌊 ChiroSurf nuits** · **⋯ Détails**
 
 Les libellés sont volontairement courts : **passez la souris sur un bouton** pour
 lire ce qu'il fait exactement.
@@ -497,8 +497,8 @@ pouvez valider **de deux façons** (complémentaires, pas exclusives).
      déjà validées (à la place de « Non validés seulement », les deux cases ne
      se cumulent pas).
    - **« Chiros seulement »** : masquer orthoptères, bruit, oiseaux.
-   - **CSV nuits** : ouvre la liste des CSV ChiroSurf (même fenêtre que
-     **🌊 ChiroSurf nuits**).
+   - **CSV nuits** : ouvre la fenêtre **🌊 ChiroSurf nuits** (CSV pour la
+     méthode 10 % → 75 %, optionnel — ce n'est pas la Synthèse).
 3. Sélectionnez un contact, puis :
    - Utilisez les **raccourcis clavier** `O` / `P` / `S` pour indiquer votre
      niveau de confiance (pOssible / Probable / Sûr).
@@ -513,24 +513,47 @@ pouvez valider **de deux façons** (complémentaires, pas exclusives).
 > « Monter au genre » pour les sons incertains, et « Envoyer » qui remonte vos
 > identifications vers Vigie-Chiro.]**
 
+**📊 Synthèse** et **🌊 ChiroSurf nuits** sont **complémentaires**, pas
+interchangeables :
+
+| | **📊 Synthèse** | **🌊 ChiroSurf nuits** |
+|---|---|---|
+| Pour qui | Tout le monde | Uniquement si vous utilisez ChiroSurf / la méthode 10 % → 75 % |
+| Rôle | Récapitulatif par espèce + niveaux d'activité | CSV par nuit pour valider dans ChiroSurf |
+| ChiroSurf requis ? | **Non** | Oui (le logiciel ChiroSurf) |
+
 ### B · Méthode MNHN / Team Chiro via ChiroSurf (10 % → 75 %)
 
-Si votre **participation couvre plusieurs nuits** d’affilée (un seul tableur
-Tadarida multi-nuits), le référentiel d’activité et la validation « optimisée »
-ChiroSurf se basent sur une **nuit unique**. ChiroTool scinde pour vous :
+Si vous **n'utilisez pas** ChiroSurf : ignorez cette section, ouvrez
+**📊 Synthèse** (voir [§9](#9--la-synthèse-dune-nuit-et-les-niveaux-dactivité)).
 
-1. Cliquez sur **« 🌊 ChiroSurf nuits »** (visible dès qu’un xlsx d’observations
-   est présent ; aussi depuis **🔍 Valider** → **CSV nuits**).
-2. ChiroTool crée le dossier `chirosurf/` dans la session et un CSV **par nuit
-   biologique** (coupure à **midi**) :
+Si votre participation couvre plusieurs nuits et que vous validez avec
+ChiroSurf, le référentiel et la méthode 10 % → 75 % se basent sur une **nuit
+unique**. ChiroTool prépare les CSV :
+
+1. Cliquez sur **« 🌊 ChiroSurf nuits »** (aussi depuis **🔍 Valider** →
+   **CSV nuits**). Inutile pour la Synthèse.
+2. ChiroTool crée le dossier `chirosurf/` et un CSV **par nuit biologique**
+   (coupure à **midi**, pas à minuit) :
    `Nuit1_<nom-du-tableur>-observations.csv`, `Nuit2_…`, etc.
+
+   | Libellé | Fichiers concernés |
+   |---|---|
+   | **16/07 · Nuit 1** | de **midi le 16** à **midi le 17** (soirée du 16 **et** matin du 17) |
+   | **17/07 · Nuit 2** | à partir de **midi le 17** |
+
+   Le nom du dossier session (`20260716_site…`) est la **date de début** de
+   la participation, pas le nombre de nuits. Une pose « d'une nuit » qui
+   déborde après midi le lendemain (carte non formatée, relevé tardif,
+   deux nuits sur la carte) sort en **deux** lignes — c'est voulu.
 3. **▶ ChiroSurf** ouvre le CSV **brut** (sans `_Vu`) — méthode 10 % → 75 %.
-   Les WAV restent dans `Data_k/` de la session.
+   Les WAV restent dans `Data_k/` de la session. Indiquez ce dossier à
+   ChiroSurf s'il ne trouve pas les sons.
 4. Après validation ChiroSurf, le fichier `…_Vu.csv` apparaît **à côté** du
    brut. **📈 _Vu** l'ouvre pour les **graphes** ChiroSurf. Pour poursuivre une
    validation, rouvrez toujours le CSV **sans** `_Vu`.
-5. **Synthèse** sur une ligne de nuit lit le `_Vu` s'il existe. Cases
-   **« identifications validées seulement »** (ne compte que `observateur_taxon`)
+5. Revenez à **📊 Synthèse** : si un `_Vu` existe pour la nuit choisie, il
+   est lu à la place du xlsx. Cases **« identifications validées seulement »**
    et **« Chiros seulement »**. Avec la méthode 10 % → 75 %, ChiroSurf n'inscrit
    en observateur que les contacts **vraiment écoutés**, pas le reste de la nuit.
 
@@ -623,7 +646,13 @@ Le Registre affiche aussi, par nuit, ce qui reste à remonter.
 
 Sur une nuit dont le tableur est récupéré, le bouton **« 📊 Synthèse »** ouvre le
 récapitulatif par espèce : combien de contacts, combien de fichiers, et surtout
-**quel niveau d'activité**.
+**quel niveau d'activité**. **ChiroSurf n'est pas nécessaire.**
+
+Si la participation couvre **plusieurs nuits biologiques** (coupure à midi), un
+menu **Nuit** en haut de la fenêtre permet de choisir Nuit 1, Nuit 2… ou toute
+la participation. Les classes d'activité (contacts/nuit) ne s'affichent que
+**nuit par nuit**. Un `_Vu` ChiroSurf, s'il existe, est utilisé pour cette nuit ;
+sinon le tableur Tadarida suffit.
 
 > 📸 **[Capture 15 — Synthèse d'une nuit : le niveau d'activité par espèce
 > (colonne de droite) et le sélecteur « Milieu » qui affine le référentiel.]**
@@ -631,7 +660,7 @@ récapitulatif par espèce : combien de contacts, combien de fichiers, et surtou
 ### Ce que vous lisez
 
 En haut : **« X contacts détectés · Y identifiés (validés) · Z espèces de chiros »**,
-plus la **source** (nom du xlsx, ou `_Vu nuit N` si vous venez de ChiroSurf nuits).
+plus la **source** (xlsx de la nuit, ou `_Vu` si vous avez validé dans ChiroSurf).
 
 Filtres utiles :
 
@@ -870,6 +899,37 @@ en tranches horodatées (tout le son est conservé). Si **Préparer s'arrête**
 faute de nom lisible, passez une fois par XnView vers `YYYYMMDD_HHMMSS.wav`
 et joignez un exemple de nom à une [issue](https://github.com/kevin-guille/ChiroTool/issues).
 
+**« Mes fichiers SM2 sont en .WAC (ou .w4v). »**
+ChiroTool **ne décompresse pas** les formats Wildlife **`.wac`** (SM2, parfois
+SM3) et **`.w4v`**. Un `.wac` SM2 peut coller **toute une heure de triggers**
+dans un seul fichier : le traiter tel quel produirait des milliers de tranches
+de 5 s vides. Convertissez **avant** Préparer, sur une **copie** (gardez les
+WAC d'archive) — même logique que l'AudioMoth `T.WAV` à expander.
+
+1. **Kaleidoscope Lite** (conversion batch **sans licence Pro**) ou l'ancien
+   **WAC2WAV** avec **Split Triggers**.
+2. Entrée **WAC** (ou W4V) ; sortie **WAV** uniquement (pas W4V, pas ZC).
+3. Expansion temporelle de **sortie = 1** (le TE×10, c'est ChiroTool).
+4. **Disable noise filtering** (consigne Vigie-Chiro : oreillard, natterer,
+   barbastelle).
+5. Stéréo : séparez les canaux et ne gardez que le micro chauves-souris.
+
+Contrôle : beaucoup de **courts** WAV `PREFIX_YYYYMMDD_HHMMSS.wav` (un suffixe
+`_mmm` est possible). Un WAV énorme par WAC = les triggers n'ont pas été
+extraits (WAC2WAV + Split Triggers, ou « split max duration » 5 s dans
+Kaleidoscope). Noms à corriger (XnView / Lupas) s'ils cassent le renommage :
+canal `_0_`, tag `_T_`, préfixe `NOISE_`, espaces.
+
+Déposez ensuite ce dossier de WAV dans ChiroTool et lancez **Préparer**
+(rename + TE×10 + tranches 5 s) comme une nuit SM4. Le SM2 n'écrit pas de
+`Summary.txt` SM4 : dates d'après les noms de fichiers, météo à la main dans
+l'assistant.
+
+Si l'appareil enregistre déjà en **WAV trigger**, sautez Kaleidoscope.
+Si Kaleidoscope a **déjà** fait le TE×10, ne le refaites pas : ChiroTool
+détecte un sample rate ≤ 60 kHz et/ou un suffixe `_000` et considère le TE
+fait (rename + upload seulement).
+
 **« L'upload refuse, ou les dates de participation sont fausses. »**
 Si le `Summary.txt` ne correspond pas aux WAV du dossier, ChiroTool **prévient
 dès la préparation** et **avant l'upload**. Les fichiers WAV font foi.
@@ -919,6 +979,16 @@ Le journal complet peut être collé dans une [issue GitHub](https://github.com/
 apparaît à côté → **📈 _Vu** pour les graphes, **Synthèse** dans ChiroTool.
 Voir [§8 B](#b--méthode-mnhn--team-chiro-via-chirosurf-10--75-).
 
+**« ChiroSurf nuits affiche 2 nuits alors que je n'ai posé qu'une nuit. »**
+Ce n'est **pas** un découpage à minuit. La coupure est à **midi** (nuit
+biologique MNHN / ChiroSurf) : le matin du 17 (00 h–12 h) reste la nuit du 16.
+Deux lignes signifient que le tableur contient des fichiers horodatés
+**≥ 12 h le second jour** (deuxième soirée, relevé après midi, ou carte SD
+non formatée). Vérifiez les heures dans `nom du fichier` des CSV sous
+`chirosurf/` : Nuit 2 à 21 h = deux nuits réelles ; Nuit 2 à 02 h = anomalie
+à signaler. Le dossier `20260716_site…` ne dit pas « une seule nuit ».
+Voir [§8 B](#b--méthode-mnhn--team-chiro-via-chirosurf-10--75-).
+
 **« Où sont stockées mes données ? »**
 Votre index et vos sauvegardes sont dans le sous-dossier `_chirotool/` de votre
 dossier de travail. Un fichier `README.txt` y explique chaque fichier. **Ne le
@@ -942,14 +1012,18 @@ ChiroTool couvre la grande majorité des cas, mais pas (encore) tout :
   (Configuration App → *Expand*). Les noms **non datés** (Peersonic,
   Pettersson D500x) nécessitent un renommage préalable (XnView vers
   `YYYYMMDD_HHMMSS.wav`). Si **aucun** nom n'est lisible, Préparer s'arrête.
-- **Fichiers compressés `.w4v` / `.wac`** : non décompressés (utilisez Kaleidoscope
-  en amont).
+- **Fichiers compressés `.wac` / `.w4v`** : non décompressés. Convertissez
+  d'abord en WAV horodatés (Kaleidoscope Lite, expansion de sortie **×1**,
+  sans filtre bruit, **un fichier par trigger**), puis Préparer. Détail
+  [§12](#12--questions-fréquentes--dépannage) (« Mes fichiers SM2 sont en
+  .WAC »).
 - **Modifier une participation déjà créée** (météo erronée…) : via le portail web.
 - **Supprimer un carré créé par erreur** : action réservée aux administrateurs
   Vigie-Chiro (contactez l'équipe du programme).
-- **Participation multi-nuits** : utilisez **🌊 ChiroSurf nuits** pour scinder
-  automatiquement (voir [§14](#14--nouveautés-v06-issue-3--suite)). La validation
-  contact par contact reste disponible en parallèle.
+- **Participation multi-nuits** : **📊 Synthèse** choisit la nuit (coupure
+  midi) sans ChiroSurf. **🌊 ChiroSurf nuits** n'est utile que pour la méthode
+  10 % → 75 % (voir [§8 B](#b--méthode-mnhn--team-chiro-via-chirosurf-10--75-)).
+  La validation contact par contact reste disponible en parallèle.
 - **Bouton 📍 Carte** : si les GPS n’ont jamais été mémorisés pour la session,
   choisissez une fois le point (pick carte ou create/reuse) pour les enregistrer.
 - **SSD / disques EXFAT sous Windows** : le renommage et le TE×10 y sont
@@ -958,46 +1032,32 @@ ChiroTool couvre la grande majorité des cas, mais pas (encore) tout :
 
 ---
 
-## 14 · Nouveautés v0.6 (résumé) & suite
-
-Rappel des apports de la **v0.6** (détail dans le flux ci-dessus) :
+## 14 · Nouveautés v0.7
 
 | Zone | Ce qui change |
 |------|----------------|
-| Meta / carte | **🗺️ Choisir sur la carte…**, GPS en manifest, libellés humains, **📍 FOCUS** (pin rose), **🔄 Recharger** = tous les sites |
-| Validation | **🌊 ChiroSurf nuits** (1 CSV / nuit bio) + validation contact-par-contact inchangée |
-| Synthèse | Source `_Vu`, filtre **proba Tadarida ≥** |
-| Campagne | **🔧 Vérifier / Réparer** (rapport détaillé, token 401, nettoyage), export **USB** |
-| Upload | **Météo non bloquante** (T° Summary auto ; vent/couverture optionnels, complétables sur le portail) |
+| **Synthèse** | Sélecteur de **nuit biologique** ; ChiroSurf **non requis** ; `_Vu` lu s'il existe |
+| **ChiroSurf nuits** | Optionnel (méthode 10 % → 75 %) ; distinct de la Synthèse ; coupure **midi** |
+| **Valider** | Tri des colonnes, filtres observateur / chiros, bilan `X / Y` (issue #4) |
+| **Titley** | Swift / Ranger : noms usine lus ; TE×10 sans collision (issue #4) |
+| **Démarrage** | Plus de scan auto du dernier dossier (issue #5) |
+| **Dates** | WAV font foi si Summary cumulé |
+| **SM2** | `.wac` / `.w4v` : conversion Kaleidoscope Lite en amont (issue #6) |
 
-**Depuis la v0.6** (code local, pas encore de tag de release) :
-
-- **Valider** : tri au clic sur les en-têtes ; filtres taxon observateur et
-  **Chiros seulement** (issue #4).
-- **Vue session** : bilan `X / Y` ; **Nettoyer** à droite de **Valider** (issue #4.5).
-- **ChiroSurf nuits** : ▶ ouvre le CSV brut, 📈 ouvre le `_Vu` (issue #4.8).
-- **Activité** : Chiros seulement, taxons observateur, lecture des `_Vu`.
-- **Démarrage** : plus de scan auto du dernier dossier ; Préférences →
-  « Garder en mémoire le dernier dossier » (issue #5).
-- **Upload** : libellés Vent / Couverture nuageuse lisibles.
-- **Titley Swift / Ranger** : noms usine `YYYY-MM-DD HH-MM-SS` lus ; TE×10
-  sans collision ; Préparer s'arrête si aucun nom n'est lisible (issue #4).
-- **Dates** : si le Summary ≠ WAV (carte SD non formatée), avertissement à
-  la préparation et avant l'upload ; dates / T° prises sur les fichiers ;
-  une participation au mauvais jour n'est pas réutilisée.
-- FAQ **EXFAT** (SSD externes sous Windows).
+La **v0.6** (carte pick/FOCUS, Vérifier / Réparer, export USB, météo non
+bloquante, CSV ChiroSurf) reste le socle — voir le
+[changelog](https://github.com/kevin-guille/ChiroTool/blob/main/CHANGELOG.md).
 
 Conception / dev : [`SPEC_v06_parcours.md`](SPEC_v06_parcours.md) · issues
 [#3](https://github.com/kevin-guille/ChiroTool/issues/3),
 [#4](https://github.com/kevin-guille/ChiroTool/issues/4),
-[#5](https://github.com/kevin-guille/ChiroTool/issues/5).
+[#5](https://github.com/kevin-guille/ChiroTool/issues/5),
+[#6](https://github.com/kevin-guille/ChiroTool/issues/6).
 
 ### Suite
 
-- Synthèse `_Vu` « nuit validée statistiquement » (10 % → 75 %), en attente
-  du cadrage terrain (issue #3).
-- Robustesse / UX du **mode batch**, journal d'upload, export multi-nuits,
-  captures tuto (pick carte, ChiroSurf nuits, diagnostic).
+- Robustesse / UX du **mode batch**, journal d'upload, export compilé
+  espèces × nuits, fusion `_Vu` → xlsx (choix produit, pas un oubli).
 
 ---
 

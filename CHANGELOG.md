@@ -5,6 +5,12 @@ Les versions publiées suivent le SemVer du fichier `version.py` / tags GitHub.
 
 ## [Unreleased]
 
+## [0.7.0] — 2026-08-30
+
+Retours issues [#4](https://github.com/kevin-guille/ChiroTool/issues/4),
+[#5](https://github.com/kevin-guille/ChiroTool/issues/5),
+[#6](https://github.com/kevin-guille/ChiroTool/issues/6).
+
 ### Ajouté
 
 - **Valider** : tri au clic sur les en-têtes (asc / desc / ordre d'origine) ;
@@ -12,26 +18,32 @@ Les versions publiées suivent le SemVer du fichier `version.py` / tags GitHub.
   seulement** (issue #4).
 - **Vue session** : bilan `X / Y` contacts avec taxon observateur (xlsx en
   arrière-plan, cache) et nombre d'identifications déjà envoyées si sidecar.
+- **Synthèse** : sélecteur de **nuit biologique** (indépendant de ChiroSurf) ;
+  `_Vu` lu s'il existe ; cumul multi-nuits sans classes d'activité
+  (contacts/nuit).
 - **ChiroSurf nuits** : ouverture du CSV brut (▶ ChiroSurf) et du `_Vu`
-  (📈 graphes) depuis la liste des nuits et depuis Valider (issue #4.8).
+  (📈 graphes) depuis la liste des nuits et depuis Valider (issue #4.8) —
+  **optionnel**, distinct de la Synthèse.
 - **Activité** : filtres **Chiros seulement** et **Taxons observateur** ;
   lecture des CSV `_Vu` (issue #4.9–10).
+- **Titley Swift / Ranger** (issue #4) : noms usine `YYYY-MM-DD HH-MM-SS`
+  (espace ou underscore, ± n° d'enregistreur) lus au renommage ; TE×10
+  incrémente l'heure des tranches ; **Préparer s'arrête** si aucun nom
+  n'est lisible.
 
 ### Corrigé
 
 - **Valider** : le 2e clic sur un en-tête conserve le tri (callback heading
   reposé après mise à jour du libellé ▲ / ▼).
-- **Vue session** : bouton **Nettoyer** à droite de **Valider** (issue #4.5).
+- **Vue session** : bouton **Nettoyer** à droite de **Valider** (issue #4.5) ;
+  **📊 Synthèse** avant **🌊 ChiroSurf nuits** (complémentaires, pas un
+  remplacement).
 - **Upload / participation** : libellés Vent et Couverture nuageuse lisibles
   (titre + aide empilés, plus superposés).
 - **Démarrage** (issue #5) : plus de scan auto du dernier dossier (EXFAT /
   SSD endormi figeait l'UI et grisait Parcourir). Préférences → Général :
   « Garder en mémoire le dernier dossier » (coché par défaut) ; décoché,
   le chemin n'est plus restauré. Parcourir reste cliquable pendant un scan.
-- **Titley Swift / Ranger** (issue #4) : noms usine `YYYY-MM-DD HH-MM-SS`
-  (espace ou underscore, ± n° d'enregistreur) lus au renommage ; TE×10
-  incrémente l'heure des tranches (plus de collision / perte des 5 s
-  suivantes) ; **Préparer s'arrête** si aucun nom n'est lisible.
 - **Dates Summary vs une nuit** (Jeanne) : si le Summary ne correspond pas
   aux WAV (carte SD non formatée, pose cumulée), **avertissement** à la
   préparation et avant l'upload ; dates (et T° si recoupement) prises sur
@@ -40,10 +52,10 @@ Les versions publiées suivent le SemVer du fichier `version.py` / tags GitHub.
 
 ### Documentation
 
-- Tutoriel + PDF : barre Valider puis Nettoyer, ChiroSurf ▶ / 📈 `_Vu`,
-  filtres chiros et taxons observateur (Valider, Synthèse, Activité),
-  Titley, dates Summary ≠ WAV, démarrage sans scan auto. README : bloc
-  **Depuis la v0.6**. Landing : Titley.
+- Tutoriel + PDF : distinction Synthèse / ChiroSurf ; coupure **midi** (nuit
+  biologique) ; Titley ; dates Summary ≠ WAV ; démarrage sans scan auto ;
+  SM2 / `.wac` / `.w4v` (issue [#6](https://github.com/kevin-guille/ChiroTool/issues/6)).
+- README + landing GitHub Pages : v0.7.
 
 ### Tests
 
@@ -51,6 +63,7 @@ Les versions publiées suivent le SemVer du fichier `version.py` / tags GitHub.
 - Cohérence synthèse / compteur observateur sur le `_Vu` Nuit_1 issue #3.
 - Titley : parse noms, rename, TE×10 15 s sans collision, stop si illisible.
 - Dates Jeanne : Summary multi-jours → WAV ; participation périmée non réutilisée.
+- Nuit biologique : coupure midi ; sélecteur Synthèse (Nuit 1 / toutes).
 
 ## [0.6.0] — 2026-08-07
 

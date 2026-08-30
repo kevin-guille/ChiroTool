@@ -45,36 +45,30 @@ Idéal pour les **bureaux d’études**, **associations** et **observateurs** qu
 
 ---
 
-## Nouveautés v0.6
+## Nouveautés v0.7
 
-La **v0.6** répond à l’issue [#3](https://github.com/kevin-guille/ChiroTool/issues/3)
-(validation MNHN / multi-nuits) et fiabilise le parcours point ↔ carte :
+La **v0.7** reprend les retours [#4](https://github.com/kevin-guille/ChiroTool/issues/4)
+(Titley, Valider), [#5](https://github.com/kevin-guille/ChiroTool/issues/5)
+(démarrage) et [#6](https://github.com/kevin-guille/ChiroTool/issues/6) (WAC),
+et **sépare** Synthèse et ChiroSurf :
 
 | | Nouveauté | Bénéfice terrain |
 |---|-----------|------------------|
-| 🔧 | **Vérifier / Réparer** une nuit (diag API + disque) | Reprise après upload partiel / force-launch web |
-| 💾 | **Export USB** de sessions (Data_k ± Data) | Partage collègue sans copier des To de bruts |
-| 🗺️ | **Pick carte** depuis les métadonnées (commune, 5 km) | Plus de saisie manuelle de carré / Zx |
-| 📍 | **FOCUS carte** (pin rose, GPS manifest) + recharger = tous sites | « Voir sur la carte » recentre vraiment |
-| 🌊 | **ChiroSurf nuits** (`chirosurf/Nuit{n}_…csv`) | Méthode 10 %→75 % nuit par nuit |
-| 📊 | Synthèse **`_Vu`** + filtre **proba Tadarida min** | Lecture activité après validation ChiroSurf |
-| 🌤 | **Météo non bloquante** (T° Summary ; vent/couverture optionnels) | Upload même sans saisie terrain complète |
+| 📊 | **Synthèse** avec choix de **nuit** (xlsx, `_Vu` si présent) | Récap + activité **sans** ChiroSurf |
+| 🌊 | **ChiroSurf nuits** optionnel (▶ brut / 📈 `_Vu`) | Méthode 10 %→75 % pour ceux qui l’utilisent |
+| 🏷️ | **Titley** Anabat Swift / Ranger | Noms usine lus ; plus besoin de XnView |
+| 🔍 | **Valider** : tri, filtres, bilan `X / Y` | Lecture plus rapide d’une nuit |
+| 📂 | Plus de **scan auto** au démarrage | SSD EXFAT endormi ne fige plus l’UI |
+| 📅 | **Dates** : WAV font foi si Summary cumulé | Carte SD non formatée : plus de mauvaise nuit |
 
-### Depuis la v0.6 (sur `main`, pas encore de tag)
+**📊 Synthèse** et **🌊 ChiroSurf nuits** sont complémentaires : tout le monde
+utilise la Synthèse ; ChiroSurf n’est utile que pour la méthode 10 %→75 %.
 
-Correctifs déjà dans le dépôt, visibles après `git pull` / prochain exe :
+### v0.6 (rappel)
 
-| | Correctif | Bénéfice terrain |
-|---|-----------|------------------|
-| 🏷️ | **Titley** Anabat Swift / Ranger (noms usine `YYYY-MM-DD HH-MM-SS`) | Plus besoin de passer par XnView ; TE×10 sans collision ; Préparer s’arrête si aucun nom n’est lisible ([#4](https://github.com/kevin-guille/ChiroTool/issues/4)) |
-| 📂 | **Démarrage** : plus de scan auto du dernier dossier | Un SSD EXFAT endormi ne fige plus l’UI ; **Parcourir** reste cliquable ([#5](https://github.com/kevin-guille/ChiroTool/issues/5)) |
-| 📅 | **Dates** : si Summary ≠ WAV (carte SD non formatée), avertissement Préparer + Upload | Les fichiers WAV font foi ; T° recoupées sur cette nuit |
-| 🔍 | **Valider** : tri, filtres observateur / chiros, bilan `X / Y` | Lecture plus rapide d’une nuit validée ([#4](https://github.com/kevin-guille/ChiroTool/issues/4)) |
-| 🧹 | **Nettoyer** à droite de **Valider** | Identifier d’abord, purger ensuite ([#4](https://github.com/kevin-guille/ChiroTool/issues/4)) |
-| 🌊 | **ChiroSurf nuits** : ▶ CSV brut, 📈 `_Vu` (aussi depuis Valider → CSV nuits) | Validation 10 %→75 % et graphes sans passer par l’explorateur |
-| 📈 | **Activité** : chiros seulement + taxons observateur | Les Nyclas (etc.) ajoutés à la main apparaissent dans les graphes |
-
-Préférences → Général : **Garder en mémoire le dernier dossier** (coché par défaut) réaffiche le chemin **sans** le rescanner.
+Vérifier / Réparer, export USB, pick + FOCUS carte, ChiroSurf multi-nuits
+(CSV), synthèse `_Vu` / proba min, météo non bloquante — voir le
+[changelog](CHANGELOG.md).
 
 👉 Détail : [Changelog](CHANGELOG.md) · [Tutoriel](docs/TUTORIEL.md) · [SPEC](docs/SPEC_v06_parcours.md) · [Releases](https://github.com/kevin-guille/ChiroTool/releases)
 
@@ -113,10 +107,11 @@ Préférences → Général : **Garder en mémoire le dernier dossier** (coché 
 
 ### Après l’analyse
 
-- **Validation des contacts** (raccourcis, tri des colonnes, filtres observateur / chiros, WAV ou **CSV nuits** dans ChiroSurf, envoi des identifications)
-- **Vue session** : bilan `X / Y` ; **Valider** puis **Nettoyer**
-- **ChiroSurf multi-nuits** : scission lazy `chirosurf/Nuit{n}_…csv` ; ▶ brut / 📈 `_Vu`
-- **Graphes d’activité** et **synthèse** (chiros seulement, taxons observateur, `_Vu`, référentiels national / région / milieu)
+- **Validation des contacts** (raccourcis, tri des colonnes, filtres observateur / chiros, ouverture WAV, envoi des identifications)
+- **Vue session** : bilan `X / Y` ; **Valider** · **Nettoyer** · **Synthèse**
+- **Synthèse** par espèce + niveaux d’activité (sélecteur de nuit, `_Vu` optionnel)
+- **ChiroSurf nuits** (optionnel) : scission lazy `chirosurf/Nuit{n}_…csv` ; ▶ brut / 📈 `_Vu`
+- **Graphes d’activité** (chiros seulement, taxons observateur, `_Vu`)
 - **Registre de campagne** multi-sites (SQLite, export CSV / xlsx)
 - **Export portable de sessions** (clé USB / partage : Data_k ± Data + métadonnées + `chirosurf/` si présent)
 - **Carte OSM** : pick depuis les meta (5 km), FOCUS session, carrés STOC, create/reuse (y compris autre observateur)
@@ -137,12 +132,14 @@ Tout enregistreur dont les fichiers sont **horodatés** dans le nom :
 
 | Famille | Modèles / notes |
 |---------|-----------------|
-| **Wildlife Acoustics** | SM2 / SM3 / SM4(BAT) / Mini Bat (`SERIE_YYYYMMDD_HHMMSS.wav`) |
+| **Wildlife Acoustics** | SM2 / SM3 / SM4(BAT) / Mini Bat (`SERIE_YYYYMMDD_HHMMSS.wav`). SM2 en **`.wac`** : conversion en WAV d’abord (ci-dessous). |
 | **Autres horodatés** | Passive Recorder, Bat Recorder, etc. |
 | **AudioMoth** | Fichiers *déjà expandés* via l’AudioMoth Configuration App (*File → Expand*). ChiroTool assure ensuite renommage + TE×10 (alternative à Kaleidoscope, devenu payant pour l’AudioMoth). |
 | **Titley** | Anabat Swift / Ranger, nom usine `YYYY-MM-DD HH-MM-SS.wav` (espace ou underscore, n° d’enregistreur optionnel). |
 
 Les formats à noms **non datés** (ex. Peersonic, Pettersson D500x) nécessitent un renommage préalable (XnView vers `YYYYMMDD_HHMMSS.wav`).
+
+Les fichiers compressés Wildlife **`.wac`** (SM2, parfois SM3) et **`.w4v`** ne sont **pas** décompressés. Convertissez-les en WAV horodatés `PREFIX_YYYYMMDD_HHMMSS` **avant** Préparer : Kaleidoscope Lite (sans licence Pro) ou WAC2WAV + *Split Triggers* ; expansion de sortie **×1** (le TE×10, c’est ChiroTool) ; **Disable noise filtering** ; **un WAV par trigger** (un pavé d’une heure par WAC = triggers non extraits). Même logique que l’AudioMoth `T.WAV` à expander. Détail : [tutoriel §12](docs/TUTORIEL.md#12--questions-fréquentes--dépannage).
 
 ---
 

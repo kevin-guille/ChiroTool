@@ -301,23 +301,85 @@ def list_chirosurf_nights(session_path: Path | str) -> list[ChiroSurfNightFile]:
     return result
 
 
+def synthesis_night_menu(
+    slices: list[NightSlice],
+    vu_indexes: set[int] | None = None,
+) -> list[tuple[int, str]]:
+    """Choix du sélecteur Synthèse : ``(key, label)``.
+
+    ``key == 0`` = toute la participation (uniquement s'il y a **plus d'une**
+    nuit bio). Les clés ``1..N`` sont les nuits. Un ``_Vu`` existant est
+    signalé dans le libellé — ChiroSurf n'est pas requis pour ouvrir Synthèse.
+    """
+    vu_indexes = vu_indexes or set()
+    items: list[tuple[int, str]] = []
+    if len(slices) > 1:
+        total = sum(sl.n_contacts for sl in slices)
+        items.append((0, f"Toute la participation · {total} contacts"))
+    for sl in slices:
+        d = sl.night_date.strftime("%d/%m") if sl.night_date else "?"
+        extra = " · _Vu" if sl.night_index in vu_indexes else ""
+        items.append((
+            sl.night_index,
+            f"Nuit {sl.night_index} · {d} · {sl.n_contacts} contacts{extra}",
+        ))
+    return items
+
+
+def resolve_synthesis_table(
+    headers: list[str],
+    rows: list[list],
+    *,
+    night_index: int | None = None,
+    vu_path: Path | str | None = None,
+) -> tuple[list[str], list[list], str, bool]:
+    """Table pour Synthèse : ``(headers, rows, source_label, mixed_nights)``.
+
+    * ``night_index`` ``None`` ou ``0`` → toutes les lignes du tableur.
+    * sinon une nuit biologique ; ``vu_path`` prioritaire s'il existe.
+    ``mixed_nights`` True si le cumul mélange plusieurs nuits (classes
+    d'activité contacts/nuit non applicables).
+    """
+    slices = split_rows_by_biological_night(headers, rows)
+    mixed_all = len(slices) > 1
+    if night_index is None or int(night_index) == 0:
+        return list(headers), list(rows), "xlsx (toute la participation)", mixed_all
+    idx = int(night_index)
+    if vu_path is not None and Path(vu_path).is_file():
+        h, r = read_csv(vu_path)
+        return h, r, f"_Vu nuit {idx}", False
+    for sl in slices:
+        if sl.night_index == idx:
+            d = sl.night_date.strftime("%d/%m") if sl.night_date else "?"
+            return list(sl.headers), list(sl.rows), f"xlsx · Nuit {idx} · {d}", False
+    return list(headers), list(rows), "xlsx", mixed_all
+
+
 def load_table_for_synthesis(
     session_path: Path | str,
     xlsx_path: Path | str,
     *,
     prefer_vu_night: int | None = None,
+    night_index: int | None = None,
 ) -> tuple[list[str], list[list], str]:
-    """Charge headers/rows pour synthèse (priorité ``_Vu`` si demandé)."""
+    """Charge headers/rows pour synthèse (priorité ``_Vu`` si demandé).
+
+    Rétrocompatible (3-tuple). Préfère ``night_index`` s'il est fourni,
+    sinon ``prefer_vu_night``.
+    """
     session_path = Path(session_path)
-    if prefer_vu_night is not None:
+    xlsx_path = Path(xlsx_path)
+    target = night_index if night_index is not None else prefer_vu_night
+    headers, rows = rows_from_xlsx(xlsx_path)
+    vu_path = None
+    if target:
         for nf in list_chirosurf_nights(session_path):
-            if nf.night_index != prefer_vu_night:
+            if nf.night_index != int(target):
                 continue
             if nf.has_vu and nf.vu_path.is_file():
-                h, r = read_csv(nf.vu_path)
-                return h, r, f"_Vu nuit {prefer_vu_night}"
-            if nf.has_raw and nf.raw_path.is_file():
-                h, r = read_csv(nf.raw_path)
-                return h, r, f"CSV nuit {prefer_vu_night}"
-    h, r = rows_from_xlsx(xlsx_path)
-    return h, r, Path(xlsx_path).name
+                vu_path = nf.vu_path
+            break
+    h, r, src, _mixed = resolve_synthesis_table(
+        headers, rows, night_index=target, vu_path=vu_path,
+    )
+    return h, r, src
