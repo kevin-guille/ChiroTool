@@ -14,7 +14,7 @@
 <meta property="og:type" content="website">
 <meta property="og:locale" content="fr_FR">
 <meta property="og:title" content="ChiroTool v0.7 — le traitement Vigie-Chiro Point Fixe automatisé">
-<meta property="og:description" content="Logiciel libre pour naturalistes et BE : renommage, TE×10, upload, Tadarida, multi-nuits ChiroSurf, Vérifier/Réparer, carte, nettoyage avec garde-fous et registre — en une seule application.">
+<meta property="og:description" content="Logiciel libre pour naturalistes et BE : renommage, TE×10, upload, Tadarida, synthèse par nuit, ChiroSurf optionnel, Vérifier/Réparer, carte, nettoyage avec garde-fous et registre, en une seule application.">
 <meta property="og:url" content="https://kevin-guille.github.io/ChiroTool/">
 <meta property="og:image" content="https://kevin-guille.github.io/ChiroTool/captures/05-fenetre-principale.png">
 <meta property="og:site_name" content="ChiroTool">
@@ -37,7 +37,7 @@
       "applicationCategory": "ScientificApplication",
       "applicationSubCategory": "Bioacoustique / traitement Vigie-Chiro",
       "softwareVersion": "0.7.0",
-      "description": "Logiciel libre qui automatise le traitement des enregistrements ultrason de chauves-souris pour le protocole Vigie-Chiro Point Fixe (MNHN) : renommage, expansion temporelle TE×10, participation et upload API, suivi Tadarida, ChiroSurf multi-nuits, Vérifier/Réparer, carte pick/FOCUS, nettoyage avec garde-fous, envoi des identifications, graphes d'activité, synthèse et registre de campagne.",
+      "description": "Logiciel libre qui automatise le traitement des enregistrements ultrason de chauves-souris pour le protocole Vigie-Chiro Point Fixe (MNHN) : renommage, expansion temporelle TE×10, participation et upload API, suivi Tadarida, synthèse par nuit, ChiroSurf optionnel, Vérifier/Réparer, carte pick/FOCUS, nettoyage avec garde-fous, envoi des identifications, graphes d'activité et registre de campagne.",
       "url": "https://kevin-guille.github.io/ChiroTool/",
       "downloadUrl": "https://github.com/kevin-guille/ChiroTool/releases",
       "softwareHelp": "https://kevin-guille.github.io/ChiroTool/ChiroTool-Tutoriel.pdf",
@@ -580,9 +580,9 @@
       <div class="f"><div class="ic">🧹</div><h3>Nettoyage par seuils</h3>
         <p>Seuils par groupe (chiros, orthos, micromam, oiseaux), aperçu chiffré et garde-fou mass-delete.</p></div>
       <div class="f"><div class="ic">🔍</div><h3>Validation &amp; envoi</h3>
-        <p>Contacts filtrables, ChiroSurf multi-nuits (1 CSV / nuit bio), taxons, envoi des identifications vers le portail.</p></div>
+        <p>Contacts filtrables, taxons, envoi des identifications vers le portail. ChiroSurf reste optionnel (méthode 10&nbsp;%→75&nbsp;%).</p></div>
       <div class="f"><div class="ic">📈</div><h3>Graphes &amp; synthèse</h3>
-        <p>Activité horaire, niveaux de référence, source xlsx ou <code>_Vu</code>, filtre proba Tadarida.</p></div>
+        <p>Activité horaire et récap par espèce, avec choix de nuit. Source xlsx ou <code>_Vu</code> si présent.</p></div>
       <div class="f"><div class="ic">🗂️</div><h3>Registre &amp; export USB</h3>
         <p>Suivi multi-sites / multi-contrats, export CSV/xlsx, paquet portable Data_k ± Data pour un collègue.</p></div>
       <div class="f"><div class="ic">🗺️</div><h3>Carte pick &amp; FOCUS</h3>
@@ -605,7 +605,7 @@
       <div class="step"><div class="num">2</div><h3>Upload + Tadarida</h3>
         <p>L’assistant pré-remplit la participation (météo optionnelle). ChiroTool uploade, suit l’analyse et récupère les observations. En cas de coupure&nbsp;: <strong>Vérifier / Réparer</strong>.</p></div>
       <div class="step"><div class="num">3</div><h3>Nettoyer &amp; valider</h3>
-        <p>Aperçu des suppressions, validation contact-par-contact ou multi-nuits ChiroSurf (10&nbsp;%→75&nbsp;%), envoi des identifications.</p></div>
+        <p>Aperçu des suppressions, synthèse par nuit, validation contact-par-contact, envoi des identifications. ChiroSurf 10&nbsp;%→75&nbsp;% si vous l’utilisez.</p></div>
     </div>
   </div>
 </section>

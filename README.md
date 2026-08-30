@@ -282,7 +282,7 @@ Tests : `pytest tests/` (également en [CI GitHub Actions](https://github.com/ke
 
 Vous avez une saison Point Fixe devant vous ? **ChiroTool est fait pour ça.**
 
-1. **[Téléchargez la v0.6](https://github.com/kevin-guille/ChiroTool/releases)** (exe ou sources)
+1. **[Téléchargez la v0.7](https://github.com/kevin-guille/ChiroTool/releases)** (exe ou sources)
 2. Traitez une nuit test de bout en bout
 3. Envoyez un retour — bug, idée, besoin de formation —
    via une [**issue GitHub**](https://github.com/kevin-guille/ChiroTool/issues)
