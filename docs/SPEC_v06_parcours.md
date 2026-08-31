@@ -2,7 +2,7 @@
 
 | | |
 |--|--|
-| **Statut** | **Livré** : v0.6.0 (2026-08-07, vagues A–C) + **v0.7.0** (2026-08-30, Synthèse autonome, Titley, issues #4–#6) |
+| **Statut** | **Livré** : v0.6.0 (2026-08-07, vagues A–C) + **v0.7.0** (2026-08-30, Synthèse autonome, Titley, issues #4–#6) + **v0.7.1** (2026-08-31, issue #7 ChiroSurf CSV+WAV) |
 | **Date** | 2026-08-04 (conception) · 2026-08-07 (v0.6) · 2026-08-30 (v0.7) |
 | **Contexte** | Issue [#3](https://github.com/kevin-guille/ChiroTool/issues/3) (retours terrain) + retours carte / meta |
 | **Principe** | Pragmatisme — une vérité disque, peu de fichiers, parcours unifiés, libellés humains d’abord |
@@ -301,7 +301,7 @@ Indépendant de P2–P5 ; livrable Vague A.
 | Highlight nuit courante | **Oui** | Style marker + status/popup |
 | Split lazy nuit bio | **Oui** | Logique pure (même coupure midi que `activity_graph`) ; fixtures Benjamin |
 | Import `_Vu` → synthèse | **Oui** | Même 11 colonnes ; proba obs SUR/PROBABLE |
-| Ouvrir ChiroSurf « magiquement » sur le bon CSV | **Partiel** | Générer fichier + ouvrir dossier (fiable). Lancement exe + args dépend de ChiroSurf — ne pas promettre plus |
+| Ouvrir ChiroSurf « magiquement » sur le bon CSV | **Oui (v0.7.1)** | Copie du CSV à côté des WAV (`Data_k/`) puis lancement exe. ChiroSurf 4.x glob `*.{wav,mp3}` dans le dossier du tableur (issue #7). Refus si plus aucun WAV. |
 | Filtre proba min synthèse | **Oui** | Petit delta `synthesis` + GUI |
 | Référentiels régionaux | **Déjà** | Brancher l’UI si pas assez visible |
 | Export 3 modes | **Quasi** | Wizard export existe ; formaliser libellés modes |

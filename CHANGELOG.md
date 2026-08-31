@@ -5,6 +5,30 @@ Les versions publiées suivent le SemVer du fichier `version.py` / tags GitHub.
 
 ## [Unreleased]
 
+## [0.7.1] — 2026-08-31
+
+Issue [#7](https://github.com/kevin-guille/ChiroTool/issues/7)
+(Benjamin — liaison ChiroSurf).
+
+### Corrigé
+
+- **▶ ChiroSurf** (fenêtre nuits) : le CSV est copié à côté des WAV
+  (`Data_k/` sinon `Data/`) avant lancement. ChiroSurf 4.x glob
+  `*.{wav,mp3}` dans le dossier du tableur ; un CSV isolé dans
+  `chirosurf/` faisait planter le script de démarrage (Tcl
+  *no files matched glob pattern*). S'il n'y a aucun WAV, l'ouverture
+  est refusée avec un message clair (nuit déjà nettoyée).
+- **`_Vu` hors ChiroTool** : reconnaissance de `Nuit1_`, `Nuit_1_` et
+  `Nuit_1-` ; un `_Vu` collé dans `chirosurf/` ou écrit par ChiroSurf
+  dans `Data_k/` (à côté du CSV ouvert) est listé, rapatrié vers
+  `chirosurf/`, et lu par Synthèse / Activité.
+
+### Tests
+
+- Naming Benjamin (`Nuit_1-observations_Vu.csv`) + préfixe avant
+  `participation`.
+- Staging CSV → `Data_k/` ; refus sans WAV ; harvest `_Vu`.
+
 ## [0.7.0] — 2026-08-30
 
 Retours issues [#4](https://github.com/kevin-guille/ChiroTool/issues/4),

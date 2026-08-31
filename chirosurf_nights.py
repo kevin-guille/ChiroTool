@@ -5,6 +5,9 @@ chirosurf_nights.py — scission multi-nuits pour ChiroSurf (SPEC v0.6 / issue #
 - Naming D11 : ``Nuit{n}_{stem_origine}.csv`` / ``Nuit{n}_{stem_origine}_Vu.csv``
 - Dossier ``chirosurf/`` créé **à la demande** (lazy)
 - Ne jamais écraser un ``_Vu`` sans confirmation explicite
+- Issue #7 : ChiroSurf 4.x glob les WAV **dans le dossier du CSV** ;
+  l'ouverture passe par une copie à côté de ``Data_k/``. Lecture ``_Vu``
+  élargie (``Nuit1_`` / ``Nuit_1_`` / ``Nuit_1-``) + scan Data_k/Data.
 
 Logique pure + I/O fichier testable.
 """
@@ -13,6 +16,7 @@ from __future__ import annotations
 
 import csv
 import re
+import shutil
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
@@ -22,9 +26,14 @@ from activity_graph import _night_date_iso, parse_filename_time
 
 CHIROSURF_DIRNAME = "chirosurf"  # sous-dossier session (SPEC D3)
 
+# D11 généré : Nuit1_stem.csv — lu aussi : Nuit_1_stem / Nuit_1-stem (issue #3/#7)
 _NUIT_FILE_RE = re.compile(
-    r"^Nuit(?P<n>\d+)_(?P<rest>.+)\.csv$", re.IGNORECASE
+    r"^Nuit_?(?P<n>\d+)[_-](?P<rest>.+)\.csv$", re.IGNORECASE
 )
+
+_AUDIO_DIR_NAMES = ("Data_k", "Data")
+_AUDIO_EXTS = {".wav", ".mp3"}
+_CSV_SCAN_DIRNAMES = (CHIROSURF_DIRNAME, "ChiroSurf_nuits") + _AUDIO_DIR_NAMES
 
 
 @dataclass
@@ -42,7 +51,7 @@ class NightSlice:
 
 @dataclass
 class ChiroSurfNightFile:
-    """Fichier présent (ou prévu) sous chirosurf/."""
+    """Fichier présent (ou prévu) sous chirosurf/ — ``_Vu`` éventuellement ailleurs."""
     night_index: int
     night_date: date | None
     raw_path: Path
@@ -140,6 +149,216 @@ def vu_csv_name(night_index: int, origin_stem: str) -> str:
     return f"Nuit{int(night_index)}_{origin_stem}_Vu.csv"
 
 
+def _strip_vu_suffix(rest: str) -> tuple[bool, str]:
+    """``(is_vu, stem)`` — suffixe ``_Vu`` inséré par ChiroSurf avant ``.csv``."""
+    if rest.lower().endswith("_vu"):
+        stem = rest[:-3]
+        if stem.endswith("_"):
+            stem = stem[:-1]
+        return True, stem
+    return False, rest
+
+
+def parse_chirosurf_csv_name(
+    name: str,
+) -> tuple[int | None, bool, str] | None:
+    """Décode un nom de CSV nuit / ``_Vu``.
+
+    Retourne ``(night_index | None, is_vu, stem)``. ``None`` si le fichier
+    n'est pas un CSV ChiroSurf reconnaissable.
+
+    Accepte D11 (``Nuit1_stem.csv``) et la convention Benjamin
+    (``Nuit_1_stem.csv``, ``Nuit_1-observations_Vu.csv``). Un ``*_Vu.csv``
+    sans préfixe Nuit est un orphelin (index ``None``) à rattacher par date.
+    """
+    name = Path(name).name
+    if not name.lower().endswith(".csv"):
+        return None
+    m = _NUIT_FILE_RE.match(name)
+    if m:
+        is_vu, stem = _strip_vu_suffix(m.group("rest"))
+        return int(m.group("n")), is_vu, stem or "observations"
+    low = name.lower()
+    if low.endswith("_vu.csv"):
+        stem = name[: -len("_Vu.csv")]
+        if stem.endswith("_"):
+            stem = stem[:-1]
+        return None, True, stem or "observations"
+    return None
+
+
+def is_chirosurf_vu_csv(path: Path | str) -> bool:
+    """True si le chemin ressemble à un ``_Vu`` ChiroSurf (dossier attendu)."""
+    p = Path(path)
+    if p.suffix.lower() != ".csv" or not p.name.lower().endswith("_vu.csv"):
+        return False
+    return p.parent.name.lower() in {
+        CHIROSURF_DIRNAME.lower(), "chirosurf_nuits", "data_k", "data",
+    }
+
+
+def count_audio_files(folder: Path | str) -> int:
+    """Nombre de ``.wav`` / ``.mp3`` **directement** dans ``folder`` (pas récursif).
+
+    ChiroSurf 4.x fait ``glob $dir/*.{wav,mp3}`` sans descendre les sous-dossiers.
+    """
+    d = Path(folder)
+    if not d.is_dir():
+        return 0
+    n = 0
+    try:
+        for p in d.iterdir():
+            if p.is_file() and p.suffix.lower() in _AUDIO_EXTS:
+                n += 1
+    except OSError:
+        return 0
+    return n
+
+
+def find_session_audio_dir(session_path: Path | str) -> Path | None:
+    """Dossier où ChiroSurf doit ouvrir le CSV : WAV présents au premier niveau.
+
+    Priorité ``Data_k/`` puis ``Data/`` puis la racine de session.
+    """
+    session_path = Path(session_path)
+    for name in _AUDIO_DIR_NAMES:
+        d = session_path / name
+        if count_audio_files(d) > 0:
+            return d
+    if count_audio_files(session_path) > 0:
+        return session_path
+    return None
+
+
+class ChiroSurfLaunchError(Exception):
+    """Pas de WAV à côté du CSV : ChiroSurf 4.x abort (glob Tcl, issue #7)."""
+
+
+def stage_csv_beside_audio(src: Path | str, audio_dir: Path | str) -> Path:
+    """Copie ``src`` dans ``audio_dir`` (même nom). Retourne le chemin à ouvrir."""
+    src = Path(src)
+    audio_dir = Path(audio_dir)
+    dest = audio_dir / src.name
+    try:
+        if dest.resolve() == src.resolve():
+            return dest
+    except OSError:
+        pass
+    if dest.is_file():
+        try:
+            if (dest.stat().st_size == src.stat().st_size
+                    and dest.stat().st_mtime >= src.stat().st_mtime):
+                return dest
+        except OSError:
+            pass
+    try:
+        shutil.copy2(src, dest)
+    except OSError:
+        if dest.is_file():
+            return dest
+        raise
+    return dest
+
+
+def prepare_chirosurf_launch(
+    session_path: Path | str,
+    csv_path: Path | str,
+) -> Path:
+    """Prépare l'ouverture ChiroSurf : CSV **à côté des WAV**.
+
+    ChiroSurf 4.x (``OpenFile``) fait ``glob $dossier_csv/*.{wav,mp3}`` sans
+    ``-nocomplain`` : un CSV isolé dans ``chirosurf/`` plante le script de
+    démarrage (issue #7).
+    """
+    csv_path = Path(csv_path)
+    if not csv_path.is_file():
+        raise ChiroSurfLaunchError(f"CSV introuvable :\n{csv_path}")
+    audio = find_session_audio_dir(session_path)
+    if audio is None:
+        raise ChiroSurfLaunchError(
+            "Aucun fichier WAV/MP3 dans Data_k/, Data/ ni à la racine "
+            "de la session.\n\n"
+            "ChiroSurf exige que le tableur et les sons soient dans le "
+            "même dossier. Si la nuit a déjà été nettoyée, les WAV ne "
+            "sont plus là — impossible d'ouvrir cette nuit dans ChiroSurf."
+        )
+    return stage_csv_beside_audio(csv_path, audio)
+
+
+def _prefer_newer(a: Path, b: Path) -> Path:
+    try:
+        if b.stat().st_mtime > a.stat().st_mtime:
+            return b
+    except OSError:
+        pass
+    return a
+
+
+def _is_chirosurf_dir(folder: Path) -> bool:
+    return folder.name.lower() in {CHIROSURF_DIRNAME.lower(), "chirosurf_nuits"}
+
+
+def _iter_candidate_csvs(session_path: Path) -> list[Path]:
+    """CSV dans chirosurf/ (d'abord) puis Data_k/ Data/ (copies / _Vu ChiroSurf)."""
+    out: list[Path] = []
+    for name in _CSV_SCAN_DIRNAMES:
+        d = session_path / name
+        if not d.is_dir():
+            continue
+        try:
+            for p in sorted(d.iterdir()):
+                if p.is_file() and p.suffix.lower() == ".csv":
+                    out.append(p)
+        except OSError:
+            continue
+    return out
+
+
+def harvest_vu_sidecars(session_path: Path | str) -> list[Path]:
+    """Ramène vers ``chirosurf/`` les ``_Vu`` écrits à côté des WAV.
+
+    ChiroSurf écrit le ``_Vu`` **dans le dossier du CSV ouvert**. Après
+    staging dans Data_k/, le sidecar y reste. On copie vers chirosurf/
+    (nom conservé) si absent, ou si la source est plus récente.
+    N'écrase jamais un ``_Vu`` chirosurf/ plus récent.
+    """
+    session_path = Path(session_path)
+    dest_dir = ensure_chirosurf_dir(session_path)
+    copied: list[Path] = []
+    for folder_name in _AUDIO_DIR_NAMES:
+        src_dir = session_path / folder_name
+        if not src_dir.is_dir():
+            continue
+        try:
+            entries = list(src_dir.iterdir())
+        except OSError:
+            continue
+        for p in entries:
+            if not p.is_file() or p.suffix.lower() != ".csv":
+                continue
+            parsed = parse_chirosurf_csv_name(p.name)
+            if parsed is None or not parsed[1]:
+                continue
+            dest = dest_dir / p.name
+            try:
+                if dest.exists() and dest.resolve() == p.resolve():
+                    continue
+            except OSError:
+                pass
+            if dest.is_file():
+                try:
+                    if dest.stat().st_mtime >= p.stat().st_mtime:
+                        continue
+                except OSError:
+                    continue
+            try:
+                shutil.copy2(p, dest)
+            except OSError:
+                continue
+            copied.append(dest)
+    return copied
+
+
 def ensure_chirosurf_dir(session_path: Path | str) -> Path:
     d = Path(session_path) / CHIROSURF_DIRNAME
     d.mkdir(parents=True, exist_ok=True)
@@ -223,62 +442,100 @@ def prepare_chirosurf_nights(
     slices = split_rows_by_biological_night(headers, rows)
     origin = origin_stem_from_xlsx_name(xlsx_path)
     out_dir = ensure_chirosurf_dir(session_path)
-    result: list[ChiroSurfNightFile] = []
 
     for sl in slices:
         raw_path = out_dir / raw_csv_name(sl.night_index, origin)
-        vu_path = out_dir / vu_csv_name(sl.night_index, origin)
-
         if force_raw or not raw_path.is_file():
             write_csv(raw_path, sl.headers, sl.rows)
 
+    harvest_vu_sidecars(session_path)
+    discovered = {nf.night_index: nf for nf in list_chirosurf_nights(session_path)}
+
+    result: list[ChiroSurfNightFile] = []
+    for sl in slices:
+        disc = discovered.get(sl.night_index)
+        raw_path = out_dir / raw_csv_name(sl.night_index, origin)
+        if disc is not None and disc.has_raw:
+            raw_path = disc.raw_path
+        vu_path = out_dir / vu_csv_name(sl.night_index, origin)
+        has_vu = vu_path.is_file()
+        if disc is not None and disc.has_vu and disc.vu_path.is_file():
+            vu_path = disc.vu_path
+            has_vu = True
         result.append(ChiroSurfNightFile(
             night_index=sl.night_index,
             night_date=sl.night_date,
             raw_path=raw_path,
             vu_path=vu_path,
             has_raw=raw_path.is_file(),
-            has_vu=vu_path.is_file(),
+            has_vu=has_vu,
             n_contacts=sl.n_contacts,
         ))
     return result
 
 
 def list_chirosurf_nights(session_path: Path | str) -> list[ChiroSurfNightFile]:
-    """Liste les fichiers chirosurf/ existants (sans générer)."""
-    d = Path(session_path) / CHIROSURF_DIRNAME
-    if not d.is_dir():
-        return []
-
+    """Liste les CSV nuit / ``_Vu`` (chirosurf/, Data_k/, Data/), sans générer."""
+    session_path = Path(session_path)
     by_idx: dict[int, dict] = {}
-    for p in sorted(d.glob("Nuit*_*.csv")):
-        m = _NUIT_FILE_RE.match(p.name)
-        if not m:
-            continue
-        idx = int(m.group("n"))
-        rest = m.group("rest")
-        # « foo_Vu » / « foo_vu » → stem « foo » (suffixe _Vu de ChiroSurf)
-        is_vu = rest.lower().endswith("_vu")
-        stem = rest[: -len("_Vu")] if is_vu else rest
-        if stem.endswith("_"):
-            stem = stem[:-1]
+    orphans: list[Path] = []
 
+    for p in _iter_candidate_csvs(session_path):
+        parsed = parse_chirosurf_csv_name(p.name)
+        if parsed is None:
+            continue
+        idx, is_vu, stem = parsed
+        if idx is None:
+            if is_vu:
+                orphans.append(p)
+            continue
         info = by_idx.setdefault(idx, {"stem": stem, "raw": None, "vu": None})
         if is_vu:
-            info["vu"] = p
-            # Le brut fixe le stem de référence s'il arrive après
+            info["vu"] = p if info["vu"] is None else _prefer_newer(info["vu"], p)
             if info.get("raw") is None:
                 info["stem"] = stem
         else:
-            info["raw"] = p
-            info["stem"] = stem
+            if info["raw"] is None or _is_chirosurf_dir(p.parent):
+                info["raw"] = p
+                info["stem"] = stem
 
+    date_to_idx: dict[date, int] = {}
+    for idx, info in by_idx.items():
+        src = info.get("raw") or info.get("vu")
+        if src and Path(src).is_file():
+            try:
+                headers, rows = read_csv(src)
+                nd = _guess_date_from_csv_data(headers, rows)
+            except Exception:
+                nd = None
+            if nd is not None:
+                date_to_idx.setdefault(nd, idx)
+
+    for p in orphans:
+        parsed = parse_chirosurf_csv_name(p.name)
+        stem = parsed[2] if parsed else "observations"
+        try:
+            headers, rows = read_csv(p)
+            nd = _guess_date_from_csv_data(headers, rows)
+        except Exception:
+            nd = None
+        idx: int | None = date_to_idx.get(nd) if nd is not None else None
+        if idx is None and len(by_idx) == 1:
+            idx = next(iter(by_idx))
+        if idx is None and not by_idx:
+            idx = 1
+        if idx is None:
+            continue
+        info = by_idx.setdefault(idx, {"stem": stem, "raw": None, "vu": None})
+        info["vu"] = p if info["vu"] is None else _prefer_newer(info["vu"], p)
+
+    fallback_dir = session_path / CHIROSURF_DIRNAME
     result: list[ChiroSurfNightFile] = []
     for idx in sorted(by_idx):
         info = by_idx[idx]
         stem = info["stem"] or "observations"
-        raw_path = info["raw"] or (d / raw_csv_name(idx, stem))
-        vu_path = info["vu"] or (d / vu_csv_name(idx, stem))
+        raw_path = info["raw"] or (fallback_dir / raw_csv_name(idx, stem))
+        vu_path = info["vu"] or (fallback_dir / vu_csv_name(idx, stem))
         n_contacts = None
         night_date = None
         src = info["raw"] or info["vu"]

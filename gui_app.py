@@ -2186,7 +2186,11 @@ class ChiroToolApp(ctk.CTk):
             )
             return
         try:
-            from chirosurf_nights import prepare_chirosurf_nights
+            from chirosurf_nights import (
+                prepare_chirosurf_nights,
+                prepare_chirosurf_launch,
+                ChiroSurfLaunchError,
+            )
             nights = prepare_chirosurf_nights(session_path, xlsx, force_raw=False)
         except Exception as e:
             messagebox.showerror(
@@ -2213,10 +2217,11 @@ class ChiroToolApp(ctk.CTk):
         ).pack(fill="x", padx=14, pady=(12, 4))
         ctk.CTkLabel(
             dlg, text="Coupure à midi (nuit biologique) : le matin du 17 reste "
-                      "la nuit du 16. Deux lignes = fichiers ≥ 12 h le second jour. "
-                      "▶ ChiroSurf ouvre le CSV brut ; 📈 _Vu ouvre les graphes. "
-                      "Le récapitulatif par espèce, c'est 📊 Synthèse "
-                      "(indépendant de ChiroSurf).",
+                      "la nuit du 16. ▶ ChiroSurf copie le CSV à côté des WAV "
+                      "(Data_k) — ChiroSurf 4.x cherche les sons dans le même "
+                      "dossier que le tableur. Un _Vu produit hors ChiroTool "
+                      "(Nuit_1_…, collé dans chirosurf/ ou Data_k/) est reconnu. "
+                      "Le récapitulatif par espèce, c'est 📊 Synthèse.",
             font=ctk.CTkFont(size=11), text_color=("gray40", "gray70"),
             wraplength=600, anchor="w", justify="left",
         ).pack(fill="x", padx=14, pady=(0, 8))
@@ -2265,6 +2270,16 @@ class ChiroToolApp(ctk.CTk):
                     prefer_vu_night=n,
                 )
 
+            def _launch_csv(p: Path):
+                try:
+                    target = prepare_chirosurf_launch(session_path, p)
+                except ChiroSurfLaunchError as e:
+                    messagebox.showwarning(
+                        "ChiroSurf", str(e), parent=dlg,
+                    )
+                    return
+                launch_chirosurf(exe, target, parent=dlg)
+
             def _open_raw(p=nf.raw_path):
                 if not p.is_file():
                     messagebox.showwarning(
@@ -2273,18 +2288,19 @@ class ChiroToolApp(ctk.CTk):
                         parent=dlg,
                     )
                     return
-                launch_chirosurf(exe, p, parent=dlg)
+                _launch_csv(p)
 
             def _open_vu(p=nf.vu_path, has=nf.has_vu):
                 if not has or not p.is_file():
                     messagebox.showinfo(
                         "Pas encore de _Vu",
                         "Ouvrez d'abord le CSV brut dans ChiroSurf et "
-                        "validez (10 %→75 %). Le _Vu apparaît à côté.",
+                        "validez (10 %→75 %). Le _Vu apparaît à côté "
+                        "du CSV (dans Data_k/ après ouverture depuis ChiroTool).",
                         parent=dlg,
                     )
                     return
-                launch_chirosurf(exe, p, parent=dlg)
+                _launch_csv(p)
 
             ctk.CTkButton(
                 row, text="Synthèse", width=88, height=28,

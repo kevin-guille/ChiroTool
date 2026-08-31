@@ -230,7 +230,9 @@ class SynthesisView(ctk.CTkToplevel):
             from chirosurf_nights import (
                 list_chirosurf_nights, rows_from_xlsx,
                 split_rows_by_biological_night, synthesis_night_menu,
+                harvest_vu_sidecars,
             )
+            harvest_vu_sidecars(self.session_path)
             headers, rows = rows_from_xlsx(self.xlsx_path)
         except Exception as e:
             messagebox.showerror("Lecture impossible",

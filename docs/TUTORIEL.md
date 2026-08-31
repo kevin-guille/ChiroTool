@@ -547,11 +547,16 @@ unique**. ChiroTool prépare les CSV :
    déborde après midi le lendemain (carte non formatée, relevé tardif,
    deux nuits sur la carte) sort en **deux** lignes — c'est voulu.
 3. **▶ ChiroSurf** ouvre le CSV **brut** (sans `_Vu`) — méthode 10 % → 75 %.
-   Les WAV restent dans `Data_k/` de la session. Indiquez ce dossier à
-   ChiroSurf s'il ne trouve pas les sons.
+   ChiroSurf 4.x cherche les sons **dans le même dossier** que le tableur :
+   ChiroTool **copie** donc le CSV dans `Data_k/` (sinon `Data/`) avant
+   l'ouverture. S'il n'y a plus de WAV (nuit déjà nettoyée), l'ouverture
+   est refusée avec un message.
 4. Après validation ChiroSurf, le fichier `…_Vu.csv` apparaît **à côté** du
-   brut. **📈 _Vu** l'ouvre pour les **graphes** ChiroSurf. Pour poursuivre une
+   CSV ouvert (donc dans `Data_k/`). ChiroTool le **rapatrie** vers
+   `chirosurf/`. **📈 _Vu** l'ouvre pour les **graphes**. Pour poursuivre une
    validation, rouvrez toujours le CSV **sans** `_Vu`.
+   Un `_Vu` produit **hors** ChiroTool (nomenclature `Nuit_1_…` ou collé
+   à la main dans `chirosurf/` / `Data_k/`) est reconnu.
 5. Revenez à **📊 Synthèse** : si un `_Vu` existe pour la nuit choisie, il
    est lu à la place du xlsx. Cases **« identifications validées seulement »**
    et **« Chiros seulement »**. Avec la méthode 10 % → 75 %, ChiroSurf n'inscrit
@@ -978,6 +983,18 @@ Le journal complet peut être collé dans une [issue GitHub](https://github.com/
 **🌊 ChiroSurf nuits** → **▶ ChiroSurf** sur le CSV brut (sans `_Vu`) → le `_Vu`
 apparaît à côté → **📈 _Vu** pour les graphes, **Synthèse** dans ChiroTool.
 Voir [§8 B](#b--méthode-mnhn--team-chiro-via-chirosurf-10--75-).
+
+**« ChiroSurf s'ouvre puis affiche *Error in startup script* / *no files matched glob pattern*. »**
+ChiroSurf 4.x cherche les WAV **dans le dossier du CSV**. La v0.7.1 copie
+le CSV dans `Data_k/` avant l'ouverture. Si le message persiste : (1) le
+chemin ChiroSurf.exe est bien 4.6+ ; (2) `Data_k/` contient encore des
+`.wav` (une nuit déjà nettoyée n'a plus de sons). Voir [§8 B](#b--méthode-mnhn--team-chiro-via-chirosurf-10--75-).
+
+**« J'ai collé un `_Vu` dans chirosurf/ et ChiroTool ne le voit pas. »**
+Les noms `Nuit1_…_Vu.csv` **et** `Nuit_1-…_Vu.csv` (nomenclature manuelle /
+issue #3) sont lus, y compris un `_Vu` laissé dans `Data_k/` après une
+validation ChiroSurf. Fermez et rouvrez **🌊 ChiroSurf nuits** ou
+**📊 Synthèse**. Voir [§8 B](#b--méthode-mnhn--team-chiro-via-chirosurf-10--75-).
 
 **« ChiroSurf nuits affiche 2 nuits alors que je n'ai posé qu'une nuit. »**
 Ce n'est **pas** un découpage à minuit. La coupure est à **midi** (nuit

@@ -3122,6 +3122,133 @@ class TestChiroSurfNights:
         assert mixed0
         assert len(r0) == 15839
 
+    def test_parse_names_d11_and_benjamin(self):
+        from chirosurf_nights import parse_chirosurf_csv_name
+        assert parse_chirosurf_csv_name(
+            "Nuit1_participation-6a5f2ea5178f3d99b4025b84-observations.csv"
+        ) == (1, False, "participation-6a5f2ea5178f3d99b4025b84-observations")
+        assert parse_chirosurf_csv_name(
+            "Nuit1_participation-abc-observations_Vu.csv"
+        )[1] is True
+        parsed = parse_chirosurf_csv_name(
+            "Nuit_1_444976-participation-abc-observations_Vu.csv")
+        assert parsed is not None
+        assert parsed[0] == 1 and parsed[1] is True
+        assert "participation" in parsed[2]
+        assert parse_chirosurf_csv_name("Nuit_1-observations_Vu.csv") == (
+            1, True, "observations")
+        assert parse_chirosurf_csv_name("Nuit_2-observations.csv") == (
+            2, False, "observations")
+        orphan = parse_chirosurf_csv_name("manuel_Vu.csv")
+        assert orphan is not None and orphan[0] is None and orphan[1] is True
+        assert parse_chirosurf_csv_name("random.csv") is None
+
+    def test_list_recognizes_benjamin_nuit_underscore(self, tmp_path):
+        """Issue #7 : ``Nuit_1-observations_Vu.csv`` (fixtures #3) est vu."""
+        from shutil import copy2
+        from chirosurf_nights import list_chirosurf_nights
+        sample = Path(__file__).resolve().parent.parent / (
+            "samples/issue3_benjamin/Nuit_1-observations_Vu.csv")
+        if not sample.is_file():
+            pytest.skip("samples issue #3 absents")
+        cs = tmp_path / "sess" / "chirosurf"
+        cs.mkdir(parents=True)
+        copy2(sample, cs / sample.name)
+        nights = list_chirosurf_nights(tmp_path / "sess")
+        assert len(nights) == 1
+        assert nights[0].night_index == 1
+        assert nights[0].has_vu
+        assert nights[0].vu_path.name == sample.name
+
+    def test_prepare_sees_external_vu(self, tmp_path):
+        from shutil import copy2
+        from chirosurf_nights import prepare_chirosurf_nights
+        import openpyxl
+        session = tmp_path / "sess"
+        session.mkdir()
+        xlsx = session / "participation-abc-observations.xlsx"
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.append(["nom du fichier", "tadarida_taxon", "tadarida_probabilite",
+                    "observateur_taxon", "observateur_probabilite",
+                    "temps_debut", "temps_fin", "frequence_mediane",
+                    "tadarida_taxon_autre", "validateur_taxon",
+                    "validateur_probabilite"])
+        ws.append(["Car381009-2026-Pass1-Z1-SMU_20260728_220000_000",
+                    "Pippip", 0.9, "", "", 0, 1, 40, "", "", ""])
+        wb.save(xlsx)
+        sample = Path(__file__).resolve().parent.parent / (
+            "samples/issue3_benjamin/Nuit_1-observations_Vu.csv")
+        if not sample.is_file():
+            pytest.skip("samples issue #3 absents")
+        cs = session / "chirosurf"
+        cs.mkdir()
+        copy2(sample, cs / "Nuit_1-observations_Vu.csv")
+        nights = prepare_chirosurf_nights(session, xlsx)
+        assert len(nights) == 1
+        assert nights[0].has_vu
+        assert nights[0].has_raw
+
+    def test_vu_in_data_k_is_listed_and_harvested(self, tmp_path):
+        from chirosurf_nights import (
+            list_chirosurf_nights, harvest_vu_sidecars, write_csv,
+        )
+        session = tmp_path / "sess"
+        dk = session / "Data_k"
+        dk.mkdir(parents=True)
+        headers = ["nom du fichier", "tadarida_taxon"]
+        rows = [["Car381009-2026-Pass1-Z1-X_20260728_220000_000", "Pippip"]]
+        write_csv(dk / "Nuit_1-observations_Vu.csv", headers, rows)
+        nights = list_chirosurf_nights(session)
+        assert len(nights) == 1
+        assert nights[0].has_vu
+        copied = harvest_vu_sidecars(session)
+        assert copied
+        assert (session / "chirosurf" / "Nuit_1-observations_Vu.csv").is_file()
+
+    def test_launch_stages_csv_next_to_wav(self, tmp_path):
+        from chirosurf_nights import (
+            write_csv, prepare_chirosurf_launch, find_session_audio_dir,
+            count_audio_files,
+        )
+        session = tmp_path / "sess"
+        cs = session / "chirosurf"
+        dk = session / "Data_k"
+        cs.mkdir(parents=True)
+        dk.mkdir()
+        (dk / "seg.wav").write_bytes(b"RIFF")
+        csv_path = write_csv(
+            cs / "Nuit1_participation-abc-observations.csv",
+            ["nom du fichier"], [["f.wav"]],
+        )
+        assert find_session_audio_dir(session) == dk
+        assert count_audio_files(dk) == 1
+        dest = prepare_chirosurf_launch(session, csv_path)
+        assert dest.parent == dk
+        assert dest.is_file()
+        assert dest.name == csv_path.name
+
+    def test_launch_without_wav_raises(self, tmp_path):
+        from chirosurf_nights import write_csv, prepare_chirosurf_launch, \
+            ChiroSurfLaunchError
+        session = tmp_path / "sess"
+        cs = session / "chirosurf"
+        cs.mkdir(parents=True)
+        csv_path = write_csv(cs / "Nuit1_x.csv", ["h"], [["a"]])
+        with pytest.raises(ChiroSurfLaunchError, match="WAV"):
+            prepare_chirosurf_launch(session, csv_path)
+
+    def test_audio_dir_prefers_data_k(self, tmp_path):
+        from chirosurf_nights import find_session_audio_dir
+        session = tmp_path / "sess"
+        data = session / "Data"
+        dk = session / "Data_k"
+        data.mkdir(parents=True)
+        dk.mkdir()
+        (data / "old.wav").write_bytes(b"x")
+        (dk / "te.wav").write_bytes(b"y")
+        assert find_session_audio_dir(session) == dk
+
 
 class TestSynthesisMinProba:
     def test_min_proba_keeps_validated(self):

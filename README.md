@@ -55,7 +55,7 @@ et **sépare** Synthèse et ChiroSurf :
 | | Nouveauté | Bénéfice terrain |
 |---|-----------|------------------|
 | 📊 | **Synthèse** avec choix de **nuit** (xlsx, `_Vu` si présent) | Récap + activité **sans** ChiroSurf |
-| 🌊 | **ChiroSurf nuits** optionnel (▶ brut / 📈 `_Vu`) | Méthode 10 %→75 % pour ceux qui l’utilisent |
+| 🌊 | **ChiroSurf nuits** optionnel (▶ brut / 📈 `_Vu`) | Méthode 10 %→75 % pour ceux qui l’utilisent. **v0.7.1** : ouverture sans plantage Tcl (CSV copié à côté des WAV) ; `_Vu` `Nuit_1_…` reconnus ([#7](https://github.com/kevin-guille/ChiroTool/issues/7)) |
 | 🏷️ | **Titley** Anabat Swift / Ranger | Noms usine lus ; plus besoin de XnView |
 | 🔍 | **Valider** : tri, filtres, bilan `X / Y` | Lecture plus rapide d’une nuit |
 | 📂 | Plus de **scan auto** au démarrage | SSD EXFAT endormi ne fige plus l’UI |

@@ -485,11 +485,11 @@ class ActivityPanel(ctk.CTkFrame):
             except ValueError:
                 continue
             low = p.name.lower()
-            if p.suffix.lower() == ".csv" and low.endswith("_vu.csv") \
-                    and p.parent.name.lower() == "chirosurf":
-                vu_csvs.append(p)
-                sessions_with_vu.add(p.parent.parent)
-                continue
+            if p.suffix.lower() == ".csv" and low.endswith("_vu.csv"):
+                parent = p.parent.name.lower()
+                if parent in ("chirosurf", "chirosurf_nuits", "data_k", "data"):
+                    vu_csvs.append(p)
+                    continue
             if p.suffix.lower() != ".xlsx":
                 continue
             if "observations" not in low or not low.startswith("participation-"):
@@ -497,8 +497,26 @@ class ActivityPanel(ctk.CTkFrame):
             if "_cleanup" in low or "_backup" in low:
                 continue
             xlsx.append(p)
+        # Dédupliquer chirosurf/ vs Data_k/ pour la même nuit (issue #7).
+        from chirosurf_nights import parse_chirosurf_csv_name
+        vu_csvs.sort(key=lambda q: (
+            0 if q.parent.name.lower() in ("chirosurf", "chirosurf_nuits") else 1,
+            str(q).lower(),
+        ))
+        vu_kept: list[Path] = []
+        seen_vu: set[tuple] = set()
+        for vp in vu_csvs:
+            parsed = parse_chirosurf_csv_name(vp.name)
+            idx = parsed[0] if parsed else None
+            session = vp.parent.parent
+            key = (session, idx if idx is not None else vp.name.lower())
+            if key in seen_vu:
+                continue
+            seen_vu.add(key)
+            vu_kept.append(vp)
+            sessions_with_vu.add(session)
         xlsx = [x for x in xlsx if x.parent not in sessions_with_vu]
-        return sorted(xlsx + vu_csvs)
+        return sorted(xlsx + vu_kept)
 
     # =========================================================================
     # Filtres : checkboxes nuits + taxons
