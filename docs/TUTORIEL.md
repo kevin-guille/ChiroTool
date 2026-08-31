@@ -8,7 +8,7 @@
 
 ![Icône ChiroTool](captures/icon_256.png)
 
-**Version 0.7** · Tutoriel utilisateur
+**Version 0.7.1** · Tutoriel utilisateur
 
 </div>
 
@@ -1054,7 +1054,7 @@ ChiroTool couvre la grande majorité des cas, mais pas (encore) tout :
 | Zone | Ce qui change |
 |------|----------------|
 | **Synthèse** | Sélecteur de **nuit biologique** ; ChiroSurf **non requis** ; `_Vu` lu s'il existe |
-| **ChiroSurf nuits** | Optionnel (méthode 10 % → 75 %) ; distinct de la Synthèse ; coupure **midi** |
+| **ChiroSurf nuits** | Optionnel (méthode 10 % → 75 %) ; distinct de la Synthèse ; coupure **midi**. **v0.7.1** : CSV copié à côté des WAV à l'ouverture ; `_Vu` `Nuit_1_…` reconnus (issue #7) |
 | **Valider** | Tri des colonnes, filtres observateur / chiros, bilan `X / Y` (issue #4) |
 | **Titley** | Swift / Ranger : noms usine lus ; TE×10 sans collision (issue #4) |
 | **Démarrage** | Plus de scan auto du dernier dossier (issue #5) |
@@ -1069,7 +1069,8 @@ Conception / dev : [`SPEC_v06_parcours.md`](SPEC_v06_parcours.md) · issues
 [#3](https://github.com/kevin-guille/ChiroTool/issues/3),
 [#4](https://github.com/kevin-guille/ChiroTool/issues/4),
 [#5](https://github.com/kevin-guille/ChiroTool/issues/5),
-[#6](https://github.com/kevin-guille/ChiroTool/issues/6).
+[#6](https://github.com/kevin-guille/ChiroTool/issues/6),
+[#7](https://github.com/kevin-guille/ChiroTool/issues/7).
 
 ### Suite (hors v0.7)
 

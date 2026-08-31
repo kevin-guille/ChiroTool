@@ -358,6 +358,7 @@ Le tutoriel **ne décrit pas** les features non livrées comme déjà disponible
 | 2026-08-04 | doc | Tutoriel : pick intégré §6, ChiroSurf nuits §8 B, synthèse proba, FAQ ; README features |
 | 2026-08-04 | beta | FOCUS carte survit au load sites ; Recharger = tous sites ; repair token 401 + max_results 99 ; popup bouton bas ; pin unique multi-nuits |
 | 2026-08-30 | v0.7 | Synthèse ≠ ChiroSurf (sélecteur de nuit dans Synthèse) ; Titley ; Valider tri/filtres ; scan auto retiré (#5) ; WAC non natif, conversion documentée (#6). Vague D toujours plus tard. |
+| 2026-08-31 | v0.7.1 | Issue #7 : CSV nuit copié à côté des WAV (`Data_k/`) avant lancement ChiroSurf 4.x ; lecture `_Vu` `Nuit_1_` / `Nuit_1-` + harvest depuis Data_k. |
 
 ---
 

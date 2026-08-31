@@ -64,6 +64,10 @@ et **sépare** Synthèse et ChiroSurf :
 **📊 Synthèse** et **🌊 ChiroSurf nuits** sont complémentaires : tout le monde
 utilise la Synthèse ; ChiroSurf n’est utile que pour la méthode 10 %→75 %.
 
+**v0.7.1** (pre-release, [#7](https://github.com/kevin-guille/ChiroTool/issues/7)) :
+▶ ChiroSurf copie le CSV à côté des WAV ; les `_Vu` `Nuit_1_…` collés à la
+main sont reconnus. Note : [`docs/RELEASE_v0.7.1.md`](docs/RELEASE_v0.7.1.md).
+
 ### v0.6 (rappel)
 
 Vérifier / Réparer, export USB, pick + FOCUS carte, ChiroSurf multi-nuits

@@ -26,6 +26,8 @@ décrivant :
 Parcours PointSelection / carte / ChiroSurf : **v0.6**. Synthèse autonome
 (sélecteur de nuit, sans ChiroSurf), Titley, Valider, démarrage sans scan auto,
 WAC documenté : **v0.7** ([release](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.7.0)).
+Liaison ChiroSurf (CSV à côté des WAV, `_Vu` `Nuit_1_…`) : **v0.7.1**
+(pre-release, [issue #7](https://github.com/kevin-guille/ChiroTool/issues/7)).
 
 | Document | Rôle |
 |----------|------|
@@ -33,6 +35,7 @@ WAC documenté : **v0.7** ([release](https://github.com/kevin-guille/ChiroTool/r
 | [`CHANGELOG.md`](CHANGELOG.md) | Versions publiées + *Suite possible* |
 | [`docs/RELEASE_v0.6.0.md`](docs/RELEASE_v0.6.0.md) | Note de release GitHub v0.6 |
 | [`docs/RELEASE_v0.7.0.md`](docs/RELEASE_v0.7.0.md) | Note de release GitHub v0.7 |
+| [`docs/RELEASE_v0.7.1.md`](docs/RELEASE_v0.7.1.md) | Note de pre-release GitHub v0.7.1 (issue #7) |
 | [`docs/TUTORIEL.md`](docs/TUTORIEL.md) | Guide utilisateur (pick, Synthèse, ChiroSurf optionnel, repair) |
 | [`docs/ChiroTool-Tutoriel.pdf`](docs/ChiroTool-Tutoriel.pdf) | PDF généré via `python docs/build_pdf.py` |
 | [`samples/issue3_benjamin/`](samples/issue3_benjamin/) | Fixtures CSV multi-nuits + `_Vu` (issue #3) |

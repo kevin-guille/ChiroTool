@@ -29,6 +29,12 @@ Issue [#7](https://github.com/kevin-guille/ChiroTool/issues/7)
   `participation`.
 - Staging CSV → `Data_k/` ; refus sans WAV ; harvest `_Vu`.
 
+### Documentation
+
+- Tutoriel §8 B + FAQ issue #7 ; landing / README / SPEC / CONTRIBUTING.
+- Note de pre-release [`docs/RELEASE_v0.7.1.md`](docs/RELEASE_v0.7.1.md)
+  (SHA-256 de l'exe).
+
 ## [0.7.0] — 2026-08-30
 
 Retours issues [#4](https://github.com/kevin-guille/ChiroTool/issues/4),
