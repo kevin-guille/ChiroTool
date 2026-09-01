@@ -54,8 +54,8 @@ et **sépare** Synthèse et ChiroSurf :
 
 | | Nouveauté | Bénéfice terrain |
 |---|-----------|------------------|
-| 📊 | **Synthèse** avec choix de **nuit** (xlsx, `_Vu` si présent) | Récap + activité **sans** ChiroSurf |
-| 🌊 | **ChiroSurf nuits** optionnel (▶ brut / 📈 `_Vu`) | Méthode 10 %→75 % pour ceux qui l’utilisent. **v0.7.1** : ouverture sans plantage Tcl (CSV copié à côté des WAV) ; `_Vu` `Nuit_1_…` reconnus ([#7](https://github.com/kevin-guille/ChiroTool/issues/7)) |
+| 📊 | **Synthèse** (xlsx, `_Vu` si présent) | Récap + activité **sans** ChiroSurf. Une pose qui passe minuit = **1** nuit ; menu Nuit seulement s’il y a **plusieurs soirs** |
+| 🌊 | **ChiroSurf nuits** optionnel (▶ brut / 📈 `_Vu`) | Méthode 10 %→75 %. **v0.7.1** : CSV à côté des WAV ; `_Vu` `Nuit_1_…` ([#7](https://github.com/kevin-guille/ChiroTool/issues/7)). **v0.7.2** : barre d’actions glissable |
 | 🏷️ | **Titley** Anabat Swift / Ranger | Noms usine lus ; plus besoin de XnView |
 | 🔍 | **Valider** : tri, filtres, bilan `X / Y` | Lecture plus rapide d’une nuit |
 | 📂 | Plus de **scan auto** au démarrage | SSD EXFAT endormi ne fige plus l’UI |
@@ -64,9 +64,13 @@ et **sépare** Synthèse et ChiroSurf :
 **📊 Synthèse** et **🌊 ChiroSurf nuits** sont complémentaires : tout le monde
 utilise la Synthèse ; ChiroSurf n’est utile que pour la méthode 10 %→75 %.
 
-**v0.7.1** (pre-release, [#7](https://github.com/kevin-guille/ChiroTool/issues/7)) :
-▶ ChiroSurf copie le CSV à côté des WAV ; les `_Vu` `Nuit_1_…` collés à la
-main sont reconnus. Note : [`docs/RELEASE_v0.7.1.md`](docs/RELEASE_v0.7.1.md).
+**v0.7.2** (test, suite [#7](https://github.com/kevin-guille/ChiroTool/issues/7)) :
+barre d’actions sur une ligne (glissement si écran étroit) ; une pose soir + matin = une nuit en
+Synthèse (plus de Nuit 1 / Nuit 2 à minuit). Note :
+[`docs/RELEASE_v0.7.2.md`](docs/RELEASE_v0.7.2.md).
+
+**v0.7.1** : ▶ ChiroSurf copie le CSV à côté des WAV ; `_Vu` `Nuit_1_…`
+reconnus. [`docs/RELEASE_v0.7.1.md`](docs/RELEASE_v0.7.1.md).
 
 ### v0.6 (rappel)
 
@@ -113,7 +117,7 @@ Vérifier / Réparer, export USB, pick + FOCUS carte, ChiroSurf multi-nuits
 
 - **Validation des contacts** (raccourcis, tri des colonnes, filtres observateur / chiros, ouverture WAV, envoi des identifications)
 - **Vue session** : bilan `X / Y` ; **Valider** · **Nettoyer** · **Synthèse**
-- **Synthèse** par espèce + niveaux d’activité (sélecteur de nuit, `_Vu` optionnel)
+- **Synthèse** par espèce + niveaux d’activité (`_Vu` optionnel ; menu Nuit seulement si plusieurs soirs)
 - **ChiroSurf nuits** (optionnel) : scission lazy `chirosurf/Nuit{n}_…csv` ; ▶ brut / 📈 `_Vu`
 - **Graphes d’activité** (chiros seulement, taxons observateur, `_Vu`)
 - **Registre de campagne** multi-sites (SQLite, export CSV / xlsx)

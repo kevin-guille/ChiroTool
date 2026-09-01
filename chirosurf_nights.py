@@ -1,7 +1,9 @@
 """
 chirosurf_nights.py — scission multi-nuits pour ChiroSurf (SPEC v0.6 / issue #3).
 
-- 1 CSV par **nuit biologique** (coupure midi, aligné activity_graph)
+- 1 CSV par **nuit biologique** (coupure **midi**, jamais minuit — SPEC D12)
+- Une pose 21 h → 6 h = **une** nuit. Interdit : fallback date calendaire
+  sans heure (ça recréait Nuit 1 / Nuit 2 de part et d'autre de minuit).
 - Naming D11 : ``Nuit{n}_{stem_origine}.csv`` / ``Nuit{n}_{stem_origine}_Vu.csv``
 - Dossier ``chirosurf/`` créé **à la demande** (lazy)
 - Ne jamais écraser un ``_Vu`` sans confirmation explicite
@@ -69,14 +71,15 @@ class ChiroSurfNightFile:
 
 
 def biological_night_key(filename: str) -> str | None:
-    """Date ISO YYYY-MM-DD de la nuit bio pour un nom de fichier WAV/contact."""
+    """Date ISO YYYY-MM-DD de la nuit bio pour un nom de fichier WAV/contact.
+
+    Coupure à midi : 21h le 16 + 6h le 17 = **une** nuit (celle du 16).
+    Pas de fallback « date calendaire sans heure » : ça scindait une pose
+    à minuit en deux nuits dans la Synthèse.
+    """
     parsed = parse_filename_time(filename)
     if not parsed:
-        m = re.search(r"(20\d{6})", filename or "")
-        if not m:
-            return None
-        ds = m.group(1)
-        return f"{ds[:4]}-{ds[4:6]}-{ds[6:8]}"
+        return None
     date_s, mins = parsed
     return _night_date_iso(date_s, mins)
 
@@ -120,12 +123,17 @@ def split_rows_by_biological_night(
             night_index=i, night_date=nd, headers=list(headers), rows=rws,
         ))
     if unknown:
-        slices.append(NightSlice(
-            night_index=len(slices) + 1,
-            night_date=date.today(),
-            headers=list(headers),
-            rows=unknown,
-        ))
+        if slices:
+            # Lignes sans horodatage : ne pas inventer une « Nuit 2 ».
+            slices[-1].rows.extend(unknown)
+            slices[-1].n_contacts = len(slices[-1].rows)
+        else:
+            slices.append(NightSlice(
+                night_index=1,
+                night_date=date.today(),
+                headers=list(headers),
+                rows=unknown,
+            ))
     return slices
 
 

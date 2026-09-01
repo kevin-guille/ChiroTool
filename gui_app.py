@@ -16,6 +16,7 @@ import sys
 import threading
 import traceback
 from pathlib import Path
+import tkinter as tk
 from tkinter import filedialog, messagebox
 
 # PyInstaller --windowed : sys.stdout peut être None (pas de console).
@@ -193,6 +194,87 @@ class SessionCard(ctk.CTkFrame):
             self.configure(fg_color=("#d5e7f7", "#1f3a52"))
         else:
             self.configure(fg_color="transparent")
+
+
+class _HActionStrip(ctk.CTkFrame):
+    """Une seule ligne de boutons, glissable vers la droite si trop large."""
+
+    def __init__(self, master, **kwargs):
+        super().__init__(master, fg_color="transparent", **kwargs)
+        self.grid_columnconfigure(0, weight=1)
+        self._canvas = tk.Canvas(self, highlightthickness=0, height=38, bd=0)
+        self._canvas.configure(xscrollincrement=24)
+        # tk.Frame (pas CTk) : s'étire à la largeur réelle des boutons.
+        self.inner = tk.Frame(self._canvas, highlightthickness=0, bd=0)
+        self._win = self._canvas.create_window((0, 0), window=self.inner, anchor="nw")
+        self._bar = ctk.CTkScrollbar(
+            self, orientation="horizontal", command=self._canvas.xview,
+        )
+        self._canvas.configure(xscrollcommand=self._on_scroll)
+        self._canvas.grid(row=0, column=0, sticky="ew")
+        self._bar.grid(row=1, column=0, sticky="ew", pady=(2, 0))
+        self.inner.bind("<Configure>", self._on_inner)
+        self._canvas.bind("<Configure>", self._on_canvas)
+        self._canvas.bind("<MouseWheel>", self._on_wheel)
+        self.inner.bind("<MouseWheel>", self._on_wheel)
+        self.bind("<Destroy>", self._on_destroy, add="+")
+        self.after(20, self._sync_bg)
+
+    def _on_scroll(self, first, last):
+        self._bar.set(first, last)
+        try:
+            if float(first) <= 0.002 and float(last) >= 0.998:
+                self._bar.grid_remove()
+            else:
+                self._bar.grid()
+        except (TypeError, ValueError):
+            pass
+
+    def _on_inner(self, _event=None):
+        self._canvas.configure(scrollregion=self._canvas.bbox("all") or (0, 0, 0, 0))
+        h = max(self._canvas.winfo_height(), 34)
+        self._canvas.itemconfigure(self._win, height=h)
+
+    def _on_canvas(self, event):
+        self._canvas.itemconfigure(self._win, height=event.height)
+        self._sync_bg()
+        self._on_inner()
+
+    def _on_wheel(self, event):
+        delta = int(-event.delta / 120) if event.delta else 0
+        if delta:
+            self._canvas.xview_scroll(delta, "units")
+        return "break"
+
+    def bind_wheel(self, widget):
+        widget.bind("<MouseWheel>", self._on_wheel)
+
+    def _sync_bg(self):
+        try:
+            w = self.master
+            bg = None
+            while w is not None:
+                fg = None
+                try:
+                    fg = w.cget("fg_color")
+                except Exception:
+                    pass
+                if fg and fg != "transparent" and hasattr(w, "_apply_appearance_mode"):
+                    bg = w._apply_appearance_mode(fg)
+                    break
+                w = getattr(w, "master", None)
+            if bg:
+                self._canvas.configure(bg=bg)
+                self.inner.configure(bg=bg)
+        except Exception:
+            pass
+
+    def _on_destroy(self, _event=None):
+        try:
+            self._canvas.unbind("<MouseWheel>")
+            self.inner.unbind("<MouseWheel>")
+        except Exception:
+            pass
 
 
 # ---------------------------------------------------------------------------
@@ -1407,14 +1489,10 @@ class ChiroToolApp(ctk.CTk):
         ctk.CTkLabel(meta_frame, text="").grid(
             row=next_row, column=0, columnspan=2, pady=4)
 
-        # Barre d'actions : 3 étapes du pipeline en boutons séparés, chacun
-        # activable individuellement. Le "prochain logique" selon l'état est
-        # mis en évidence visuellement (bleu + gras) ; les autres restent
-        # accessibles (gris + visibles) mais non-proéminents. Au clic sur une
-        # étape normalement pas atteinte (ex: Nettoyer sur une session pas
-        # encore analysée), l'action est tentée et remonte proprement l'erreur.
-        actions = ctk.CTkFrame(self.session_container, fg_color="transparent")
-        actions.grid(row=3, column=0, sticky="ew", padx=8, pady=(2, 8))
+        # Une seule ligne + glissement horizontal si le panneau est trop étroit
+        # (écran classique : tout était coupé après 📍 Carte).
+        strip = _HActionStrip(self.session_container)
+        strip.grid(row=3, column=0, sticky="ew", padx=8, pady=(2, 8))
 
         next_step = self._next_step_name(s)  # "prep" | "upload" | "cleanup" | "done"
 
@@ -1426,8 +1504,6 @@ class ChiroToolApp(ctk.CTk):
         can_upload = bool(s.flag_renamed and s.flag_te10_done)
         can_cleanup = bool(s.flag_analyzed)
 
-        # Libellés COURTS (tout tient sur une ligne) + détail en infobulle au
-        # survol. Remplace les 2 rangées peu esthétiques.
         def _btn(label, cmd, tip, *, is_primary=False, enabled=True, accent=None):
             kw = dict(text=label, height=34,
                       state=("normal" if enabled else "disabled"), command=cmd)
@@ -1442,8 +1518,9 @@ class ChiroToolApp(ctk.CTk):
                 kw.update(fg_color=("gray85", "gray25"),
                           text_color=("gray15", "gray90"),
                           hover_color=("gray75", "gray35"))
-            b = ctk.CTkButton(actions, **kw)
+            b = ctk.CTkButton(strip.inner, **kw)
             b.pack(side="left", padx=(0, 5))
+            strip.bind_wheel(b)
             WidgetTooltip(b, tip)
             return b
 
@@ -1494,16 +1571,15 @@ class ChiroToolApp(ctk.CTk):
                  "Récapitulatif par espèce et niveaux d'activité. "
                  "Indépendant de ChiroSurf. Si plusieurs nuits, le choix "
                  "se fait dans la fenêtre.")
+            _btn("🌊 ChiroSurf nuits",
+                 lambda: self._open_chirosurf_nights_for_path(s.path, s.name),
+                 "Optionnel : CSV par nuit pour la méthode ChiroSurf "
+                 "10 %→75 %. ▶ ChiroSurf ouvre le CSV brut ; 📈 _Vu les graphes.")
 
         _btn("✎ Métadonnées", lambda: self._edit_meta(s),
              "Modifier les métadonnées de la session (site, point, passage, série…)")
         _btn("📍 Carte", lambda: self._view_on_map(s),
              "Voir le point d'écoute sur la carte")
-        if has_obs:
-            _btn("🌊 ChiroSurf nuits",
-                 lambda: self._open_chirosurf_nights_for_path(s.path, s.name),
-                 "Optionnel : CSV par nuit pour la méthode ChiroSurf "
-                 "10 %→75 %. Pas nécessaire pour la Synthèse.")
         _btn("⋯ Détails", lambda: self._show_advanced(s),
              "Détails avancés : manifest, historique des actions, fichiers")
 
@@ -2208,7 +2284,8 @@ class ChiroToolApp(ctk.CTk):
         # Dialog simple liste + actions
         dlg = ctk.CTkToplevel(self)
         dlg.title(f"ChiroSurf — nuits · {name}")
-        dlg.geometry("640x440")
+        dlg.geometry("680x480")
+        dlg.minsize(520, 360)
         dlg.transient(self)
         dlg.after(50, dlg.grab_set)
         ctk.CTkLabel(
@@ -2258,10 +2335,11 @@ class ChiroToolApp(ctk.CTk):
         for nf in nights:
             row = ctk.CTkFrame(box, fg_color=("#eef5ff", "#16263d"), corner_radius=6)
             row.pack(fill="x", pady=3, padx=2)
+            row.grid_columnconfigure(0, weight=1)
             ctk.CTkLabel(
                 row, text=nf.label, anchor="w",
                 font=ctk.CTkFont(size=12),
-            ).pack(side="left", padx=10, pady=8, fill="x", expand=True)
+            ).grid(row=0, column=0, sticky="ew", padx=10, pady=(8, 2))
 
             def _open_synth(n=nf.night_index):
                 dlg.destroy()
@@ -2302,20 +2380,24 @@ class ChiroToolApp(ctk.CTk):
                     return
                 _launch_csv(p)
 
+            # Boutons sous le libellé, alignés à gauche : sur un écran étroit
+            # pack(side=right) les poussait hors cadre.
+            btns = ctk.CTkFrame(row, fg_color="transparent")
+            btns.grid(row=1, column=0, sticky="w", padx=8, pady=(0, 8))
             ctk.CTkButton(
-                row, text="Synthèse", width=88, height=28,
-                command=_open_synth,
-            ).pack(side="right", padx=(4, 6), pady=6)
+                btns, text="▶ ChiroSurf", width=110, height=28,
+                command=_open_raw,
+            ).pack(side="left", padx=(0, 4))
             ctk.CTkButton(
-                row, text="📈 _Vu", width=78, height=28,
+                btns, text="📈 _Vu", width=78, height=28,
                 fg_color=("#2ea043" if nf.has_vu else ("gray85", "gray25")),
                 text_color=("white" if nf.has_vu else ("gray15", "gray90")),
                 command=_open_vu,
-            ).pack(side="right", padx=2, pady=6)
+            ).pack(side="left", padx=(0, 4))
             ctk.CTkButton(
-                row, text="▶ ChiroSurf", width=100, height=28,
-                command=_open_raw,
-            ).pack(side="right", padx=2, pady=6)
+                btns, text="Synthèse", width=88, height=28,
+                command=_open_synth,
+            ).pack(side="left")
 
         footer = ctk.CTkFrame(dlg, fg_color="transparent")
         footer.pack(fill="x", padx=12, pady=10)

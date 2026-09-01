@@ -3095,6 +3095,49 @@ class TestChiroSurfNights:
         assert biological_night_key(
             "Car381009-2026-Pass1-Z1-X_20260716_210000_000.wav") == "2026-07-16"
 
+    def test_overnight_spanning_midnight_is_one_night(self):
+        """Une pose 21h → 6h = une nuit bio, pas deux dates calendaires."""
+        from chirosurf_nights import split_rows_by_biological_night
+        headers = ["nom du fichier", "tadarida_taxon"]
+        rows = [
+            ["Car381009-2026-Pass1-Z1-X_20260716_210000_000", "Pippip"],
+            ["Car381009-2026-Pass1-Z1-X_20260717_000000_000", "Pippip"],
+            ["Car381009-2026-Pass1-Z1-X_20260717_063000_000", "Pippip"],
+        ]
+        slices = split_rows_by_biological_night(headers, rows)
+        assert len(slices) == 1
+        assert slices[0].n_contacts == 3
+        assert slices[0].night_date.isoformat() == "2026-07-16"
+
+    def test_overnight_trailing_junk_still_one_night(self):
+        """Tableur xlsx : espace / suffixe ne doit plus tomber en date calendaire."""
+        from chirosurf_nights import split_rows_by_biological_night
+        headers = ["nom du fichier"]
+        rows = [
+            ["Car381009-2026-Pass1-Z1-X_20260716_210000_000.wav "],
+            ["Car381009-2026-Pass1-Z1-X_20260717_020000_000 extra"],
+        ]
+        slices = split_rows_by_biological_night(headers, rows)
+        assert len(slices) == 1
+        assert slices[0].night_date.isoformat() == "2026-07-16"
+
+    def test_unknown_filename_does_not_add_a_night(self):
+        from chirosurf_nights import split_rows_by_biological_night
+        headers = ["nom du fichier"]
+        rows = [
+            ["Car381009-2026-Pass1-Z1-X_20260716_210000_000"],
+            ["sans_horodatage"],
+        ]
+        slices = split_rows_by_biological_night(headers, rows)
+        assert len(slices) == 1
+        assert slices[0].n_contacts == 2
+
+    def test_titley_overnight_is_one_night(self):
+        from chirosurf_nights import biological_night_key
+        assert biological_night_key("2026-07-16 21-00-00.wav") == "2026-07-16"
+        assert biological_night_key("2026-07-17 06-30-00.wav") == "2026-07-16"
+        assert biological_night_key("2026-07-17_06-30-00.wav") == "2026-07-16"
+
     def test_synthesis_night_menu_and_resolve(self):
         from pathlib import Path
         from chirosurf_nights import (

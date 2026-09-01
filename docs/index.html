@@ -36,7 +36,7 @@
       "operatingSystem": "Windows",
       "applicationCategory": "ScientificApplication",
       "applicationSubCategory": "Bioacoustique / traitement Vigie-Chiro",
-      "softwareVersion": "0.7.1",
+      "softwareVersion": "0.7.2",
       "description": "Logiciel libre qui automatise le traitement des enregistrements ultrason de chauves-souris pour le protocole Vigie-Chiro Point Fixe (MNHN) : renommage, expansion temporelle TE×10, participation et upload API, suivi Tadarida, synthèse par nuit, ChiroSurf optionnel, Vérifier/Réparer, carte pick/FOCUS, nettoyage avec garde-fous, envoi des identifications, graphes d'activité et registre de campagne.",
       "url": "https://kevin-guille.github.io/ChiroTool/",
       "downloadUrl": "https://github.com/kevin-guille/ChiroTool/releases",
@@ -500,7 +500,7 @@
     <div class="banner-v">
       <div>
         <strong>Nouveautés v0.7</strong>
-        <span> — Synthèse par nuit (sans ChiroSurf), Titley Swift/Ranger, Valider, démarrage sans scan auto. v0.7.1 (pre-release)&nbsp;: correctif liaison ChiroSurf (issue&nbsp;#7).</span>
+        <span> — Synthèse par nuit (sans ChiroSurf), Titley Swift/Ranger, Valider, démarrage sans scan auto. v0.7.2&nbsp;: une pose qui passe minuit = une nuit ; barre d’actions glissable sur écran classique.</span>
       </div>
       <a class="btn outline sm" href="https://github.com/kevin-guille/ChiroTool/releases">Voir les releases →</a>
     </div>
@@ -520,14 +520,14 @@
         <div class="ic">📊</div>
         <div>
           <h3>Synthèse par nuit</h3>
-          <p>Récapitulatif et niveaux d’activité, avec choix de nuit. ChiroSurf n’est pas requis.</p>
+          <p>Récapitulatif et niveaux d’activité. Une pose soir + matin = <strong>une</strong> nuit (coupure midi). Le choix de nuit n’apparaît que s’il y a plusieurs soirs. ChiroSurf n’est pas requis.</p>
         </div>
       </div>
       <div class="news">
         <div class="ic">🌊</div>
         <div>
           <h3>ChiroSurf, optionnel</h3>
-          <p>CSV par nuit biologique (coupure midi) pour la méthode 10&nbsp;%→75&nbsp;%. Distinct de la Synthèse. v0.7.1&nbsp;: ouverture sans plantage (CSV à côté des WAV) ; <code>_Vu</code> <code>Nuit_1_…</code> reconnus.</p>
+          <p>CSV par nuit biologique (coupure <strong>midi</strong>, jamais minuit) pour la méthode 10&nbsp;%→75&nbsp;%. Distinct de la Synthèse. v0.7.1&nbsp;: CSV à côté des WAV ; <code>_Vu</code> <code>Nuit_1_…</code>. v0.7.2&nbsp;: barre d’actions glissable sur écran classique.</p>
         </div>
       </div>
       <div class="news">

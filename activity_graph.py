@@ -51,9 +51,20 @@ def filter_items(items, query, *, label_fn=str) -> list:
     return [it for it in items if q in _norm_search(label_fn(it))]
 
 
-# Regex extraction de l'heure depuis le nom de fichier
+# Horodatage dans le nom (Vigie-Chiro / Wildlife / AudioMoth expandé).
+# Pas d'ancre `$` : le tableur Tadarida n'a souvent pas l'extension, et un
+# suffixe / espace en trop ne doit pas faire tomber le parse (sinon la
+# date calendaire scinde une pose à minuit).
 _RE_FILENAME_TIMESTAMP = re.compile(
-    r"_(\d{8})_(\d{2})(\d{2})(\d{2})(?:_\d+)?(?:\..+)?$"
+    r"_(\d{8})_(\d{2})(\d{2})(\d{2})"
+)
+# Titley Swift/Ranger usine : 2026-08-21 20-45-29  (espace ou underscore)
+_RE_TITLEY_TIMESTAMP = re.compile(
+    r"(20\d{2})-(\d{2})-(\d{2})[ _](\d{2})[-:](\d{2})[-:](\d{2})"
+)
+# AudioMoth expandé : date en tête, sans underscore devant.
+_RE_DATE_HEAD_TIMESTAMP = re.compile(
+    r"(?<!\d)(\d{8})_(\d{2})(\d{2})(\d{2})"
 )
 
 # Regex contexte session : préfixe canonique Vigie-Chiro
@@ -124,11 +135,24 @@ def parse_filename_time(name: str) -> tuple[str, int] | None:
 
     Retourne None si format non reconnu.
     """
-    m = _RE_FILENAME_TIMESTAMP.search(name)
-    if not m:
+    name = str(name or "").strip()
+    if not name:
         return None
-    date_s = m.group(1)
-    h, mn, s = int(m.group(2)), int(m.group(3)), int(m.group(4))
+    m = _RE_FILENAME_TIMESTAMP.search(name)
+    if m:
+        date_s = m.group(1)
+        h, mn, s = int(m.group(2)), int(m.group(3)), int(m.group(4))
+    else:
+        tm = _RE_TITLEY_TIMESTAMP.search(name)
+        if tm:
+            date_s = f"{tm.group(1)}{tm.group(2)}{tm.group(3)}"
+            h, mn, s = int(tm.group(4)), int(tm.group(5)), int(tm.group(6))
+        else:
+            hm = _RE_DATE_HEAD_TIMESTAMP.search(name)
+            if not hm:
+                return None
+            date_s = hm.group(1)
+            h, mn, s = int(hm.group(2)), int(hm.group(3)), int(hm.group(4))
     if not (0 <= h <= 23 and 0 <= mn <= 59 and 0 <= s <= 59):
         return None
     return date_s, h * 60 + mn

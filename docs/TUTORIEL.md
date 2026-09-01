@@ -8,7 +8,7 @@
 
 ![Icône ChiroTool](captures/icon_256.png)
 
-**Version 0.7.1** · Tutoriel utilisateur
+**Version 0.7.2** · Tutoriel utilisateur
 
 </div>
 
@@ -220,12 +220,12 @@ campagne. Une pastille de couleur indique l'état de chaque nuit :
 
 ### La barre d'actions
 
-En bas de la **Vue session**, une barre unique regroupe tout ce que vous pouvez
-faire sur la nuit sélectionnée :
+En bas de la **Vue session**, une **seule ligne**. Si l'écran est trop étroit,
+faites glisser la barre vers la droite (molette ou curseur sous les boutons) :
 
 > **▶ Préparer** · **☁ Upload** · **🔧 Vérifier / Réparer** · **🔍 Valider** ·
-> **🧹 Nettoyer** · **📊 Synthèse** · **✎ Métadonnées** · **📍 Carte** ·
-> **🌊 ChiroSurf nuits** · **⋯ Détails**
+> **🧹 Nettoyer** · **📊 Synthèse** · **🌊 ChiroSurf nuits** · **✎ Métadonnées** ·
+> **📍 Carte** · **⋯ Détails**
 
 Les libellés sont volontairement courts : **passez la souris sur un bouton** pour
 lire ce qu'il fait exactement.
@@ -522,6 +522,20 @@ interchangeables :
 | Rôle | Récapitulatif par espèce + niveaux d'activité | CSV par nuit pour valider dans ChiroSurf |
 | ChiroSurf requis ? | **Non** | Oui (le logiciel ChiroSurf) |
 
+### Règle de la nuit (ne plus la recasser)
+
+Une **nuit d'enregistrement** va de **midi à midi**, pas de minuit à minuit.
+
+| Situation | Combien de nuits | Menu **Nuit** dans Synthèse |
+|---|---|---|
+| Pose **21 h le 16 → 6 h le 17** | **1** (nuit du 16) | **absent** |
+| Deux soirs (16 au soir **et** 17 au soir) | **2** | Nuit 1 / Nuit 2 |
+| Découpage calendaire 16 / 17 à **minuit** | **interdit** | — |
+
+Le matin du 17 (2 h, 6 h…) appartient à la nuit commencée le 16 au soir.
+Deux lignes n'apparaissent que s'il y a une **deuxième soirée** (fichiers
+**après midi** le second jour).
+
 ### B · Méthode MNHN / Team Chiro via ChiroSurf (10 % → 75 %)
 
 Si vous **n'utilisez pas** ChiroSurf : ignorez cette section, ouvrez
@@ -543,9 +557,9 @@ unique**. ChiroTool prépare les CSV :
    | **17/07 · Nuit 2** | à partir de **midi le 17** |
 
    Le nom du dossier session (`20260716_site…`) est la **date de début** de
-   la participation, pas le nombre de nuits. Une pose « d'une nuit » qui
-   déborde après midi le lendemain (carte non formatée, relevé tardif,
-   deux nuits sur la carte) sort en **deux** lignes — c'est voulu.
+   la participation, pas le nombre de nuits. Une pose d'un soir qui passe
+   **minuit** reste **une** ligne. Deux lignes = fichiers **après midi** le
+   lendemain (deuxième soirée, relevé tardif, carte SD non formatée).
 3. **▶ ChiroSurf** ouvre le CSV **brut** (sans `_Vu`) — méthode 10 % → 75 %.
    ChiroSurf 4.x cherche les sons **dans le même dossier** que le tableur :
    ChiroTool **copie** donc le CSV dans `Data_k/` (sinon `Data/`) avant
@@ -653,9 +667,9 @@ Sur une nuit dont le tableur est récupéré, le bouton **« 📊 Synthèse »**
 récapitulatif par espèce : combien de contacts, combien de fichiers, et surtout
 **quel niveau d'activité**. **ChiroSurf n'est pas nécessaire.**
 
-Si la participation couvre **plusieurs nuits biologiques** (coupure à midi), un
-menu **Nuit** en haut de la fenêtre permet de choisir Nuit 1, Nuit 2… ou toute
-la participation. Les classes d'activité (contacts/nuit) ne s'affichent que
+Une pose qui **passe minuit** (soir + matin) reste **une** nuit : pas de menu
+Nuit. Le menu n'apparaît que si la participation couvre **plusieurs soirs**
+(coupure à midi). Les classes d'activité (contacts/nuit) ne s'affichent que
 **nuit par nuit**. Un `_Vu` ChiroSurf, s'il existe, est utilisé pour cette nuit ;
 sinon le tableur Tadarida suffit.
 
@@ -996,15 +1010,24 @@ issue #3) sont lus, y compris un `_Vu` laissé dans `Data_k/` après une
 validation ChiroSurf. Fermez et rouvrez **🌊 ChiroSurf nuits** ou
 **📊 Synthèse**. Voir [§8 B](#b--méthode-mnhn--team-chiro-via-chirosurf-10--75-).
 
-**« ChiroSurf nuits affiche 2 nuits alors que je n'ai posé qu'une nuit. »**
-Ce n'est **pas** un découpage à minuit. La coupure est à **midi** (nuit
-biologique MNHN / ChiroSurf) : le matin du 17 (00 h–12 h) reste la nuit du 16.
-Deux lignes signifient que le tableur contient des fichiers horodatés
-**≥ 12 h le second jour** (deuxième soirée, relevé après midi, ou carte SD
-non formatée). Vérifiez les heures dans `nom du fichier` des CSV sous
-`chirosurf/` : Nuit 2 à 21 h = deux nuits réelles ; Nuit 2 à 02 h = anomalie
-à signaler. Le dossier `20260716_site…` ne dit pas « une seule nuit ».
-Voir [§8 B](#b--méthode-mnhn--team-chiro-via-chirosurf-10--75-).
+**« La Synthèse me propose Nuit 1 et Nuit 2 pour une pose d'un soir. »**
+Ce n'est plus le cas depuis la **v0.7.2**. Une pose 21 h → 6 h = **une**
+nuit (coupure à **midi**, pas à minuit). Le menu Nuit n'apparaît que s'il y
+a **deux soirs**. Si vous voyez encore deux nuits : des fichiers sont
+horodatés **après midi** le lendemain (deuxième soirée réelle, ou carte SD
+non formatée). Voir [§8 — Règle de la nuit](#règle-de-la-nuit-ne-plus-la-recasser).
+
+**« ChiroSurf nuits affiche 2 lignes alors que je n'ai posé qu'une nuit. »**
+Même règle : le matin du 17 reste la nuit du 16. Deux lignes = fichiers
+**≥ 12 h le second jour**. Vérifiez les heures dans `nom du fichier` :
+Nuit 2 à 21 h = deux soirs ; Nuit 2 à 02 h = anomalie à signaler.
+Le dossier `20260716_site…` ne dit pas « une seule nuit ».
+Voir [§8](#règle-de-la-nuit-ne-plus-la-recasser).
+
+**« Je ne vois pas Synthèse / ChiroSurf nuits, seulement jusqu'à Carte. »**
+Glissez la barre d'actions vers la **droite** (molette sur la ligne, ou le
+curseur sous les boutons). Dans la fenêtre ChiroSurf nuits, ▶ / 📈 / Synthèse
+sont **sous** le nom de la nuit.
 
 **« Où sont stockées mes données ? »**
 Votre index et vos sauvegardes sont dans le sous-dossier `_chirotool/` de votre
@@ -1037,9 +1060,10 @@ ChiroTool couvre la grande majorité des cas, mais pas (encore) tout :
 - **Modifier une participation déjà créée** (météo erronée…) : via le portail web.
 - **Supprimer un carré créé par erreur** : action réservée aux administrateurs
   Vigie-Chiro (contactez l'équipe du programme).
-- **Participation multi-nuits** : **📊 Synthèse** choisit la nuit (coupure
-  midi) sans ChiroSurf. **🌊 ChiroSurf nuits** n'est utile que pour la méthode
-  10 % → 75 % (voir [§8 B](#b--méthode-mnhn--team-chiro-via-chirosurf-10--75-)).
+- **Participation multi-nuits** : **📊 Synthèse** n'affiche le menu Nuit
+  que s'il y a **plusieurs soirs** (une pose qui passe minuit = une nuit).
+  **🌊 ChiroSurf nuits** n'est utile que pour la méthode 10 % → 75 %
+  (voir [§8](#règle-de-la-nuit-ne-plus-la-recasser)).
   La validation contact par contact reste disponible en parallèle.
 - **Bouton 📍 Carte** : si les GPS n’ont jamais été mémorisés pour la session,
   choisissez une fois le point (pick carte ou create/reuse) pour les enregistrer.
@@ -1053,8 +1077,9 @@ ChiroTool couvre la grande majorité des cas, mais pas (encore) tout :
 
 | Zone | Ce qui change |
 |------|----------------|
-| **Synthèse** | Sélecteur de **nuit biologique** ; ChiroSurf **non requis** ; `_Vu` lu s'il existe |
-| **ChiroSurf nuits** | Optionnel (méthode 10 % → 75 %) ; distinct de la Synthèse ; coupure **midi**. **v0.7.1** : CSV copié à côté des WAV à l'ouverture ; `_Vu` `Nuit_1_…` reconnus (issue #7) |
+| **Synthèse** | ChiroSurf **non requis** ; `_Vu` lu s'il existe. Menu Nuit **seulement** s'il y a plusieurs soirs (v0.7.2 : une pose minuit = 1 nuit) |
+| **ChiroSurf nuits** | Optionnel (méthode 10 % → 75 %) ; distinct de la Synthèse ; coupure **midi**. **v0.7.1** : CSV à côté des WAV ; `_Vu` `Nuit_1_…`. **v0.7.2** : boutons sous le libellé (écran classique) |
+| **Barre d'actions** | **v0.7.2** : une ligne, glissement horizontal si l'écran est étroit |
 | **Valider** | Tri des colonnes, filtres observateur / chiros, bilan `X / Y` (issue #4) |
 | **Titley** | Swift / Ranger : noms usine lus ; TE×10 sans collision (issue #4) |
 | **Démarrage** | Plus de scan auto du dernier dossier (issue #5) |

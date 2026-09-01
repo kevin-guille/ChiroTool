@@ -26,7 +26,9 @@ Nuit_1_<id>-participation-<id>-observations_Vu.csv
 ## Constats techniques (conception)
 
 - Délimiteur `;`, 11 colonnes Vigie-Chiro standard.
-- **Nuit biologique** = coupure à midi : 8000 + 7839 = total multi.
+- **Nuit biologique** = coupure à **midi** (SPEC D12), jamais à minuit :
+  8000 + 7839 = total multi. Une pose 21 h → 6 h serait **une** slice ;
+  ces fichiers-ci sont un **vrai** multi-nuits (deux soirs).
 - `_Vu` = **mêmes lignes** que le brut. `observateur_taxon` /
   `observateur_probabilite` ne sont remplis que sur les contacts **écoutés**
   (16 lignes SUR / PROBABLE sur Nuit_1 comme sur Nuit_2). La méthode

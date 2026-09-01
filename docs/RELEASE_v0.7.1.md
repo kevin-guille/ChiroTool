@@ -1,8 +1,11 @@
 # ChiroTool v0.7.1 (pre-release) : liaison ChiroSurf
 
+> **Remplacée par [v0.7.2](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.7.2).**
+> Ne plus tester cet exe. On garde la pre-release pour l'historique (ne pas
+> la supprimer).
+
 Correctif ciblé suite au test terrain de
 [#7](https://github.com/kevin-guille/ChiroTool/issues/7) (Benjamin).
-À tester avant de remplacer la 0.7.0 comme release courante.
 
 ## 🔧 Corrections
 

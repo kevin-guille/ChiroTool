@@ -5,6 +5,31 @@ Les versions publiées suivent le SemVer du fichier `version.py` / tags GitHub.
 
 ## [Unreleased]
 
+## [0.7.2] — 2026-09-01
+
+Correctifs terrain après 0.7.1 ([#7](https://github.com/kevin-guille/ChiroTool/issues/7)).
+
+### Corrigé
+
+- **Vue session** : barre d'actions sur **une ligne**, glissement horizontal
+  si le panneau est trop étroit (plus rien de coupé après 📍 Carte). Dans
+  **ChiroSurf nuits**, les boutons ▶ / 📈 / Synthèse passent sous le libellé,
+  alignés à gauche.
+- **Synthèse / nuit biologique (D12)** : une pose qui passe **minuit**
+  (soir + matin) est **une** nuit. Plus de sélecteur « Nuit 1 / Nuit 2 »
+  fantôme (l'ancien fallback date calendaire sans heure scindait à minuit).
+  Les vraies participations multi-nuits (2 soirs) restent scindées à midi.
+
+### Tests
+
+- Pose 21 h → 6 h = 1 slice ; suffixe / espace dans le nom ; Titley overnight ;
+  ligne sans horodatage n'invente pas une Nuit 2.
+
+### Documentation
+
+- SPEC D12 (règle de nuit, anti-patterns) ; tutoriel §8/§9/FAQ ; README ;
+  landing ; note [`docs/RELEASE_v0.7.2.md`](docs/RELEASE_v0.7.2.md).
+
 ## [0.7.1] — 2026-08-31
 
 Issue [#7](https://github.com/kevin-guille/ChiroTool/issues/7)

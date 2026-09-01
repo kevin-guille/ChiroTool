@@ -22,8 +22,8 @@ Ainsi un exe qui affiche `0.2-dev` comparé au tag `v0.2-dev` → « à jour ».
 
 from __future__ import annotations
 
-__version__ = "0.7.1"
-__build_date__ = "2026-08-31"
+__version__ = "0.7.2"
+__build_date__ = "2026-09-01"
 
 # URLs utilisées dans la page À propos et la vérification de mises à jour.
 GITHUB_REPO_URL = "https://github.com/kevin-guille/ChiroTool"

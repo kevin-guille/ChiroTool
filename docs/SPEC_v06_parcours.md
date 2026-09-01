@@ -2,7 +2,7 @@
 
 | | |
 |--|--|
-| **Statut** | **Livré** : v0.6.0 (2026-08-07, vagues A–C) + **v0.7.0** (2026-08-30, Synthèse autonome, Titley, issues #4–#6) + **v0.7.1** (2026-08-31, issue #7 ChiroSurf CSV+WAV) |
+| **Statut** | **Livré** : v0.6.0 (2026-08-07, vagues A–C) + **v0.7.0** (2026-08-30, Synthèse autonome, Titley, issues #4–#6) + **v0.7.1** (2026-08-31, issue #7 ChiroSurf CSV+WAV) + **v0.7.2** (2026-09-01, D12 nuit bio + barre d'actions) |
 | **Date** | 2026-08-04 (conception) · 2026-08-07 (v0.6) · 2026-08-30 (v0.7) |
 | **Contexte** | Issue [#3](https://github.com/kevin-guille/ChiroTool/issues/3) (retours terrain) + retours carte / meta |
 | **Principe** | Pragmatisme — une vérité disque, peu de fichiers, parcours unifiés, libellés humains d’abord |
@@ -28,6 +28,7 @@ Ce document **prime** sur l’improvisation au codage. En cas de doute : revenir
 | D9 | Validation contact-par-contact **conservée** ; méthode ChiroSurf 10 %→75 % en **complément**. |
 | D10 | Rayon de chargement mode **PICK** = **5 km** (constante unique, ajustable plus tard si retour terrain). |
 | D11 | Naming CSV nuit : **préfixe** `Nuit{n}_` + stem d’origine (voir §1.2.1) — aligné usage Benjamin + contrainte ChiroSurf `_Vu`. |
+| D12 | **Nuit biologique = coupure à midi, jamais à minuit.** Une pose soir + matin = **une** nuit. Le sélecteur Synthèse n'apparaît que s'il y a **plusieurs soirs**. Voir §1.2.2 — **non négociable**. |
 
 ---
 
@@ -65,7 +66,7 @@ PointSelection {
     …
 ```
 
-- Nuit = **nuit biologique** (coupure à midi) — validé sur les CSV Benjamin (8000 + 7839 = multi).
+- Nuit = **nuit biologique** (coupure à midi, **D12**) — validé sur les CSV Benjamin (8000 + 7839 = multi).
 - Ordre `Nuit1`, `Nuit2`… = ordre chronologique des nuits bio dans la participation.
 - UI : toujours afficher aussi la **date** (`28/07 · Nuit 1 · ~8000 contacts`).
 - Régénérer les CSV **bruts** = OK (écraser). **Ne jamais écraser un `_Vu`** sans confirmation.
@@ -86,6 +87,37 @@ Nuit_2_…  (idem)
 ```
 
 → marqueur de nuit en **préfixe**, stem portail **à la fin**, `_Vu` inséré avant `.csv`.
+
+#### 1.2.2 Règle de la nuit biologique (D12) — ne plus recasser
+
+**Une nuit d'enregistrement = midi → midi suivant.** Pas minuit. Pas la date
+du dossier session. Pas deux dates calendaires.
+
+| Situation | Nuits | Sélecteur Synthèse |
+|-----------|-------|--------------------|
+| Pose 21 h le 16 → 6 h le 17 | **1** (nuit du 16) | **absent** |
+| Deux soirs (16 au soir **et** 17 au soir, ≥ midi le 17) | **2** | Nuit 1 / Nuit 2 / toute la participation |
+| Découpage 16 / 17 à **minuit** | **interdit** | — |
+
+**Anti-patterns (déjà vu en 0.7.1, corrigé 0.7.2) :**
+
+- Fallback `YYYYMMDD` **sans heure** quand le parse du nom échoue → le matin
+  du 17 devient une Nuit 2. **Interdit.** Si l'horodatage est illisible, la
+  ligne se rattache à la nuit connue (ou une seule slice), elle n'en crée pas.
+- Ancre `$` trop stricte sur le timestamp (espace, pas d'extension, suffixe
+  Tadarida) → même chute dans le fallback calendaire. Parser **tolérant**.
+- Afficher le menu Nuit dès qu'il y a deux **dates calendaires**. Le menu ne
+  s'ouvre que si `split_rows_by_biological_night` rend **plus d'une slice
+  après coupure midi**.
+- Barre d'actions session trop longue pour l'écran : **ne pas** passer à deux
+  rangées. Une ligne + **glissement horizontal** (curseur / molette). Boutons
+  ChiroSurf nuits **sous** le libellé, à gauche.
+
+Code : `activity_graph.parse_filename_time` + `_night_date_iso` (cutoff 12 h) ;
+`chirosurf_nights.biological_night_key` / `split_rows_by_biological_night`.
+Tests : `TestChiroSurfNights.test_overnight_spanning_midnight_is_one_night`
+(+ trailing junk, Titley, unknown sans Nuit 2). Fixtures Benjamin = **vrai**
+multi-nuits (2 soirs), pas le cas overnight.
 
 **Forum [t483 — plusieurs nuits consécutives](https://vigie-chiro.forumactif.com/t483-chiro-surf-analyser-plusieurs-nuits-consecutives)** (Yann T. / Yves Bas / LouSauvajon) :
 
@@ -264,7 +296,9 @@ Légende fichiers : `+` créé · `~` modifié · `=` inchangé · `→` lecture
 4. **Nouveau** : seuil **proba Tadarida minimale** (synthèse non validée).
 5. Référentiels d’activité : national / région (déjà via n° site) / milieu (existant) — **exposer**, ne pas réécrire.
 6. Plus tard (hors v0.7) : export compilé multi-nuits (espèces × nuits) en action explicite.
-7. **v0.7** : sélecteur de nuit **dans** 📊 Synthèse (xlsx, `_Vu` si présent). ChiroSurf n’est pas requis. Cumul « toute la participation » sans classes d’activité.
+7. **v0.7** : sélecteur de nuit **dans** 📊 Synthèse **seulement s'il y a
+   plusieurs soirs** (D12). ChiroSurf n’est pas requis. Cumul « toute la
+   participation » sans classes d’activité. Une pose qui passe minuit = 1 nuit.
 
 ---
 
@@ -320,6 +354,8 @@ Indépendant de P2–P5 ; livrable Vague A.
 - Rayon 5 km qui **cache** les points des autres **dans le carré** en création (doublons).
 - Remplacer la validation contact-par-contact.
 - Promettre un pilotage complet de ChiroSurf.
+- Scinder une pose overnight à **minuit** (D12).
+- Recréer un fallback date calendaire sans heure dans `biological_night_key`.
 
 ---
 
@@ -359,6 +395,7 @@ Le tutoriel **ne décrit pas** les features non livrées comme déjà disponible
 | 2026-08-04 | beta | FOCUS carte survit au load sites ; Recharger = tous sites ; repair token 401 + max_results 99 ; popup bouton bas ; pin unique multi-nuits |
 | 2026-08-30 | v0.7 | Synthèse ≠ ChiroSurf (sélecteur de nuit dans Synthèse) ; Titley ; Valider tri/filtres ; scan auto retiré (#5) ; WAC non natif, conversion documentée (#6). Vague D toujours plus tard. |
 | 2026-08-31 | v0.7.1 | Issue #7 : CSV nuit copié à côté des WAV (`Data_k/`) avant lancement ChiroSurf 4.x ; lecture `_Vu` `Nuit_1_` / `Nuit_1-` + harvest depuis Data_k. |
+| 2026-09-01 | v0.7.2 | **D12** : nuit bio = midi, jamais minuit ; parse horodatage tolérant ; pas de fallback calendaire ; sélecteur Synthèse seulement si ≥ 2 soirs. Barre d'actions **une ligne + glissement horizontal** ; boutons ChiroSurf sous le libellé. |
 
 ---
 
