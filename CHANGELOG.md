@@ -7,7 +7,8 @@ Les versions publiées suivent le SemVer du fichier `version.py` / tags GitHub.
 
 ## [0.7.2] — 2026-09-01
 
-Correctifs terrain après 0.7.1 ([#7](https://github.com/kevin-guille/ChiroTool/issues/7)).
+Release courante. Correctifs terrain après 0.7.0 / pre-release 0.7.1
+([#7](https://github.com/kevin-guille/ChiroTool/issues/7)).
 
 ### Corrigé
 

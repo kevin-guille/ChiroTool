@@ -64,7 +64,7 @@ et **sépare** Synthèse et ChiroSurf :
 **📊 Synthèse** et **🌊 ChiroSurf nuits** sont complémentaires : tout le monde
 utilise la Synthèse ; ChiroSurf n’est utile que pour la méthode 10 %→75 %.
 
-**v0.7.2** (test, suite [#7](https://github.com/kevin-guille/ChiroTool/issues/7)) :
+**v0.7.2** (release courante, suite [#7](https://github.com/kevin-guille/ChiroTool/issues/7)) :
 barre d’actions sur une ligne (glissement si écran étroit) ; une pose soir + matin = une nuit en
 Synthèse (plus de Nuit 1 / Nuit 2 à minuit). Note :
 [`docs/RELEASE_v0.7.2.md`](docs/RELEASE_v0.7.2.md).

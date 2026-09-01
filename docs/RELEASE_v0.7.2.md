@@ -1,24 +1,25 @@
-# ChiroTool v0.7.2 (pre-release) : nuit biologique + barre d'actions
+# ChiroTool v0.7.2 : nuit biologique + barre d'actions
 
-Correctifs après le test 0.7.1 de
-[#7](https://github.com/kevin-guille/ChiroTool/issues/7).
-Remplace la pre-release **v0.7.1** comme exe à tester (la 0.7.0 reste la
-release stable).
+Release courante. Inclut le correctif ChiroSurf de la
+[#7](https://github.com/kevin-guille/ChiroTool/issues/7) (pre-release 0.7.1)
+plus les retours de test.
 
-## 🔧 Corrections
+## 🔧 Corrections (depuis 0.7.0)
 
-- **Barre d'actions** (Vue session) : une seule ligne. Si l'écran est trop
-  étroit, glissement vers la droite (molette sur la barre, ou curseur
-  dessous). Dans **ChiroSurf nuits**, ▶ / 📈 / Synthèse sont sous le libellé.
+- **▶ ChiroSurf** : le CSV nuit est copié à côté des WAV (`Data_k/`) avant
+  ouverture (évite le plantage Tcl *no files matched glob pattern*).
+- **`_Vu` hors ChiroTool** : `Nuit1_…`, `Nuit_1_…` et `Nuit_1-…` reconnus.
+- **Barre d'actions** : une seule ligne ; glissement vers la droite si l'écran
+  est étroit (molette ou curseur). Dans **ChiroSurf nuits**, ▶ / 📈 / Synthèse
+  sont sous le libellé.
 - **Nuit biologique** : une pose **21 h → 6 h** = **une** nuit (coupure à
   **midi**, jamais à minuit). Le menu Nuit n'apparaît que s'il y a **plusieurs
-  soirs**. Deux soirs réels (ex. 16 au soir **et** 17 au soir) restent deux
-  nuits.
+  soirs**. Deux soirs réels restent deux nuits.
 
 ## 📦 Installation
 
 Téléchargez `ChiroTool.exe` ci-dessous (portable, Windows). Remplacez
-l'exe 0.7.1 : les sessions déjà préparées sont conservées.
+l'exe 0.7.0 / 0.7.1 : les sessions déjà préparées sont conservées.
 
 Tutoriel : [https://kevin-guille.github.io/ChiroTool/](https://kevin-guille.github.io/ChiroTool/)
 
@@ -26,9 +27,6 @@ Tutoriel : [https://kevin-guille.github.io/ChiroTool/](https://kevin-guille.gith
 
 Outil indépendant, compatible avec le protocole Vigie-Chiro Point Fixe via son
 API publique. Ce n'est pas un outil officiel du MNHN.
-
-Pre-release : merci de confirmer (1) on glisse la barre si Synthèse / ChiroSurf
-sont hors cadre, (2) une pose d'un soir ne montre pas Nuit 1 / Nuit 2.
 
 ---
 
