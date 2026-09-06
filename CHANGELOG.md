@@ -5,6 +5,32 @@ Les versions publiées suivent le SemVer du fichier `version.py` / tags GitHub.
 
 ## [Unreleased]
 
+### Ajouté
+
+- **Synthèse, méthode MNHN 10 % / 75 %** (issue
+  [#7](https://github.com/kevin-guille/ChiroTool/issues/7)) : case distincte
+  dans 📊 Synthèse. Reconstitution depuis le `_Vu` : bandes de **confiance
+  Tadarida** (pas le temps). Si une validation concordante atteint la
+  bande qui couvre 75 % des contacts de l'espèce, toute l'espèce est
+  retenue ; sinon, seulement les bandes 10 % qui contiennent un contact
+  écouté. « Identifications validées seulement » reste les lignes
+  écoutées. SPEC P8.
+
+### Corrigé
+
+- **Activité** : un `_Vu` (nuit 1) ne fait plus disparaître les autres
+  nuits du tableur. Le `_Vu` remplace **cette nuit seulement**.
+- **Synthèse MNHN** : cases ignorées tant que le tableur n'est pas
+  chargé ; export CSV avec `Atteint_75` / `F75` / pool ; libellé de
+  source nuit par nuit en cumul ; avertissement si la source n'est
+  pas un `_Vu` ChiroSurf.
+
+### Tests
+
+- Bandes / F75 (graphe 102 / 71 / 78), bande F75 sautée, correction
+  Eptser → MyoGT, fixture Benjamin Nuit_1 (`Pippip` 184, `Pipkuh` 73).
+- `_Vu` nuit 1 + xlsx nuit 2 : les deux nuits restent dans Activité.
+
 ## [0.7.2] — 2026-09-01
 
 Release courante. Correctifs terrain après 0.7.0 / pre-release 0.7.1
@@ -170,10 +196,11 @@ Issue [#3](https://github.com/kevin-guille/ChiroTool/issues/3) (retours terrain)
 
 ### Suite possible (post-0.7)
 
+- Onglet **Activité** : même filtre MNHN 10 % / 75 % que la Synthèse.
 - Robustesse / UX **mode batch** (données complémentaires participation,
   template avant lot, journal d'upload).
 - Export multi-nuits compilé (espèces × nuits).
-- Fusion `_Vu` → xlsx (choix produit : la méthode 10 %→75 % n'alimente pas
+- Fusion `_Vu` → xlsx (choix produit : la méthode 10 % / 75 % n'alimente pas
   l'envoi Vigie-Chiro aujourd'hui).
 - Lancer plusieurs instances de ChiroTool en parallèle (issue #4.2).
 - Modes export formalisés Léger / Travail / Complet.

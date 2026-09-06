@@ -467,13 +467,12 @@ class ActivityPanel(ctk.CTkFrame):
     def _discover_xlsx(self) -> list[Path]:
         """Scan xlsx d'observations + CSV ``_Vu`` ChiroSurf (issue #4.10).
 
-        Si une session a des ``chirosurf/*_Vu.csv``, on les prend **à la
-        place** du xlsx (évite de compter deux fois la même nuit).
+        Un ``_Vu`` remplace l'xlsx **pour cette nuit seulement** (dédup dans
+        ``aggregate_multi_xlsx``). Les autres nuits du tableur restent.
         """
         if self.workspace is None:
             return []
         xlsx: list[Path] = []
-        sessions_with_vu: set[Path] = set()
         vu_csvs: list[Path] = []
         for p in self.workspace.rglob("*"):
             if not p.is_file():
@@ -514,8 +513,8 @@ class ActivityPanel(ctk.CTkFrame):
                 continue
             seen_vu.add(key)
             vu_kept.append(vp)
-            sessions_with_vu.add(session)
-        xlsx = [x for x in xlsx if x.parent not in sessions_with_vu]
+        # Ne plus écarter tout l'xlsx dès qu'un _Vu existe : aggregate_multi_xlsx
+        # ignore les nuits déjà couvertes par un _Vu et garde les autres.
         return sorted(xlsx + vu_kept)
 
     # =========================================================================
@@ -909,6 +908,10 @@ class ActivityPanel(ctk.CTkFrame):
         sub_parts.append(f"tranche : {self._bin_minutes} min")
         if self._only_validated:
             sub_parts.append("validés humains uniquement")
+        if self._observer_taxon:
+            sub_parts.append("taxons observateur")
+        if self._chiros_only:
+            sub_parts.append("chiros seulement")
         sub_text = "  ·  ".join(sub_parts)
 
         draw.text((30, 18), title, fill="#1a1a1a", font=font_title)

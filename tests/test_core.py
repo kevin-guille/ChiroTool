@@ -1125,6 +1125,34 @@ class TestActivityAggregate:
             self.HEADERS, rows, bin_minutes=30, use_only_validated=True)
         assert {k[-1] for k in out} == {"Nyclas"}
 
+    def test_vu_csv_does_not_hide_other_nights(self, tmp_path):
+        """Un _Vu nuit 1 ne doit pas faire disparaître la nuit 2 de l'xlsx."""
+        import csv
+        import openpyxl
+        from activity_graph import aggregate_multi_xlsx, list_nights
+        n1 = self._fname("210000")
+        n2 = "Car212097-2026-Pass1-Z1-SMU03126_20260822_210000.wav"
+        csv_path = tmp_path / "Nuit_1-observations_Vu.csv"
+        with csv_path.open("w", encoding="utf-8", newline="") as f:
+            w = csv.writer(f, delimiter=";")
+            w.writerow(self.HEADERS)
+            w.writerow([n1, "Pippip", "Pippip", None])
+        xlsx = tmp_path / "participation-abc-observations.xlsx"
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.append(self.HEADERS)
+        ws.append([n1, "Pippip", "", ""])
+        ws.append([n2, "Barbar", "", ""])
+        wb.save(xlsx)
+        agg = aggregate_multi_xlsx([xlsx, csv_path])
+        nights = set(list_nights(agg))
+        assert "2026-08-21" in nights
+        assert "2026-08-22" in nights
+        n1_taxons = {k[-1] for k in agg if k[-2] == "2026-08-21"}
+        n2_taxons = {k[-1] for k in agg if k[-2] == "2026-08-22"}
+        assert n1_taxons == {"Pippip"}
+        assert n2_taxons == {"Barbar"}
+
     def test_synthesis_chiros_only(self):
         from synthesis import compute_night_synthesis
         headers = ["nom du fichier", "tadarida_taxon", "observateur_taxon"]
@@ -3291,6 +3319,188 @@ class TestChiroSurfNights:
         (data / "old.wav").write_bytes(b"x")
         (dk / "te.wav").write_bytes(b"y")
         assert find_session_audio_dir(session) == dk
+
+
+class TestMnhnSynthesis:
+    """Méthode MNHN 10 % / 75 % : bandes de confiance, pas le temps."""
+
+    HEADERS = ["nom du fichier", "tadarida_taxon", "tadarida_probabilite",
+               "observateur_taxon"]
+
+    def _rows(self, specs):
+        # specs: (file, tad, proba, obs)
+        return [list(s) for s in specs]
+
+    def _by(self, res):
+        return {s["taxon"]: s for s in res["species"]}
+
+    def test_proba_bin_edges(self):
+        from synthesis import mnhn_proba_bin
+        assert mnhn_proba_bin(None) is None
+        assert mnhn_proba_bin("") is None
+        assert mnhn_proba_bin("x") is None
+        assert mnhn_proba_bin(-0.1) is None
+        assert mnhn_proba_bin(float("nan")) is None
+        assert mnhn_proba_bin(float("inf")) is None
+        assert mnhn_proba_bin(0) == 0
+        assert mnhn_proba_bin(0.0) == 0
+        assert mnhn_proba_bin(0.099) == 0
+        assert mnhn_proba_bin(0.1) == 1
+        assert mnhn_proba_bin(0.8) == 8
+        assert mnhn_proba_bin(0.89) == 8
+        assert mnhn_proba_bin(0.9) == 9
+        assert mnhn_proba_bin(0.999) == 9
+        assert mnhn_proba_bin(1.0) == 9
+        assert mnhn_proba_bin("0.85") == 8
+
+    def test_f75_graph_102(self):
+        from synthesis import mnhn_f75
+        # 71 en 0.9, 7 en 0.8, 24 plus bas → cumul 0.9=71/102 < 75 %, 0.8=78/102.
+        bins = [0] * 10
+        bins[9] = 71
+        bins[8] = 7
+        bins[4] = 24
+        assert mnhn_f75(bins) == 8
+        assert mnhn_f75([0] * 10) is None
+
+    def test_graph_only_09_vs_reached_08(self):
+        from synthesis import compute_mnhn_synthesis
+        rows = ([["a", "Nyclei", 0.95, "Nyclei"]]
+                + [["a", "Nyclei", 0.95, ""] for _ in range(70)]
+                + [["a", "Nyclei", 0.85, ""] for _ in range(7)]
+                + [["a", "Nyclei", 0.40, ""] for _ in range(24)])
+        res = compute_mnhn_synthesis(self.HEADERS, rows)
+        sp = self._by(res)["Nyclei"]
+        assert sp["n_pool"] == 102
+        assert sp["f75"] == 0.8
+        assert sp["reached_75"] is False
+        assert sp["n_contacts"] == 71
+
+        # rows[0] = 0.95 validé ; rows[1..70] = 0.95 ; rows[71..77] = 0.85
+        rows[71][3] = "Nyclei"
+        res = compute_mnhn_synthesis(self.HEADERS, rows)
+        sp = self._by(res)["Nyclei"]
+        assert sp["reached_75"] is True
+        assert sp["n_contacts"] == 102
+
+    def test_skip_f75_band_counts_union_not_all(self):
+        """D04 conservative : bande F75 sautée → pas ALL, union des bandes."""
+        from synthesis import compute_mnhn_synthesis
+        rows = ([["f", "Pippip", 0.95, "Pippip"] for _ in range(70)]
+                + [["f", "Pippip", 0.85, ""] for _ in range(10)]
+                + [["f", "Pippip", 0.75, "Pippip"] for _ in range(20)])
+        # Forcer une seule validation en 0.9 et une en 0.7.
+        for i, r in enumerate(rows):
+            if i not in (0, 80):
+                r[3] = ""
+        res = compute_mnhn_synthesis(self.HEADERS, rows)
+        sp = self._by(res)["Pippip"]
+        assert sp["n_pool"] == 100
+        assert sp["f75"] == 0.8
+        assert sp["reached_75"] is False
+        assert sp["n_contacts"] == 90  # 70 + 20, pas les 10 de 0.8
+
+    def test_correction_forced_add_and_observer_only(self):
+        from synthesis import compute_mnhn_synthesis
+        rows = [
+            ["a", "Eptser", 0.98, "MyoGT"],   # correction, MyoGT sans pool
+            ["b", "Eptser", 0.95, "Eptser"],  # concordant 0.9
+            ["c", "Eptser", 0.95, ""],
+            ["d", "Eptser", 0.40, ""],
+            ["e", "Pippip", 0.99, "Nyclei"],  # correction vers Nyclei
+            ["f", "Nyclei", 0.99, "Nyclei"],  # pool Nyclei, bande 0.9
+            ["g", "Nyclei", 0.99, ""],
+            ["h", "Nyclei", 0.20, ""],
+        ]
+        res = compute_mnhn_synthesis(self.HEADERS, rows)
+        by = self._by(res)
+        assert "Eptser" in by
+        # Eptser pool = 3 (b,c,d) ; correction a sortie. F75 : 2/3 en 0.9 < 75 %,
+        # 2/3 encore à 0.8... 2/3=66.7%, ALL at bin 0.2 (d). Val bin 9 only.
+        assert by["Eptser"]["n_pool"] == 3
+        assert by["Eptser"]["reached_75"] is False
+        assert by["Eptser"]["n_contacts"] == 2  # bande 0.9 : b+c
+        assert by["MyoGT"]["n_contacts"] == 1
+        assert by["MyoGT"]["n_pool"] == 0
+        assert by["MyoGT"]["n_forced"] == 1
+        # Nyclei : pool 2 (f,g ; h in 0.2). e est forcé. val 0.9.
+        # cum 0.9 = 2/3 < 75 % → 2 + 1 forcé = 3 si not reached.
+        assert by["Nyclei"]["n_pool"] == 3
+        assert by["Nyclei"]["n_forced"] == 1
+        # 2 en 0.9, 1 en 0.2. F75 = 0.2 (cum 0.9=2/3 < 75 %, 0.2=3/3).
+        # val_bins={9}, F75=2 → pas atteint → 2 + 1 forcé = 3
+        assert by["Nyclei"]["reached_75"] is False
+        assert by["Nyclei"]["n_contacts"] == 3
+
+    def test_unsampled_species_dropped(self):
+        from synthesis import compute_mnhn_synthesis
+        rows = [
+            ["a", "Pippip", 0.99, "Pippip"],
+            ["b", "noise", 0.9, ""],
+            ["c", "Leppun", 0.8, ""],
+        ]
+        res = compute_mnhn_synthesis(self.HEADERS, rows)
+        assert {s["taxon"] for s in res["species"]} == {"Pippip"}
+        assert res["method"] == "mnhn"
+
+    def test_chiros_only_and_sur_probable(self):
+        from synthesis import compute_mnhn_synthesis
+        rows = [
+            ["a", "Pippip", 0.99, "Pippip"],
+            ["b", "noise", 0.2, "noise"],
+        ]
+        res = compute_mnhn_synthesis(self.HEADERS, rows, chiros_only=True)
+        assert {s["taxon"] for s in res["species"]} == {"Pippip"}
+
+    def test_does_not_break_validated_only_contract(self):
+        from pathlib import Path
+        from chirosurf_nights import read_csv
+        from synthesis import compute_night_synthesis, compute_mnhn_synthesis
+        sample = Path(__file__).resolve().parent.parent / (
+            "samples/issue3_benjamin/Nuit_1-observations_Vu.csv")
+        if not sample.is_file():
+            import pytest
+            pytest.skip("samples issue #3 absents")
+        headers, rows = read_csv(sample)
+        s_vo = compute_night_synthesis(headers, rows, validated_only=True)
+        assert s_vo["total_contacts"] == 16
+        m = compute_mnhn_synthesis(headers, rows)
+        assert m["validated_contacts"] == 16
+        by = self._by(m)
+        assert by["Pippip"]["n_pool"] == 184
+        assert by["Pippip"]["reached_75"] is True
+        assert by["Pippip"]["n_contacts"] == 184
+        assert by["Pipkuh"]["n_pool"] == 106
+        assert by["Pipkuh"]["f75"] == 0.6
+        assert by["Pipkuh"]["reached_75"] is False
+        assert by["Pipkuh"]["n_contacts"] == 73
+        assert by["Barbar"]["n_pool"] == 6
+        assert by["Barbar"]["reached_75"] is True
+        assert by["Barbar"]["n_contacts"] == 6
+        assert by["Nyclei"]["n_pool"] == 42
+        assert by["Nyclei"]["reached_75"] is False
+        assert by["Nyclei"]["n_contacts"] == 9
+        assert by["Pleaur"]["n_contacts"] == 1
+        assert by["MyoGT"]["n_contacts"] == 1
+        assert by["MyoGT"]["n_pool"] == 0
+        assert "noise" not in by
+        assert m["total_contacts"] > 16
+        assert m["total_contacts"] < 8000
+
+    def test_merge_nights_sums(self):
+        from synthesis import compute_mnhn_synthesis, merge_night_syntheses
+        a = compute_mnhn_synthesis(self.HEADERS, [
+            ["a", "Pippip", 0.99, "Pippip"],
+        ])
+        b = compute_mnhn_synthesis(self.HEADERS, [
+            ["b", "Pippip", 0.99, "Pippip"],
+            ["c", "Barbar", 0.99, "Barbar"],
+        ])
+        m = merge_night_syntheses([a, b])
+        by = self._by(m)
+        assert by["Pippip"]["n_contacts"] == a["species"][0]["n_contacts"] + 1
+        assert by["Barbar"]["n_valides"] == 1
+        assert by["Pippip"]["reached_75"] is False  # cumul : pas de F75
 
 
 class TestSynthesisMinProba:

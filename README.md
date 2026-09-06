@@ -55,14 +55,17 @@ et **sépare** Synthèse et ChiroSurf :
 | | Nouveauté | Bénéfice terrain |
 |---|-----------|------------------|
 | 📊 | **Synthèse** (xlsx, `_Vu` si présent) | Récap + activité **sans** ChiroSurf. Une pose qui passe minuit = **1** nuit ; menu Nuit seulement s’il y a **plusieurs soirs** |
-| 🌊 | **ChiroSurf nuits** optionnel (▶ brut / 📈 `_Vu`) | Méthode 10 %→75 %. **v0.7.1** : CSV à côté des WAV ; `_Vu` `Nuit_1_…` ([#7](https://github.com/kevin-guille/ChiroTool/issues/7)). **v0.7.2** : barre d’actions glissable |
+| 🌊 | **ChiroSurf nuits** optionnel (▶ brut / 📈 `_Vu`) | CSV pour valider **dans ChiroSurf** (méthode 10 % / 75 %). **v0.7.1** : CSV à côté des WAV ; `_Vu` `Nuit_1_…` ([#7](https://github.com/kevin-guille/ChiroTool/issues/7)). **v0.7.2** : barre d’actions glissable. **Synthèse** : case **Méthode MNHN 10 % / 75 %** (bandes de confiance Tadarida). |
 | 🏷️ | **Titley** Anabat Swift / Ranger | Noms usine lus ; plus besoin de XnView |
 | 🔍 | **Valider** : tri, filtres, bilan `X / Y` | Lecture plus rapide d’une nuit |
 | 📂 | Plus de **scan auto** au démarrage | SSD EXFAT endormi ne fige plus l’UI |
 | 📅 | **Dates** : WAV font foi si Summary cumulé | Carte SD non formatée : plus de mauvaise nuit |
 
 **📊 Synthèse** et **🌊 ChiroSurf nuits** sont complémentaires : tout le monde
-utilise la Synthèse ; ChiroSurf n’est utile que pour la méthode 10 %→75 %.
+utilise la Synthèse ; ChiroSurf sert à valider avec la méthode 10 % / 75 %.
+Après un `_Vu`, « Identifications validées seulement » = contacts **écoutés**.
+« Méthode MNHN 10 % / 75 % » reconstitue l'interprétation (bandes de
+confiance Tadarida, issue [#7](https://github.com/kevin-guille/ChiroTool/issues/7)).
 
 **v0.7.2** (release courante, suite [#7](https://github.com/kevin-guille/ChiroTool/issues/7)) :
 barre d’actions sur une ligne (glissement si écran étroit) ; une pose soir + matin = une nuit en

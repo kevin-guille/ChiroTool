@@ -2,9 +2,10 @@
 
 | | |
 |--|--|
-| **Statut** | **Livré** : v0.6.0 (2026-08-07, vagues A–C) + **v0.7.0** (2026-08-30, Synthèse autonome, Titley, issues #4–#6) + **v0.7.1** (2026-08-31, issue #7 ChiroSurf CSV+WAV) + **v0.7.2** (2026-09-01, D12 nuit bio + barre d'actions) |
-| **Date** | 2026-08-04 (conception) · 2026-08-07 (v0.6) · 2026-08-30 (v0.7) |
-| **Contexte** | Issue [#3](https://github.com/kevin-guille/ChiroTool/issues/3) (retours terrain) + retours carte / meta |
+| **Statut** | **Livré** : v0.6.0 (2026-08-07, vagues A–C) + **v0.7.0** (2026-08-30, Synthèse autonome, Titley, issues #4–#6) + **v0.7.1** (2026-08-31, issue #7 ChiroSurf CSV+WAV) + **v0.7.2** (2026-09-01, D12 nuit bio + barre d'actions). **P8 Synthèse MNHN** (unreleased, 2026-09-06). |
+| **Ouvert** | Liaison ChiroSurf livrée. Interprétation 10 % / 75 % dans la Synthèse : **P8** (vague E), validée Benjamin 2026-09-04 (bandes de confiance Tadarida, pas le temps). Onglet Activité ensuite. |
+| **Date** | 2026-08-04 (conception) · 2026-08-07 (v0.6) · 2026-08-30 (v0.7) · 2026-09-03 (D13) · 2026-09-06 (P8) |
+| **Contexte** | Issue [#3](https://github.com/kevin-guille/ChiroTool/issues/3) (retours terrain) + retours carte / meta + issue [#7](https://github.com/kevin-guille/ChiroTool/issues/7) |
 | **Principe** | Pragmatisme — une vérité disque, peu de fichiers, parcours unifiés, libellés humains d’abord |
 
 Ce document **prime** sur l’improvisation au codage. En cas de doute : revenir ici, ou amender le §8 avant de coder autre chose.
@@ -25,10 +26,11 @@ Ce document **prime** sur l’improvisation au codage. En cas de doute : revenir
 | D6 | **Libellés humains d’abord** ; n° de carré / Zx en secondaire (toujours visibles). |
 | D7 | **« 📍 Carte » (vue session)** : **on garde le bouton**, on le **répare** — pas de France vide. Voir §2. |
 | D8 | Coordonnées GPS **persistées** dans le manifest de session dès qu’un point est choisi/créé/réutilisé (sinon « Voir sur la carte » reste fragile). |
-| D9 | Validation contact-par-contact **conservée** ; méthode ChiroSurf 10 %→75 % en **complément**. |
+| D9 | Validation contact-par-contact **conservée** ; méthode ChiroSurf 10 % / 75 % en **complément** via le logiciel ChiroSurf (CSV par nuit, D3). |
 | D10 | Rayon de chargement mode **PICK** = **5 km** (constante unique, ajustable plus tard si retour terrain). |
 | D11 | Naming CSV nuit : **préfixe** `Nuit{n}_` + stem d’origine (voir §1.2.1) — aligné usage Benjamin + contrainte ChiroSurf `_Vu`. |
 | D12 | **Nuit biologique = coupure à midi, jamais à minuit.** Une pose soir + matin = **une** nuit. Le sélecteur Synthèse n'apparaît que s'il y a **plusieurs soirs**. Voir §1.2.2 — **non négociable**. |
+| D13 | **Méthode MNHN 10 % / 75 %** = bandes de **confiance Tadarida** (pas des paquets chronologiques). Case « identifications validées seulement » = contacts **écoutés** (inchangée). Case distincte « Méthode MNHN 10 % / 75 % ». Voir P8. |
 
 ---
 
@@ -292,7 +294,9 @@ Légende fichiers : `+` créé · `~` modifié · `=` inchangé · `→` lecture
 
 1. Ouvre **📊 Synthèse**.
 2. Source : xlsx **ou** `_Vu` de la nuit choisie si multi et importé.
-3. Option **identifications validées seulement** (existant).
+3. Option **identifications validées seulement** (existant) : lignes
+   `observateur_taxon` renseigné uniquement. Option distincte
+   **Méthode MNHN 10 % / 75 %** (P8). Les deux s'excluent.
 4. **Nouveau** : seuil **proba Tadarida minimale** (synthèse non validée).
 5. Référentiels d’activité : national / région (déjà via n° site) / milieu (existant) — **exposer**, ne pas réécrire.
 6. Plus tard (hors v0.7) : export compilé multi-nuits (espèces × nuits) en action explicite.
@@ -321,6 +325,59 @@ Indépendant de P2–P5 ; livrable Vague A.
 
 ---
 
+### P8 : Synthèse « méthode 10 % / 75 % »
+
+**Statut** : **validé** Benjamin 2026-09-04 (issue [#7](https://github.com/kevin-guille/ChiroTool/issues/7),
+graphe ChiroSurf). Logique dans `synthesis.compute_mnhn_synthesis`.
+v1 = Synthèse ; onglet Activité ensuite.
+
+**Constat** : ChiroSurf n'écrit pas le 10 % / 75 % dans le `_Vu`. On reconstitue
+depuis `tadarida_taxon` + `tadarida_probabilite` + `observateur_taxon`.
+`validated_only=True` (16 écoutés / 8000 sur Nuit_1) reste un autre mode.
+
+Quoi :
+
+- Espèce retenue = au moins 1 contact écouté et validé. Les taxons jamais
+  regardés sortent (orthoptères, noise, chiros non échantillonnés compris).
+- Pool = propositions `tadarida_taxon` de ce code, dans la nuit. Les
+  validations **filtrent** ce pool, elles ne le remplacent pas
+  (`retained_taxon` interdit ici).
+- Espèce ajoutée par l'observateur, absente de Tadarida : lignes écoutées
+  seulement, pas d'extrapolation.
+- Correction (Pippip devient Nyclas) : retirer du pool Pippip. Nyclas n'est
+  extrapolé que s'il a des propositions Tadarida **et** au moins une
+  validation concordante. Le contact corrigé est ajouté de force au nombre
+  extrapolé. La proba source ne valide aucune bande de la destination.
+  `tadarida_taxon_autre` ignoré. SUR et PROBABLE comptent tous deux.
+
+Comment (graphe ChiroSurf, mode cumulé) :
+
+- 10 bandes exclusives de confiance : `[0.0,0.1)`, …, `[0.9,1.0]`
+  (`p >= 1` → bande 0.9). Pas 10 % de la durée, pas 10 paquets chronologiques.
+- Cumul depuis le haut : `>= 0.90`, `>= 0.80`, … Graphe Nyclei : 102 contacts,
+  71 à `>= 0.90` (sous 75 %), 78 à `>= 0.80` (au-dessus) → F75 = 0.8.
+- F75 = plus haut seuil `k/10` tel que `4 * cumul(p >= k/10) >= 3 * n_pool`.
+- **Atteint 75 %** : une validation **concordante** (observateur = Tadarida)
+  dans **la bande F75**. Alors tous les contacts du pool.
+- Sinon : union des bandes exclusives qui contiennent une validation
+  concordante. Une bande sautée n'est pas comptée (70+10+20, valides en 0.9
+  et 0.7, F75=0.8 → 90, pas 100).
+- Proba absente / invalide : hors pool extrapolable. Ligne validée sans
+  proba : +1 direct, sans bande.
+- Classes d'activité recalculées sur ces effectifs. Cumul multi-nuits :
+  MNHN **par nuit** puis somme ; pas de classe d'activité sur le cumul.
+- `min_tadarida_proba` ignoré (et désactivé) en mode MNHN.
+
+**Piège** : « 1 validation manuelle → tous les Tadarida de l'espèce » raterait
+un test en validation partielle (capture #7 : 3 écoutés, Pipkuh 316 / Nyclei
+147 / Barbar 12).
+
+**Fichiers** : `synthesis.py` (logique + tests) · `gui_synthesis.py` (case).
+Onglet Activité : pas MNHN en v1. Un `_Vu` y remplace l'xlsx **nuit par nuit**
+(`aggregate_multi_xlsx`), pas toute la participation.
+
+---
+
 ## 4. Attentes vs faisabilité
 
 | Attente | Faisable ? | Commentaire |
@@ -342,6 +399,7 @@ Indépendant de P2–P5 ; livrable Vague A.
 | Ne plus jamais charger l’API carte | **Non** | Browse / pick create ont encore besoin de l’API ; FOCUS non |
 | Carte 100 % offline pour create point | **Non** | `resolve_carre` + create site = API |
 | Auto-organisation multi-contrats / sites d’étude dans un contrat | **Plus tard** | Demandé par Benjamin en exploration — hors v0.6 cœur |
+| Interprétation 10 % / 75 % dans la Synthèse | **Oui** | Issue #7 / P8. Bandes de confiance Tadarida (Benjamin 2026-09-04). |
 
 ---
 
@@ -356,6 +414,10 @@ Indépendant de P2–P5 ; livrable Vague A.
 - Promettre un pilotage complet de ChiroSurf.
 - Scinder une pose overnight à **minuit** (D12).
 - Recréer un fallback date calendaire sans heure dans `biological_night_key`.
+- Compter tous les Tadarida d'une espèce dès 1 ligne écoutée (trop naïf
+  pour une validation partielle).
+- Reprendre P8 chronologique (10 paquets temporels) : contredit le graphe
+  ChiroSurf (bandes de confiance).
 
 ---
 
@@ -367,6 +429,7 @@ Indépendant de P2–P5 ; livrable Vague A.
 | **B — Point** | D8 lat/lon manifest · PointSelection · wizard 3 entrées · FOCUS carte · mode PICK | **Livré v0.6** |
 | **C — ChiroSurf** | Split lazy · UI nuits · import `_Vu` · synthèse proba min | **Livré v0.6** ; v0.7 : Synthèse autonome (sélecteur de nuit, sans passer par ChiroSurf) |
 | **D — Polish** | Export multi-nuits compilé · fusion `_Vu` → xlsx · captures tuto | **Plus tard** (pas un oubli) |
+| **E : Synthèse 10 % / 75 %** | Interprétation statistique du `_Vu` (P8) | **Codé** (Synthèse). Activité ensuite. |
 
 ---
 
@@ -396,12 +459,16 @@ Le tutoriel **ne décrit pas** les features non livrées comme déjà disponible
 | 2026-08-30 | v0.7 | Synthèse ≠ ChiroSurf (sélecteur de nuit dans Synthèse) ; Titley ; Valider tri/filtres ; scan auto retiré (#5) ; WAC non natif, conversion documentée (#6). Vague D toujours plus tard. |
 | 2026-08-31 | v0.7.1 | Issue #7 : CSV nuit copié à côté des WAV (`Data_k/`) avant lancement ChiroSurf 4.x ; lecture `_Vu` `Nuit_1_` / `Nuit_1-` + harvest depuis Data_k. |
 | 2026-09-01 | v0.7.2 | **D12** : nuit bio = midi, jamais minuit ; parse horodatage tolérant ; pas de fallback calendaire ; sélecteur Synthèse seulement si ≥ 2 soirs. Barre d'actions **une ligne + glissement horizontal** ; boutons ChiroSurf sous le libellé. |
+| 2026-09-03 | issue #7 | **D13** + **P8** : proposition chronologique soumise à Benjamin (ne pas coder telle quelle). |
+| 2026-09-06 | issue #7 | P8 **corrigé** : 10 % = bandes de confiance Tadarida (graphe ChiroSurf). `compute_mnhn_synthesis`. Case distincte. D04 : bande F75 doit contenir une validation concordante. |
+| 2026-09-06 | audit | Activité : `_Vu` ne masque plus les autres nuits de l'xlsx. Synthèse MNHN : source par nuit, export diagnostics, garde clic, avertissement hors `_Vu`. |
 
 ---
 
 ## 9. Références
 
-- Issue #3 — méthode validation MNHN, multi-nuits, pièces CSV Benjamin.
+- Issue #3 : méthode validation MNHN, multi-nuits, pièces CSV Benjamin.
+- Issue [#7](https://github.com/kevin-guille/ChiroTool/issues/7) : liaison ChiroSurf (v0.7.1 / 0.7.2) ; interprétation 10 % / 75 % Synthèse (P8, bandes de confiance).
 - Échantillons : `samples/issue3_benjamin/` (multi + Nuit_1/2 + `_Vu`).
 - Forum Vigie-Chiro :
   - [t483 — analyser plusieurs nuits consécutives](https://vigie-chiro.forumactif.com/t483-chiro-surf-analyser-plusieurs-nuits-consecutives) (Yann T., Yves Bas, LouSauvajon)

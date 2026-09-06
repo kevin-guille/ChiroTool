@@ -573,8 +573,10 @@ unique**. ChiroTool prépare les CSV :
    à la main dans `chirosurf/` / `Data_k/`) est reconnu.
 5. Revenez à **📊 Synthèse** : si un `_Vu` existe pour la nuit choisie, il
    est lu à la place du xlsx. Cases **« identifications validées seulement »**
-   et **« Chiros seulement »**. Avec la méthode 10 % → 75 %, ChiroSurf n'inscrit
-   en observateur que les contacts **vraiment écoutés**, pas le reste de la nuit.
+   et **« Chiros seulement »**. Cochez **« Méthode MNHN 10 % / 75 % »** pour
+   reconstituer l'interprétation (bandes de confiance Tadarida). La case
+   « validées seulement » reste les lignes **écoutées**. Voir issue
+   [#7](https://github.com/kevin-guille/ChiroTool/issues/7).
 
 > ⚠️ Les CSV bruts peuvent être **régénérés** (bouton dans la fenêtre) ; les
 > `_Vu` ne sont **jamais** écrasés automatiquement.
@@ -685,11 +687,21 @@ Filtres utiles :
 
 - **« Identifications validées seulement »** : ne compter que les lignes où
   **taxon observateur** est renseigné (ignore Tadarida seul). Après un `_Vu`
-  ChiroSurf 10 % → 75 %, ce sont les contacts écoutés, pas toute l'activité
-  statistiquement retenue.
+  ChiroSurf, ce sont les contacts **écoutés**.
+- **« Méthode MNHN 10 % / 75 % »** : reconstitue l'interprétation ChiroSurf
+  (bandes de confiance Tadarida, pas le temps). Distinct de « validées
+  seulement ». Les deux cases s'excluent. L'export CSV ajoute alors
+  `Atteint_75`, `F75` et la taille du pool Tadarida. Si la source n'est
+  pas un `_Vu`, un avertissement rappelle que la méthode suppose
+  l'échantillonnage ChiroSurf (pas une validation contact par contact).
+  En cumul multi-nuits, le calcul se fait **nuit par nuit** puis s'additionne
+  (pas de classe d'activité sur le cumul). L'onglet Activité n'applique
+  pas encore cette méthode. Voir issue
+  [#7](https://github.com/kevin-guille/ChiroTool/issues/7).
 - **« Chiros seulement »** : masquer orthoptères, bruit, oiseaux.
 - **« Proba Tadarida ≥ »** : seuil optionnel (ex. `0.5` ou `50`) pour la synthèse
   **non validée** ; les lignes déjà validées par l'observateur passent toujours.
+  Désactivé si « Méthode MNHN 10 % / 75 % » est cochée.
 
 Pour chaque espèce, une colonne **Activité** indique :
 
@@ -751,8 +763,13 @@ d'activité horaire** — parfait pour un rapport ou une analyse.
 - **Taxons** (espèces et groupes)
 - **Chiros seulement** : masquer orthoptères, bruit, oiseaux
 - **Taxons observateur** : ne garder que les lignes où vous avez renseigné
-  l'espèce (ex. un Nyclas que Tadarida avait mis en Nycnoc). Si un dossier
-  `chirosurf/` contient des `_Vu`, ce sont eux qui sont lus (pas le xlsx brut).
+  l'espèce (ex. un Nyclas que Tadarida avait mis en Nycnoc).
+- **Validés humains seulement** : lignes avec identification observateur ou
+  validateur.
+- Un `_Vu` dans `chirosurf/` (ou `Data_k/`) **remplace le tableur pour cette
+  nuit seulement**. Les autres nuits de la participation restent lues dans
+  l'xlsx. Ce graphe ne reconstitue **pas** la méthode MNHN 10 % / 75 %
+  (c'est la case de la Synthèse).
 
 Chaque section se **replie** et affiche son état (`8 / 42`), pour garder le
 panneau lisible même sur une grosse campagne. Les listes longues (nuits, taxons)
@@ -1029,6 +1046,13 @@ Glissez la barre d'actions vers la **droite** (molette sur la ligne, ou le
 curseur sous les boutons). Dans la fenêtre ChiroSurf nuits, ▶ / 📈 / Synthèse
 sont **sous** le nom de la nuit.
 
+**« Où est le filtre méthode MNHN / 10 % / 75 % dans la Synthèse ? »**
+Case **« Méthode MNHN 10 % / 75 % »**, distincte de **« Identifications
+validées seulement »** (lignes écoutées). La reconstitution se fait depuis
+le `_Vu` (bandes de confiance Tadarida). Voir
+[§8 B](#b--méthode-mnhn--team-chiro-via-chirosurf-10--75-) et l'issue
+[#7](https://github.com/kevin-guille/ChiroTool/issues/7).
+
 **« Où sont stockées mes données ? »**
 Votre index et vos sauvegardes sont dans le sous-dossier `_chirotool/` de votre
 dossier de travail. Un fichier `README.txt` y explique chaque fichier. **Ne le
@@ -1062,8 +1086,9 @@ ChiroTool couvre la grande majorité des cas, mais pas (encore) tout :
   Vigie-Chiro (contactez l'équipe du programme).
 - **Participation multi-nuits** : **📊 Synthèse** n'affiche le menu Nuit
   que s'il y a **plusieurs soirs** (une pose qui passe minuit = une nuit).
-  **🌊 ChiroSurf nuits** n'est utile que pour la méthode 10 % → 75 %
-  (voir [§8](#règle-de-la-nuit-ne-plus-la-recasser)).
+  **🌊 ChiroSurf nuits** sert à valider dans ChiroSurf
+  (méthode 10 % / 75 %, voir [§8](#règle-de-la-nuit-ne-plus-la-recasser)).
+  La Synthèse reconstitue cette interprétation via **« Méthode MNHN 10 % / 75 % »**.
   La validation contact par contact reste disponible en parallèle.
 - **Bouton 📍 Carte** : si les GPS n’ont jamais été mémorisés pour la session,
   choisissez une fois le point (pick carte ou create/reuse) pour les enregistrer.
@@ -1077,8 +1102,9 @@ ChiroTool couvre la grande majorité des cas, mais pas (encore) tout :
 
 | Zone | Ce qui change |
 |------|----------------|
-| **Synthèse** | ChiroSurf **non requis** ; `_Vu` lu s'il existe. Menu Nuit **seulement** s'il y a plusieurs soirs (v0.7.2 : une pose minuit = 1 nuit) |
-| **ChiroSurf nuits** | Optionnel (méthode 10 % → 75 %) ; distinct de la Synthèse ; coupure **midi**. **v0.7.1** : CSV à côté des WAV ; `_Vu` `Nuit_1_…`. **v0.7.2** : boutons sous le libellé (écran classique) |
+| **Synthèse** | ChiroSurf **non requis** ; `_Vu` lu s'il existe. Menu Nuit **seulement** s'il y a plusieurs soirs (v0.7.2 : une pose minuit = 1 nuit). Case **Méthode MNHN 10 % / 75 %** (bandes de confiance Tadarida, issue #7) |
+| **Activité** | Un `_Vu` remplace le tableur **pour cette nuit seulement** (les autres nuits restent). Pas de méthode MNHN sur les graphes (c'est la Synthèse) |
+| **ChiroSurf nuits** | Optionnel (CSV pour valider dans ChiroSurf, méthode 10 % / 75 %) ; distinct de la Synthèse ; coupure **midi**. **v0.7.1** : CSV à côté des WAV ; `_Vu` `Nuit_1_…`. **v0.7.2** : boutons sous le libellé (écran classique) |
 | **Barre d'actions** | **v0.7.2** : une ligne, glissement horizontal si l'écran est étroit |
 | **Valider** | Tri des colonnes, filtres observateur / chiros, bilan `X / Y` (issue #4) |
 | **Titley** | Swift / Ranger : noms usine lus ; TE×10 sans collision (issue #4) |
@@ -1099,6 +1125,7 @@ Conception / dev : [`SPEC_v06_parcours.md`](SPEC_v06_parcours.md) · issues
 
 ### Suite (hors v0.7)
 
+- Onglet **Activité** : même filtre MNHN 10 % / 75 % que la Synthèse.
 - Robustesse / UX du **mode batch**, journal d'upload.
 - Export compilé espèces × nuits ; fusion `_Vu` → xlsx (choix produit).
 - Plusieurs instances de ChiroTool en parallèle (demande issue #4).

@@ -29,10 +29,14 @@ WAC documenté : **v0.7** ([release](https://github.com/kevin-guille/ChiroTool/r
 Liaison ChiroSurf (CSV à côté des WAV, `_Vu` `Nuit_1_…`) : **v0.7.1**.
 Nuit biologique D12 (midi, jamais minuit) + barre d'actions glissable :
 **v0.7.2**.
+Interprétation 10 % / 75 % dans la Synthèse : **P8** (bandes de confiance
+Tadarida, `compute_mnhn_synthesis`, issue
+[#7](https://github.com/kevin-guille/ChiroTool/issues/7)). Onglet Activité
+ensuite.
 
 | Document | Rôle |
 |----------|------|
-| [`docs/SPEC_v06_parcours.md`](docs/SPEC_v06_parcours.md) | **Source de vérité** parcours (vagues A–C livrées ; D plus tard) |
+| [`docs/SPEC_v06_parcours.md`](docs/SPEC_v06_parcours.md) | **Source de vérité** parcours (A–C livrées ; P8 Synthèse MNHN ; D / Activité MNHN plus tard) |
 | [`CHANGELOG.md`](CHANGELOG.md) | Versions publiées + *Suite possible* |
 | [`docs/RELEASE_v0.6.0.md`](docs/RELEASE_v0.6.0.md) | Note de release GitHub v0.6 |
 | [`docs/RELEASE_v0.7.0.md`](docs/RELEASE_v0.7.0.md) | Note de release GitHub v0.7 |

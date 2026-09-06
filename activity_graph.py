@@ -361,26 +361,57 @@ def aggregate_xlsx(xlsx_path: Path, *,
     return result
 
 
+def _activity_cover_key(key: tuple) -> tuple:
+    """Clé de nuit (sans taxon) pour dédupliquer ``_Vu`` vs xlsx."""
+    if len(key) >= 5:
+        return key[:4]
+    return key[:-1] if len(key) >= 2 else key
+
+
+def _add_activity_partial(out: dict, key: tuple, bins: list[int]) -> None:
+    if key not in out:
+        out[key] = list(bins)
+        return
+    cur = out[key]
+    for i, n in enumerate(bins):
+        if i < len(cur):
+            cur[i] += n
+        else:
+            cur.append(n)
+
+
 def aggregate_multi_xlsx(paths: Iterable[Path], **kwargs
                           ) -> dict[tuple[str, str], list[int]]:
-    """Agrège plusieurs xlsx (multi-nuits) en un seul dict cumulé."""
+    """Agrège plusieurs xlsx / CSV ``_Vu`` en un seul dict cumulé.
+
+    Un ``_Vu`` prime sur l'xlsx pour la même nuit (même site / point /
+    passage / date). Les autres nuits de l'xlsx restent. Évite de perdre
+    une nuit 2 quand seul un ``_Vu`` nuit 1 existe.
+    """
+    paths = [Path(p) for p in paths]
+    csvs = [p for p in paths if p.suffix.lower() == ".csv"]
+    others = [p for p in paths if p.suffix.lower() != ".csv"]
     out: dict[tuple[str, str], list[int]] = {}
-    for p in paths:
+    covered: set[tuple] = set()
+
+    for p in csvs:
         try:
-            partial = aggregate_xlsx(Path(p), **kwargs)
+            partial = aggregate_xlsx(p, **kwargs)
         except Exception:
             continue
         for k, bins in partial.items():
-            if k not in out:
-                out[k] = list(bins)
-            else:
-                # Cumul (additionne par bin)
-                cur = out[k]
-                for i, n in enumerate(bins):
-                    if i < len(cur):
-                        cur[i] += n
-                    else:
-                        cur.append(n)
+            _add_activity_partial(out, k, bins)
+            covered.add(_activity_cover_key(k))
+
+    for p in others:
+        try:
+            partial = aggregate_xlsx(p, **kwargs)
+        except Exception:
+            continue
+        for k, bins in partial.items():
+            if _activity_cover_key(k) in covered:
+                continue
+            _add_activity_partial(out, k, bins)
     return out
 
 

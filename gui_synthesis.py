@@ -3,7 +3,8 @@ gui_synthesis.py — fenêtre « Synthèse de la nuit ».
 
 Affiche, pour une nuit, le nombre de contacts par espèce retenue (validation
 observateur si présente, sinon Tadarida) + les totaux, et permet un export CSV
-pour les rapports. S'appuie sur la logique pure ``synthesis.compute_night_synthesis``.
+pour les rapports. S'appuie sur ``synthesis.compute_night_synthesis`` et, pour la méthode
+MNHN 10 % / 75 %, ``compute_mnhn_synthesis``.
 """
 
 from __future__ import annotations
@@ -20,7 +21,9 @@ from activity_reference import (
     annotate_synthesis, load_reference, region_for_site, season_for_date,
     CITATION, HABITATS, UNITE,
 )
-from synthesis import compute_night_synthesis
+from synthesis import (
+    compute_mnhn_synthesis, compute_night_synthesis, merge_night_syntheses,
+)
 
 # Libellés lisibles des groupes métier.
 GROUP_LABELS = {
@@ -90,6 +93,8 @@ class SynthesisView(ctk.CTkToplevel):
         self._night_key = int(prefer_vu_night) if prefer_vu_night else 1
         self._night_labels: dict[str, int] = {}
         self._mixed_nights = False
+        self._data_ready = False
+        self._mnhn_xlsx_warning = False
 
         self._build_ui()
         self.after(80, self._load)
@@ -128,9 +133,15 @@ class SynthesisView(ctk.CTkToplevel):
         self.validated_only_var = ctk.BooleanVar(value=False)
         ctk.CTkCheckBox(
             header, text="Identifications validées seulement",
-            variable=self.validated_only_var, command=self._recompute,
+            variable=self.validated_only_var, command=self._on_validated_toggle,
             font=ctk.CTkFont(size=11), checkbox_width=18, checkbox_height=18,
         ).grid(row=2, column=0, sticky="w", pady=(4, 0))
+        self.mnhn_var = ctk.BooleanVar(value=False)
+        ctk.CTkCheckBox(
+            header, text="Méthode MNHN 10 % / 75 %",
+            variable=self.mnhn_var, command=self._on_mnhn_toggle,
+            font=ctk.CTkFont(size=11), checkbox_width=18, checkbox_height=18,
+        ).grid(row=3, column=0, sticky="w", pady=(4, 0))
         self.chiros_only_var = ctk.BooleanVar(value=False)
         ctk.CTkCheckBox(
             header, text="Chiros seulement",
@@ -140,19 +151,21 @@ class SynthesisView(ctk.CTkToplevel):
 
         # Filtre proba Tadarida min (synthèse non validée) — issue #3
         filt = ctk.CTkFrame(header, fg_color="transparent")
-        filt.grid(row=3, column=0, sticky="w", pady=(4, 0))
+        filt.grid(row=4, column=0, sticky="w", pady=(4, 0))
         ctk.CTkLabel(filt, text="Proba Tadarida ≥", font=ctk.CTkFont(size=11)).pack(
             side="left")
         self.min_proba_var = ctk.StringVar(value="")
-        ctk.CTkEntry(
+        self.min_proba_entry = ctk.CTkEntry(
             filt, textvariable=self.min_proba_var, width=56,
             placeholder_text="ex 0.5",
             font=ctk.CTkFont(family="Consolas", size=11),
-        ).pack(side="left", padx=(4, 4))
-        ctk.CTkButton(
+        )
+        self.min_proba_entry.pack(side="left", padx=(4, 4))
+        self.min_proba_btn = ctk.CTkButton(
             filt, text="Appliquer", width=80, height=26,
             command=self._recompute,
-        ).pack(side="left")
+        )
+        self.min_proba_btn.pack(side="left")
 
         # Sélecteur « milieu dominant » : affine le référentiel d'activité
         # (contexte général autour du point). Défaut = national.
@@ -299,13 +312,65 @@ class SynthesisView(ctk.CTkToplevel):
         self._headers = headers
         self._rows = rows
         self._source_label = src
+        self._base_source_label = src
         self._mixed_nights = mixed
+        self._data_ready = True
         self._recompute()
+
+    def _on_mnhn_toggle(self):
+        if self.mnhn_var.get():
+            self.validated_only_var.set(False)
+        self._sync_min_proba_state()
+        self._recompute()
+
+    def _on_validated_toggle(self):
+        if self.validated_only_var.get():
+            self.mnhn_var.set(False)
+        self._sync_min_proba_state()
+        self._recompute()
+
+    def _sync_min_proba_state(self):
+        mnhn = bool(getattr(self, "mnhn_var", None) and self.mnhn_var.get())
+        state = "disabled" if mnhn else "normal"
+        if hasattr(self, "min_proba_entry"):
+            self.min_proba_entry.configure(state=state)
+        if hasattr(self, "min_proba_btn"):
+            self.min_proba_btn.configure(state=state)
 
     def _recompute(self):
         """(Re)calcule la synthèse selon filtres, puis niveaux d'activité."""
+        if not getattr(self, "_data_ready", False):
+            return
         vo = bool(self.validated_only_var.get()) if hasattr(self, "validated_only_var") else False
+        mnhn = bool(getattr(self, "mnhn_var", None) and self.mnhn_var.get())
         chiros = bool(self.chiros_only_var.get()) if hasattr(self, "chiros_only_var") else False
+        self._mnhn_xlsx_warning = False
+        if mnhn:
+            if getattr(self, "_mixed_nights", False) and getattr(self, "_slices", None):
+                from chirosurf_nights import read_csv
+                parts = []
+                src_bits = []
+                used_xlsx = False
+                for sl in self._slices:
+                    vu = (self._vu_by_night or {}).get(sl.night_index)
+                    if vu is not None and vu.vu_path.is_file():
+                        h, r = read_csv(vu.vu_path)
+                        src_bits.append(f"nuit {sl.night_index} _Vu")
+                    else:
+                        h, r = sl.headers, sl.rows
+                        src_bits.append(f"nuit {sl.night_index} xlsx")
+                        used_xlsx = True
+                    parts.append(compute_mnhn_synthesis(h, r, chiros_only=chiros))
+                self.result = merge_night_syntheses(parts)
+                self._source_label = "MNHN · " + " · ".join(src_bits)
+                self._mnhn_xlsx_warning = used_xlsx
+            else:
+                self.result = compute_mnhn_synthesis(
+                    self._headers, self._rows, chiros_only=chiros)
+                src = str(getattr(self, "_source_label", "") or "")
+                self._mnhn_xlsx_warning = not src.startswith("_Vu")
+            self._apply_activity()
+            return
         thr = None
         if hasattr(self, "min_proba_var"):
             raw = (self.min_proba_var.get() or "").strip().replace(",", ".")
@@ -316,6 +381,8 @@ class SynthesisView(ctk.CTkToplevel):
                         thr = thr / 100.0
                 except ValueError:
                     thr = None
+        self._source_label = getattr(
+            self, "_base_source_label", getattr(self, "_source_label", ""))
         self.result = compute_night_synthesis(
             self._headers, self._rows,
             validated_only=vo,
@@ -395,27 +462,68 @@ class SynthesisView(ctk.CTkToplevel):
 
         val = res.get("validated_contacts", 0)
         src = getattr(self, "_source_label", "") or ""
+        mnhn = res.get("method") == "mnhn"
+        contacts_lbl = ("contacts retenus (MNHN 10 % / 75 %)" if mnhn
+                        else "contacts détectés")
         self.count_lbl.configure(text=(
-            f"{res.get('total_contacts', 0)} contacts détectés  ·  "
+            f"{res.get('total_contacts', 0)} {contacts_lbl}  ·  "
             f"{val} identifiés (validés)  ·  "
             f"{res.get('richesse_chiros', 0)} espèces de chiros  ·  "
             f"{res.get('total_fichiers', 0)} fichiers"
             + (f"  ·  source : {src}" if src else "")))
 
-        if self._mixed_nights:
+        mnhn_warn = ""
+        if res.get("method") == "mnhn" and getattr(self, "_mnhn_xlsx_warning", False):
+            mnhn_warn = (
+                " Source xlsx : la méthode suppose un échantillonnage ChiroSurf "
+                "(bandes de confiance). Une validation contact par contact n'est "
+                "pas le même protocole. "
+            )
+        mnhn_empty = (
+            res.get("method") == "mnhn" and not species
+        )
+        if mnhn_empty:
+            self.note_lbl.configure(text=(
+                "Aucun contact écouté dans cette source. La méthode MNHN n'a "
+                "rien à reconstituer. Ouvrez d'abord le CSV dans ChiroSurf "
+                "pour produire un _Vu."
+                + mnhn_warn))
+        elif self._mixed_nights:
+            extra = ""
+            if res.get("method") == "mnhn":
+                extra = (" Méthode MNHN calculée nuit par nuit, puis cumulée "
+                         "(pas de classe d'activité sur le cumul). Une ligne "
+                         "verte = au moins un contact écouté."
+                         + mnhn_warn)
             self.note_lbl.configure(text=(
                 "Cumul de plusieurs nuits biologiques : les classes d'activité "
                 "(contacts/nuit) ne s'appliquent pas. Choisissez une nuit dans le "
-                "menu pour l'interprétation. Indépendant de ChiroSurf."))
+                "menu pour l'interprétation. Indépendant de ChiroSurf."
+                + extra))
         elif has_ref:
+            prefix = ""
+            if res.get("method") == "mnhn":
+                prefix = (
+                    "Méthode MNHN 10 % / 75 % : bandes de confiance Tadarida "
+                    "(pas le temps). Une ligne verte = au moins un contact écouté. "
+                    + mnhn_warn
+                )
             self.note_lbl.configure(text=(
-                f"Activité — référentiel : {self._context_label()} (unité : {UNITE}). "
+                prefix
+                + f"Activité — référentiel : {self._context_label()} (unité : {UNITE}). "
                 "Aide à l'interprétation espèce par espèce : ne pas comparer les "
                 "contacts entre espèces ; une classe n'est pas un niveau d'enjeu ; "
                 "valable sous réserve du protocole (matériel conforme, micro < 6 m, "
                 f"métropole). Source : {CITATION}."))
         else:
-            self.note_lbl.configure(text="")
+            note = ""
+            if res.get("method") == "mnhn":
+                note = (
+                    "Méthode MNHN 10 % / 75 % : bandes de confiance Tadarida "
+                    "(pas le temps). Une ligne verte = au moins un contact écouté."
+                    + mnhn_warn
+                )
+            self.note_lbl.configure(text=note)
         self.export_btn.configure(state="normal" if species else "disabled")
 
     # -- Export -------------------------------------------------------------
@@ -439,7 +547,19 @@ class SynthesisView(ctk.CTkToplevel):
                 w = csv.writer(f, delimiter=";")
                 # En-tête « propre » : contexte + rappels, avant les données.
                 w.writerow(["Synthèse de nuit", self.session_path.name])
-                w.writerow(["Contacts détectés", res.get("total_contacts", 0)])
+                if res.get("method") == "mnhn":
+                    w.writerow(["Methode", "MNHN 10 % / 75 % (bandes de confiance Tadarida)"])
+                    w.writerow(["Contacts retenus", res.get("total_contacts", 0)])
+                else:
+                    w.writerow(["Contacts détectés", res.get("total_contacts", 0)])
+                w.writerow(["Source", getattr(self, "_source_label", "")])
+                if res.get("method") == "mnhn" and getattr(
+                        self, "_mnhn_xlsx_warning", False):
+                    w.writerow([
+                        "Avertissement",
+                        "Source xlsx : la methode suppose un echantillonnage "
+                        "ChiroSurf (bandes de confiance).",
+                    ])
                 w.writerow(["Identifiés (validés)", res.get("validated_contacts", 0)])
                 w.writerow(["Espèces de chiroptères", res.get("richesse_chiros", 0)])
                 w.writerow(["Fichiers", res.get("total_fichiers", 0)])
@@ -447,8 +567,11 @@ class SynthesisView(ctk.CTkToplevel):
                     w.writerow(["Référentiel d'activité", self._context_label(),
                                 f"unité : {UNITE}"])
                 w.writerow([])
+                mnhn = res.get("method") == "mnhn"
                 cols = ["Espece", "Groupe", "Contacts", "Contacts_valides",
                         "Fichiers", "Valide"]
+                if mnhn:
+                    cols += ["Atteint_75", "F75", "Pool_Tadarida", "Ajouts_forces"]
                 if has_ref:
                     cols += ["Activite", "Referentiel_utilise", "Seuil_fiable",
                              "Q25", "Q75", "Q98"]
@@ -457,6 +580,17 @@ class SynthesisView(ctk.CTkToplevel):
                     row = [s["taxon"], s["groupe"], s["n_contacts"],
                            s.get("n_valides", 0), s["n_fichiers"],
                            "oui" if s["validated"] else ""]
+                    if mnhn:
+                        if self._mixed_nights:
+                            row += ["n/a cumul", "",
+                                    s.get("n_pool", ""), s.get("n_forced", 0)]
+                        else:
+                            row += [
+                                "oui" if s.get("reached_75") else "non",
+                                "" if s.get("f75") is None else s.get("f75"),
+                                s.get("n_pool", ""),
+                                s.get("n_forced", 0),
+                            ]
                     if has_ref:
                         a = s.get("activite") or {}
                         row += [a.get("classe") or "", a.get("referentiel") or "",
