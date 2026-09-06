@@ -2,8 +2,8 @@
 
 | | |
 |--|--|
-| **Statut** | **Livré** : v0.6.0 (2026-08-07, vagues A–C) + **v0.7.0** (2026-08-30, Synthèse autonome, Titley, issues #4–#6) + **v0.7.1** (2026-08-31, issue #7 ChiroSurf CSV+WAV) + **v0.7.2** (2026-09-01, D12 nuit bio + barre d'actions). **P8 Synthèse MNHN** (unreleased, 2026-09-06). |
-| **Ouvert** | Liaison ChiroSurf livrée. Interprétation 10 % / 75 % dans la Synthèse : **P8** (vague E), validée Benjamin 2026-09-04 (bandes de confiance Tadarida, pas le temps). Onglet Activité ensuite. |
+| **Statut** | **Livré** : v0.6.0 (2026-08-07, vagues A–C) + **v0.7.0** (2026-08-30, Synthèse autonome, Titley, issues #4–#6) + **v0.7.1** (2026-08-31, issue #7 ChiroSurf CSV+WAV) + **v0.7.2** (2026-09-01, D12 nuit bio + barre d'actions) + **v0.8.0** (2026-09-06, P8 Synthèse MNHN 10 % / 75 %). |
+| **Ouvert** | Onglet Activité : même filtre MNHN 10 % / 75 % que la Synthèse (ensuite). |
 | **Date** | 2026-08-04 (conception) · 2026-08-07 (v0.6) · 2026-08-30 (v0.7) · 2026-09-03 (D13) · 2026-09-06 (P8) |
 | **Contexte** | Issue [#3](https://github.com/kevin-guille/ChiroTool/issues/3) (retours terrain) + retours carte / meta + issue [#7](https://github.com/kevin-guille/ChiroTool/issues/7) |
 | **Principe** | Pragmatisme — une vérité disque, peu de fichiers, parcours unifiés, libellés humains d’abord |
@@ -429,7 +429,7 @@ Onglet Activité : pas MNHN en v1. Un `_Vu` y remplace l'xlsx **nuit par nuit**
 | **B — Point** | D8 lat/lon manifest · PointSelection · wizard 3 entrées · FOCUS carte · mode PICK | **Livré v0.6** |
 | **C — ChiroSurf** | Split lazy · UI nuits · import `_Vu` · synthèse proba min | **Livré v0.6** ; v0.7 : Synthèse autonome (sélecteur de nuit, sans passer par ChiroSurf) |
 | **D — Polish** | Export multi-nuits compilé · fusion `_Vu` → xlsx · captures tuto | **Plus tard** (pas un oubli) |
-| **E : Synthèse 10 % / 75 %** | Interprétation statistique du `_Vu` (P8) | **Codé** (Synthèse). Activité ensuite. |
+| **E : Synthèse 10 % / 75 %** | Interprétation statistique du `_Vu` (P8) | **Livré v0.8.0** (Synthèse). Activité ensuite. |
 
 ---
 

@@ -8,7 +8,7 @@
 
 ![Icône ChiroTool](captures/icon_256.png)
 
-**Version 0.7.2** · Tutoriel utilisateur
+**Version 0.8.0** · Tutoriel utilisateur
 
 </div>
 
@@ -691,7 +691,8 @@ Filtres utiles :
 - **« Méthode MNHN 10 % / 75 % »** : reconstitue l'interprétation ChiroSurf
   (bandes de confiance Tadarida, pas le temps). Distinct de « validées
   seulement ». Les deux cases s'excluent. L'export CSV ajoute alors
-  `Atteint_75`, `F75` et la taille du pool Tadarida. Si la source n'est
+  `Atteint_75`, `F75` et la taille du pool Tadarida. Une colonne **75 %**
+  dans le tableau indique si le seuil de l'espèce est atteint. Si la source n'est
   pas un `_Vu`, un avertissement rappelle que la méthode suppose
   l'échantillonnage ChiroSurf (pas une validation contact par contact).
   En cumul multi-nuits, le calcul se fait **nuit par nuit** puis s'additionne
@@ -1098,11 +1099,11 @@ ChiroTool couvre la grande majorité des cas, mais pas (encore) tout :
 
 ---
 
-## 14 · Nouveautés v0.7
+## 14 · Nouveautés v0.8 / v0.7
 
 | Zone | Ce qui change |
 |------|----------------|
-| **Synthèse** | ChiroSurf **non requis** ; `_Vu` lu s'il existe. Menu Nuit **seulement** s'il y a plusieurs soirs (v0.7.2 : une pose minuit = 1 nuit). Case **Méthode MNHN 10 % / 75 %** (bandes de confiance Tadarida, issue #7) |
+| **Synthèse** | **v0.8.0** : case **Méthode MNHN 10 % / 75 %** (bandes de confiance Tadarida, colonne 75 %, issue #7). `_Vu` lu s'il existe. Menu Nuit **seulement** s'il y a plusieurs soirs (v0.7.2 : une pose minuit = 1 nuit) |
 | **Activité** | Un `_Vu` remplace le tableur **pour cette nuit seulement** (les autres nuits restent). Pas de méthode MNHN sur les graphes (c'est la Synthèse) |
 | **ChiroSurf nuits** | Optionnel (CSV pour valider dans ChiroSurf, méthode 10 % / 75 %) ; distinct de la Synthèse ; coupure **midi**. **v0.7.1** : CSV à côté des WAV ; `_Vu` `Nuit_1_…`. **v0.7.2** : boutons sous le libellé (écran classique) |
 | **Barre d'actions** | **v0.7.2** : une ligne, glissement horizontal si l'écran est étroit |

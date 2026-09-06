@@ -1605,6 +1605,14 @@ class TestBestRelease:
         from version import _best_release
         assert _best_release([]) is None
 
+    def test_parse_version_0_8_vs_0_7(self):
+        from version import parse_version, is_newer
+        assert is_newer("v0.8.0", "0.7.2")
+        assert not is_newer("0.7.2", "0.8.0")
+        assert not is_newer("0.8.0", "0.8.0")
+        assert is_newer("0.8.0", "0.8.0-rc.1")
+        assert parse_version("v0.8.0") > parse_version("0.7.2")
+
 
 # =========================================================================
 # AudioMoth : format date_time sans serie (issue #1)
@@ -3352,6 +3360,7 @@ class TestMnhnSynthesis:
         assert mnhn_proba_bin(0.999) == 9
         assert mnhn_proba_bin(1.0) == 9
         assert mnhn_proba_bin("0.85") == 8
+        assert mnhn_proba_bin("0,85") == 8
 
     def test_f75_graph_102(self):
         from synthesis import mnhn_f75

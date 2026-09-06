@@ -29,8 +29,8 @@ WAC documenté : **v0.7** ([release](https://github.com/kevin-guille/ChiroTool/r
 Liaison ChiroSurf (CSV à côté des WAV, `_Vu` `Nuit_1_…`) : **v0.7.1**.
 Nuit biologique D12 (midi, jamais minuit) + barre d'actions glissable :
 **v0.7.2**.
-Interprétation 10 % / 75 % dans la Synthèse : **P8** (bandes de confiance
-Tadarida, `compute_mnhn_synthesis`, issue
+Interprétation 10 % / 75 % dans la Synthèse : **v0.8.0** / P8 (bandes de
+confiance Tadarida, `compute_mnhn_synthesis`, issue
 [#7](https://github.com/kevin-guille/ChiroTool/issues/7)). Onglet Activité
 ensuite.
 
@@ -41,7 +41,8 @@ ensuite.
 | [`docs/RELEASE_v0.6.0.md`](docs/RELEASE_v0.6.0.md) | Note de release GitHub v0.6 |
 | [`docs/RELEASE_v0.7.0.md`](docs/RELEASE_v0.7.0.md) | Note de release GitHub v0.7 |
 | [`docs/RELEASE_v0.7.1.md`](docs/RELEASE_v0.7.1.md) | Note de pre-release GitHub v0.7.1 (issue #7, remplacée par 0.7.2) |
-| [`docs/RELEASE_v0.7.2.md`](docs/RELEASE_v0.7.2.md) | Note de release GitHub v0.7.2 (courante) |
+| [`docs/RELEASE_v0.7.2.md`](docs/RELEASE_v0.7.2.md) | Note de release GitHub v0.7.2 |
+| [`docs/RELEASE_v0.8.0.md`](docs/RELEASE_v0.8.0.md) | Note de release GitHub v0.8.0 (courante) |
 | [`docs/TUTORIEL.md`](docs/TUTORIEL.md) | Guide utilisateur (pick, Synthèse, ChiroSurf optionnel, repair) |
 | [`docs/ChiroTool-Tutoriel.pdf`](docs/ChiroTool-Tutoriel.pdf) | PDF généré via `python docs/build_pdf.py` |
 | [`samples/issue3_benjamin/`](samples/issue3_benjamin/) | Fixtures CSV multi-nuits + `_Vu` (issue #3) |

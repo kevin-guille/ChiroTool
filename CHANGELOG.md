@@ -5,6 +5,11 @@ Les versions publiées suivent le SemVer du fichier `version.py` / tags GitHub.
 
 ## [Unreleased]
 
+## [0.8.0] — 2026-09-06
+
+Issue [#7](https://github.com/kevin-guille/ChiroTool/issues/7) : interprétation
+MNHN 10 % / 75 % dans la Synthèse (bandes de confiance Tadarida).
+
 ### Ajouté
 
 - **Synthèse, méthode MNHN 10 % / 75 %** (issue
@@ -21,9 +26,9 @@ Les versions publiées suivent le SemVer du fichier `version.py` / tags GitHub.
 - **Activité** : un `_Vu` (nuit 1) ne fait plus disparaître les autres
   nuits du tableur. Le `_Vu` remplace **cette nuit seulement**.
 - **Synthèse MNHN** : cases ignorées tant que le tableur n'est pas
-  chargé ; export CSV avec `Atteint_75` / `F75` / pool ; libellé de
-  source nuit par nuit en cumul ; avertissement si la source n'est
-  pas un `_Vu` ChiroSurf.
+  chargé ; colonne **75 %** dans le tableau ; export CSV avec
+  `Atteint_75` / `F75` / pool ; libellé de source nuit par nuit en
+  cumul ; avertissement si la source n'est pas un `_Vu` ChiroSurf.
 
 ### Tests
 
@@ -33,7 +38,7 @@ Les versions publiées suivent le SemVer du fichier `version.py` / tags GitHub.
 
 ## [0.7.2] — 2026-09-01
 
-Release courante. Correctifs terrain après 0.7.0 / pre-release 0.7.1
+Correctifs terrain après 0.7.0 / pre-release 0.7.1
 ([#7](https://github.com/kevin-guille/ChiroTool/issues/7)).
 
 ### Corrigé

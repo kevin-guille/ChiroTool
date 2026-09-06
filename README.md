@@ -67,8 +67,11 @@ Après un `_Vu`, « Identifications validées seulement » = contacts **écouté
 « Méthode MNHN 10 % / 75 % » reconstitue l'interprétation (bandes de
 confiance Tadarida, issue [#7](https://github.com/kevin-guille/ChiroTool/issues/7)).
 
-**v0.7.2** (release courante, suite [#7](https://github.com/kevin-guille/ChiroTool/issues/7)) :
-barre d’actions sur une ligne (glissement si écran étroit) ; une pose soir + matin = une nuit en
+**v0.8.0** (release courante, suite [#7](https://github.com/kevin-guille/ChiroTool/issues/7)) :
+case **Méthode MNHN 10 % / 75 %** dans la Synthèse (bandes de confiance Tadarida).
+Note : [`docs/RELEASE_v0.8.0.md`](docs/RELEASE_v0.8.0.md).
+
+**v0.7.2** : barre d’actions sur une ligne (glissement si écran étroit) ; une pose soir + matin = une nuit en
 Synthèse (plus de Nuit 1 / Nuit 2 à minuit). Note :
 [`docs/RELEASE_v0.7.2.md`](docs/RELEASE_v0.7.2.md).
 

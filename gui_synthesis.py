@@ -191,18 +191,21 @@ class SynthesisView(ctk.CTkToplevel):
         table.grid_columnconfigure(0, weight=1)
         table.grid_rowconfigure(0, weight=1)
 
-        cols = ("taxon", "groupe", "contacts", "fichiers", "activite")
+        cols = ("taxon", "groupe", "contacts", "fichiers", "seuil75", "activite")
         self.tree = ttk.Treeview(table, columns=cols, show="headings")
         self.tree.heading("taxon", text="Espèce")
         self.tree.heading("groupe", text="Groupe")
         self.tree.heading("contacts", text="Contacts")
         self.tree.heading("fichiers", text="Fichiers")
+        self.tree.heading("seuil75", text="75 %")
         self.tree.heading("activite", text="Activité")
-        self.tree.column("taxon", width=190, anchor="w")
-        self.tree.column("groupe", width=130, anchor="w")
-        self.tree.column("contacts", width=90, anchor="center")
-        self.tree.column("fichiers", width=80, anchor="center")
-        self.tree.column("activite", width=190, anchor="w")
+        self.tree.column("taxon", width=180, anchor="w")
+        self.tree.column("groupe", width=120, anchor="w")
+        self.tree.column("contacts", width=80, anchor="center")
+        self.tree.column("fichiers", width=70, anchor="center")
+        self.tree.column("seuil75", width=56, anchor="center")
+        self.tree.column("activite", width=170, anchor="w")
+        self.tree["displaycolumns"] = ("taxon", "groupe", "contacts", "fichiers", "activite")
         self.tree.tag_configure("validated", background="#e8f5ec")
         self.tree.tag_configure("total", background="#eef2f8")
         self.tree.grid(row=0, column=0, sticky="nsew")
@@ -354,8 +357,18 @@ class SynthesisView(ctk.CTkToplevel):
                 for sl in self._slices:
                     vu = (self._vu_by_night or {}).get(sl.night_index)
                     if vu is not None and vu.vu_path.is_file():
-                        h, r = read_csv(vu.vu_path)
-                        src_bits.append(f"nuit {sl.night_index} _Vu")
+                        try:
+                            h, r = read_csv(vu.vu_path)
+                            src_bits.append(f"nuit {sl.night_index} _Vu")
+                        except Exception as e:
+                            messagebox.showwarning(
+                                "Lecture _Vu",
+                                f"{vu.vu_path.name}\n{e}",
+                                parent=self,
+                            )
+                            h, r = sl.headers, sl.rows
+                            src_bits.append(f"nuit {sl.night_index} xlsx")
+                            used_xlsx = True
                     else:
                         h, r = sl.headers, sl.rows
                         src_bits.append(f"nuit {sl.night_index} xlsx")
@@ -436,19 +449,35 @@ class SynthesisView(ctk.CTkToplevel):
         species = res.get("species", [])
         by_group = res.get("by_group", {})
         has_ref = bool(self._reference) and not self._mixed_nights
+        mnhn = res.get("method") == "mnhn"
+        if mnhn:
+            self.tree["displaycolumns"] = (
+                "taxon", "groupe", "contacts", "fichiers", "seuil75", "activite")
+        else:
+            self.tree["displaycolumns"] = (
+                "taxon", "groupe", "contacts", "fichiers", "activite")
 
         for iid in self.tree.get_children():
             self.tree.delete(iid)
         for i, s in enumerate(species):
             grp = GROUP_LABELS.get(s["groupe"], s["groupe"])
             tags = ("validated",) if s["validated"] else ()
+            if not mnhn:
+                s75 = ""
+            elif self._mixed_nights:
+                s75 = "n/a"
+            elif s.get("reached_75"):
+                s75 = "oui"
+            else:
+                s75 = "non"
             self.tree.insert("", "end", iid=str(i), tags=tags, values=(
-                s["taxon"], grp, s["n_contacts"], s["n_fichiers"],
+                s["taxon"], grp, s["n_contacts"], s["n_fichiers"], s75,
                 self._activity_cell(s) if has_ref else ""))
         if species:
             self.tree.insert("", "end", iid="__total__", tags=("total",), values=(
                 "TOTAL", f"{res.get('richesse_totale', len(species))} taxon(s)",
-                res.get("total_contacts", 0), res.get("total_fichiers", 0), ""))
+                res.get("total_contacts", 0), res.get("total_fichiers", 0),
+                "", ""))
 
         # Résumé par groupe (ordre métier)
         order = ["chiros", "orthos", "micromam", "oiseaux", "unknown", "noise"]
@@ -470,7 +499,9 @@ class SynthesisView(ctk.CTkToplevel):
             f"{val} identifiés (validés)  ·  "
             f"{res.get('richesse_chiros', 0)} espèces de chiros  ·  "
             f"{res.get('total_fichiers', 0)} fichiers"
-            + (f"  ·  source : {src}" if src else "")))
+            + (f"  ·  source : {src}" if src else "")
+            + (f"  ·  {res.get('n_proba_invalides', 0)} proba illisibles"
+               if mnhn and res.get("n_proba_invalides") else "")))
 
         mnhn_warn = ""
         if res.get("method") == "mnhn" and getattr(self, "_mnhn_xlsx_warning", False):

@@ -190,6 +190,10 @@ def mnhn_proba_bin(value) -> int | None:
     """
     if value in (None, ""):
         return None
+    if isinstance(value, str):
+        value = value.strip().replace(",", ".")
+        if not value:
+            return None
     try:
         x = float(value)
     except (TypeError, ValueError):
@@ -264,7 +268,11 @@ def compute_mnhn_synthesis(headers: list, rows: list, *,
     per: dict[str, dict] = {}
 
     def acc_for(taxon: str) -> dict:
-        return per.setdefault(taxon, _empty_species_acc())
+        d = per.get(taxon)
+        if d is None:
+            d = _empty_species_acc()
+            per[taxon] = d
+        return d
 
     def filename(row: list) -> str:
         if t_file is None or t_file >= len(row):
@@ -360,6 +368,7 @@ def compute_mnhn_synthesis(headers: list, rows: list, *,
     species.sort(key=lambda s: (-s["n_contacts"], s["taxon"].lower()))
     richesse_chiros = sum(1 for s in species if s["groupe"] == "chiros")
     richesse_totale = sum(1 for s in species if s["groupe"] not in ("noise", "unknown"))
+    n_invalid = sum(per[t]["n_pool_invalid"] for t in listened)
     return {
         "species": species,
         "total_contacts": total_contacts,
@@ -369,6 +378,7 @@ def compute_mnhn_synthesis(headers: list, rows: list, *,
         "richesse_chiros": richesse_chiros,
         "richesse_totale": richesse_totale,
         "method": "mnhn",
+        "n_proba_invalides": n_invalid,
     }
 
 
@@ -381,6 +391,7 @@ def merge_night_syntheses(parts: list[dict]) -> dict:
     acc: dict[str, dict] = {}
     validated_contacts = 0
     total_fichiers = 0
+    n_invalid = 0
     method = None
     for part in parts:
         if not part:
@@ -388,6 +399,7 @@ def merge_night_syntheses(parts: list[dict]) -> dict:
         method = part.get("method") or method
         validated_contacts += int(part.get("validated_contacts") or 0)
         total_fichiers += int(part.get("total_fichiers") or 0)
+        n_invalid += int(part.get("n_proba_invalides") or 0)
         for s in part.get("species") or []:
             taxon = s.get("taxon") or ""
             if not taxon:
@@ -428,6 +440,7 @@ def merge_night_syntheses(parts: list[dict]) -> dict:
         "richesse_chiros": sum(1 for s in species if s["groupe"] == "chiros"),
         "richesse_totale": sum(
             1 for s in species if s["groupe"] not in ("noise", "unknown")),
+        "n_proba_invalides": n_invalid,
     }
     if method:
         out["method"] = method
