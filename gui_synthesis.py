@@ -305,13 +305,25 @@ class SynthesisView(ctk.CTkToplevel):
         self._apply_night_source()
 
     def _apply_night_source(self):
-        from chirosurf_nights import resolve_synthesis_table
+        from chirosurf_nights import ObservationTableError, resolve_synthesis_table
         vu = self._vu_by_night.get(self._night_key)
         vu_path = vu.vu_path if vu is not None else None
-        headers, rows, src, mixed = resolve_synthesis_table(
-            self._xlsx_headers, self._xlsx_rows,
-            night_index=self._night_key, vu_path=vu_path,
-        )
+        try:
+            headers, rows, src, mixed = resolve_synthesis_table(
+                self._xlsx_headers, self._xlsx_rows,
+                night_index=self._night_key, vu_path=vu_path,
+            )
+        except (ObservationTableError, OSError, csv.Error) as e:
+            name = Path(vu_path).name if vu_path else "tableur"
+            messagebox.showerror(
+                "Lecture _Vu",
+                f"{name}\n{e}\n\nRepli sur le tableur Tadarida de la nuit.",
+                parent=self,
+            )
+            headers, rows, src, mixed = resolve_synthesis_table(
+                self._xlsx_headers, self._xlsx_rows,
+                night_index=self._night_key, vu_path=None,
+            )
         self._headers = headers
         self._rows = rows
         self._source_label = src
@@ -350,7 +362,9 @@ class SynthesisView(ctk.CTkToplevel):
         self._mnhn_xlsx_warning = False
         if mnhn:
             if getattr(self, "_mixed_nights", False) and getattr(self, "_slices", None):
-                from chirosurf_nights import read_csv
+                from chirosurf_nights import (
+                    ObservationTableError, load_observation_csv,
+                )
                 parts = []
                 src_bits = []
                 used_xlsx = False
@@ -358,9 +372,10 @@ class SynthesisView(ctk.CTkToplevel):
                     vu = (self._vu_by_night or {}).get(sl.night_index)
                     if vu is not None and vu.vu_path.is_file():
                         try:
-                            h, r = read_csv(vu.vu_path)
+                            h, r = load_observation_csv(
+                                vu.vu_path, require_proba=True)
                             src_bits.append(f"nuit {sl.night_index} _Vu")
-                        except Exception as e:
+                        except (ObservationTableError, OSError, csv.Error) as e:
                             messagebox.showwarning(
                                 "Lecture _Vu",
                                 f"{vu.vu_path.name}\n{e}",
@@ -594,6 +609,11 @@ class SynthesisView(ctk.CTkToplevel):
                 w.writerow(["Identifiés (validés)", res.get("validated_contacts", 0)])
                 w.writerow(["Espèces de chiroptères", res.get("richesse_chiros", 0)])
                 w.writerow(["Fichiers", res.get("total_fichiers", 0)])
+                if res.get("method") == "mnhn":
+                    w.writerow([
+                        "Proba illisibles (hors pool)",
+                        res.get("n_proba_invalides", 0),
+                    ])
                 if has_ref:
                     w.writerow(["Référentiel d'activité", self._context_label(),
                                 f"unité : {UNITE}"])

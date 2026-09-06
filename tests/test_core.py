@@ -3201,6 +3201,54 @@ class TestChiroSurfNights:
         assert mixed0
         assert len(r0) == 15839
 
+    def test_load_observation_csv_rejects_missing_headers(self, tmp_path):
+        from chirosurf_nights import (
+            ObservationTableError, load_observation_csv, missing_observation_headers,
+        )
+        p = tmp_path / "Nuit_1-observations_Vu.csv"
+        p.write_text("foo;bar\n1;2\n", encoding="utf-8")
+        miss = missing_observation_headers(["foo", "bar"], require_proba=True)
+        assert "tadarida_taxon" in miss
+        assert "tadarida_probabilite" in miss
+        try:
+            load_observation_csv(p)
+            assert False, "aurait du lever"
+        except ObservationTableError as e:
+            msg = str(e)
+            assert "Nuit_1-observations_Vu.csv" in msg
+            assert "colonnes manquantes" in msg
+
+    def test_load_observation_csv_rejects_empty(self, tmp_path):
+        from chirosurf_nights import ObservationTableError, load_observation_csv
+        p = tmp_path / "vide_Vu.csv"
+        p.write_text("", encoding="utf-8")
+        try:
+            load_observation_csv(p)
+            assert False, "aurait du lever"
+        except ObservationTableError as e:
+            assert "vide_Vu.csv" in str(e)
+
+    def test_resolve_falls_back_message_on_bad_vu(self, tmp_path):
+        from chirosurf_nights import (
+            ObservationTableError, resolve_synthesis_table,
+        )
+        headers = ["nom du fichier", "tadarida_taxon", "observateur_taxon",
+                   "tadarida_probabilite"]
+        rows = [["Car212097-2026-Pass1-Z1-X_20260821_210000.wav",
+                 "Pippip", "", "0.9"]]
+        bad = tmp_path / "Nuit_1-observations_Vu.csv"
+        bad.write_text("pas;les;bonnes;colonnes\n1;2;3;4\n", encoding="utf-8")
+        try:
+            resolve_synthesis_table(
+                headers, rows, night_index=1, vu_path=bad)
+            assert False, "aurait du lever"
+        except ObservationTableError as e:
+            assert "Nuit_1-observations_Vu.csv" in str(e)
+        h, r, src, mixed = resolve_synthesis_table(
+            headers, rows, night_index=1, vu_path=None)
+        assert r == rows
+        assert mixed is False
+
     def test_parse_names_d11_and_benjamin(self):
         from chirosurf_nights import parse_chirosurf_csv_name
         assert parse_chirosurf_csv_name(
@@ -3361,6 +3409,17 @@ class TestMnhnSynthesis:
         assert mnhn_proba_bin(1.0) == 9
         assert mnhn_proba_bin("0.85") == 8
         assert mnhn_proba_bin("0,85") == 8
+
+    def test_invalid_proba_counted(self):
+        from synthesis import compute_mnhn_synthesis
+        rows = [
+            ["a", "Pippip", "abc", "Pippip"],
+            ["b", "Pippip", "0.99", "Pippip"],
+            ["c", "Pippip", "0.99", ""],
+        ]
+        res = compute_mnhn_synthesis(self.HEADERS, rows)
+        assert res["n_proba_invalides"] == 1
+        assert self._by(res)["Pippip"]["n_pool"] == 2
 
     def test_f75_graph_102(self):
         from synthesis import mnhn_f75

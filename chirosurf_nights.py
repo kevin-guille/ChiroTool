@@ -28,6 +28,13 @@ from activity_graph import _night_date_iso, parse_filename_time
 
 CHIROSURF_DIRNAME = "chirosurf"  # sous-dossier session (SPEC D3)
 
+class ObservationTableError(ValueError):
+    """CSV / tableur d'observations illisible ou colonnes manquantes."""
+
+
+_OBS_HEADERS_BASE = ("nom du fichier", "tadarida_taxon", "observateur_taxon")
+_OBS_HEADERS_PROBA = ("tadarida_probabilite",)
+
 # D11 généré : Nuit1_stem.csv — lu aussi : Nuit_1_stem / Nuit_1-stem (issue #3/#7)
 _NUIT_FILE_RE = re.compile(
     r"^Nuit_?(?P<n>\d+)[_-](?P<rest>.+)\.csv$", re.IGNORECASE
@@ -403,6 +410,47 @@ def read_csv(path: Path | str) -> tuple[list[str], list[list]]:
     return headers, rows
 
 
+def missing_observation_headers(
+    headers: list, *, require_proba: bool = False,
+) -> list[str]:
+    """Colonnes Vigie-Chiro absentes (comparaison insensible à la casse)."""
+    lower = {str(h).lower().strip() for h in (headers or [])}
+    needed = list(_OBS_HEADERS_BASE)
+    if require_proba:
+        needed.extend(_OBS_HEADERS_PROBA)
+    return [c for c in needed if c not in lower]
+
+
+def load_observation_csv(
+    path: Path | str, *, require_proba: bool = True,
+) -> tuple[list[str], list[list]]:
+    """Lit un CSV d'observations et refuse un fichier vide ou sans colonnes métier.
+
+    ``require_proba=True`` (défaut, ``_Vu`` ChiroSurf) exige aussi
+    ``tadarida_probabilite``. Lève ``ObservationTableError`` avec le nom du
+    fichier dans le message.
+    """
+    path = Path(path)
+    try:
+        headers, rows = read_csv(path)
+    except OSError as e:
+        raise ObservationTableError(
+            f"{path.name} : lecture impossible ({e})"
+        ) from e
+    except csv.Error as e:
+        raise ObservationTableError(
+            f"{path.name} : CSV illisible ({e})"
+        ) from e
+    if not headers:
+        raise ObservationTableError(f"{path.name} : fichier vide.")
+    missing = missing_observation_headers(headers, require_proba=require_proba)
+    if missing:
+        raise ObservationTableError(
+            f"{path.name} : colonnes manquantes ({', '.join(missing)})."
+        )
+    return headers, rows
+
+
 def rows_from_xlsx(xlsx_path: Path | str) -> tuple[list[str], list[list]]:
     import warnings
     warnings.filterwarnings("ignore", category=UserWarning, module="openpyxl")
@@ -611,7 +659,7 @@ def resolve_synthesis_table(
         return list(headers), list(rows), "xlsx (toute la participation)", mixed_all
     idx = int(night_index)
     if vu_path is not None and Path(vu_path).is_file():
-        h, r = read_csv(vu_path)
+        h, r = load_observation_csv(vu_path, require_proba=True)
         return h, r, f"_Vu nuit {idx}", False
     for sl in slices:
         if sl.night_index == idx:

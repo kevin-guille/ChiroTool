@@ -9,7 +9,9 @@ ChiroSurf, la Synthèse peut reconstituer l'interprétation 10 % / 75 %.
 - **📊 Synthèse** : case **Méthode MNHN 10 % / 75 %**, distincte de
   « Identifications validées seulement » (contacts écoutés). Bandes de
   confiance Tadarida (pas le temps). Colonne **75 %** dans le tableau.
-  Export CSV avec `Atteint_75`, `F75` et le pool Tadarida.
+  Export CSV avec `Atteint_75`, `F75`, le pool Tadarida et les proba
+  illisibles. Un `_Vu` cassé affiche le nom du fichier et replie sur
+  le tableur.
 - **Activité** : un `_Vu` remplace le tableur **pour cette nuit seulement**
   (une nuit 2 n'est plus masquée). Les graphes n'appliquent pas encore
   la méthode MNHN.
@@ -33,4 +35,4 @@ API publique. Ce n'est pas un outil officiel du MNHN.
 
 ---
 
-SHA-256 (`ChiroTool.exe`) : `468B2C434CC083395DB73C03DAA54C75374A293D5138BD4F2197C58685E2B1C4`
+SHA-256 (`ChiroTool.exe`) : `7EC0BFDF69BB5398E3B09CCF3A6D3C831BE6533368AF1D9C43EF16532B50D50A`

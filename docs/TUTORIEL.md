@@ -691,8 +691,11 @@ Filtres utiles :
 - **« Méthode MNHN 10 % / 75 % »** : reconstitue l'interprétation ChiroSurf
   (bandes de confiance Tadarida, pas le temps). Distinct de « validées
   seulement ». Les deux cases s'excluent. L'export CSV ajoute alors
-  `Atteint_75`, `F75` et la taille du pool Tadarida. Une colonne **75 %**
-  dans le tableau indique si le seuil de l'espèce est atteint. Si la source n'est
+  `Atteint_75`, `F75`, la taille du pool Tadarida et le nombre de
+  **proba illisibles** (hors pool ; virgule ou point acceptés). Une colonne
+  **75 %** dans le tableau indique si le seuil de l'espèce est atteint.
+  Un `_Vu` illisible ou sans les colonnes Vigie-Chiro affiche le nom du
+  fichier et replie sur le tableur. Si la source n'est
   pas un `_Vu`, un avertissement rappelle que la méthode suppose
   l'échantillonnage ChiroSurf (pas une validation contact par contact).
   En cumul multi-nuits, le calcul se fait **nuit par nuit** puis s'additionne

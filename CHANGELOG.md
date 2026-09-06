@@ -27,8 +27,10 @@ MNHN 10 % / 75 % dans la Synthèse (bandes de confiance Tadarida).
   nuits du tableur. Le `_Vu` remplace **cette nuit seulement**.
 - **Synthèse MNHN** : cases ignorées tant que le tableur n'est pas
   chargé ; colonne **75 %** dans le tableau ; export CSV avec
-  `Atteint_75` / `F75` / pool ; libellé de source nuit par nuit en
-  cumul ; avertissement si la source n'est pas un `_Vu` ChiroSurf.
+  `Atteint_75` / `F75` / pool / proba illisibles ; libellé de source
+  nuit par nuit en cumul ; avertissement si la source n'est pas un
+  `_Vu` ChiroSurf. Un `_Vu` illisible ou sans colonnes Vigie-Chiro
+  affiche le nom du fichier et replie sur le tableur.
 
 ### Tests
 
