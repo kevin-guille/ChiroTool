@@ -114,8 +114,8 @@ class AddPointWizard(ctk.CTkToplevel):
             self.nearby_points.sort(key=lambda x: x[0])
             self._nearest_site_idx = 0 if self.sites else None
 
-        self.transient(master)
-        self.after(50, self.grab_set)
+        from gui_windowing import bind_modal
+        bind_modal(self, master)
         self.focus()
 
         self._build_ui()

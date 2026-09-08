@@ -43,8 +43,8 @@ class AboutDialog(ctk.CTkToplevel):
         self.title("À propos de ChiroTool")
         self.geometry("560x680")
         self.resizable(False, False)
-        self.transient(master)
-        self.after(50, self.grab_set)
+        from gui_windowing import bind_modal
+        bind_modal(self, master)
 
         self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(0, weight=1)

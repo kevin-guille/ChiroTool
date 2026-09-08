@@ -39,8 +39,8 @@ class PreferencesDialog(ctk.CTkToplevel):
         self.geometry("720x680")
         self.minsize(640, 580)
 
-        self.transient(master)
-        self.after(50, self.grab_set)   # modal (après affichage pour éviter race)
+        from gui_windowing import bind_modal
+        bind_modal(self, master)  # modal (après affichage pour éviter race)
         self.focus()
 
         self._build_ui()
@@ -777,8 +777,8 @@ class PreferencesDialog(ctk.CTkToplevel):
         dlg.title("Mode d'import")
         dlg.geometry("520x260")
         dlg.resizable(False, False)
-        dlg.transient(self)
-        dlg.after(50, dlg.grab_set)
+        from gui_windowing import bind_modal
+        bind_modal(dlg, self)
         dlg.grid_columnconfigure(0, weight=1)
         result = {"mode": None}
 

@@ -5,20 +5,11 @@ Les versions publiées suivent le SemVer du fichier `version.py` / tags GitHub.
 
 ## [Unreleased]
 
-### Corrigé
-
-- **Upload code 409** : un WAV déjà enregistré n'est plus un échec. Il est
-  sauté et Tadarida peut partir. Cas typique : l'envoi a créé les fiches,
-  puis s'est interrompu (réseau ou saturation) avant l'analyse.
-- **Vérifier / Réparer** : si le portail n'arrive pas à lister les fichiers,
-  sonde les noms Data_k. Tous déjà enregistrés (code 409) : propose de
-  lancer Tadarida au lieu d'un re-upload bloqué. Si l'analyse sort 0 contact,
-  le son n'est probablement pas sur le serveur (nouvelle participation).
-
 ## [0.8.0] — 2026-09-06
 
 Issue [#7](https://github.com/kevin-guille/ChiroTool/issues/7) : interprétation
 MNHN 10 % / 75 % dans la Synthèse (bandes de confiance Tadarida).
+Exe reconstruit le 2026-09-08 (correctifs ci-dessous, version inchangée).
 
 ### Ajouté
 
@@ -41,12 +32,24 @@ MNHN 10 % / 75 % dans la Synthèse (bandes de confiance Tadarida).
   nuit par nuit en cumul ; avertissement si la source n'est pas un
   `_Vu` ChiroSurf. Un `_Vu` illisible ou sans colonnes Vigie-Chiro
   affiche le nom du fichier et replie sur le tableur.
+- **Upload code 409** : un WAV déjà enregistré n'est plus un échec. Il est
+  sauté et Tadarida peut partir. Cas typique : l'envoi a créé les fiches,
+  puis s'est interrompu (réseau ou saturation) avant l'analyse.
+- **Vérifier / Réparer** : si le portail n'arrive pas à lister les fichiers,
+  sonde les noms Data_k. Tous déjà enregistrés (code 409) : propose de
+  lancer Tadarida au lieu d'un re-upload bloqué. Si l'analyse sort 0 contact,
+  le son n'est probablement pas sur le serveur (nouvelle participation).
+- **Afficher le bureau (Win+D)** : les fenêtres de progression / wizards
+  réapparaissent en recliquant ChiroTool (plus besoin de tuer le process).
+  Sous Windows, elles ont aussi une icône dans la barre des tâches.
 
 ### Tests
 
 - Bandes / F75 (graphe 102 / 71 / 78), bande F75 sautée, correction
   Eptser → MyoGT, fixture Benjamin Nuit_1 (`Pippip` 184, `Pipkuh` 73).
 - `_Vu` nuit 1 + xlsx nuit 2 : les deux nuits restent dans Activité.
+- Upload 409 = déjà enregistré ; repair sonde titres ; restauration
+  des fenêtres après Afficher le bureau.
 
 ## [0.7.2] — 2026-09-01
 

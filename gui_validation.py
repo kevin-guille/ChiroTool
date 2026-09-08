@@ -310,8 +310,8 @@ class ValidationView(ctk.CTkToplevel):
         self.geometry("1280x780")
         self.minsize(1100, 640)
 
-        self.transient(master)
-        self.after(50, self.grab_set)
+        from gui_windowing import bind_modal
+        bind_modal(self, master)
         self.focus()
 
         # Data

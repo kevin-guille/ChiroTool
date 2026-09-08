@@ -82,8 +82,8 @@ class SynthesisView(ctk.CTkToplevel):
         self.title(f"Synthèse — {self.session_path.name}{title_extra}")
         self.geometry("820x700")
         self.minsize(640, 480)
-        self.transient(master)
-        self.after(50, self.grab_set)
+        from gui_windowing import bind_modal
+        bind_modal(self, master)
         self.focus()
 
         self._xlsx_headers: list = []

@@ -21,6 +21,20 @@ ChiroSurf, la Synthèse peut reconstituer l'interprétation 10 % / 75 %.
 Les sessions déjà préparées (v0.7.x) restent utilisables. La case MNHN
 est décochée par défaut.
 
+## Correctifs inclus dans cet exe (2026-09-08)
+
+Version toujours **0.8.0**. Même tag GitHub.
+
+- **Upload** : un WAV déjà enregistré (code 409) n'est plus un échec.
+  Il est sauté, Tadarida peut partir. Cas typique : l'envoi a créé les
+  fiches, puis s'est interrompu avant l'analyse.
+- **Vérifier / Réparer** : si le portail n'arrive pas à lister les
+  fichiers, sonde les noms Data_k. Tous déjà enregistrés : propose de
+  lancer Tadarida. Si l'analyse sort 0 contact, le son n'est probablement
+  pas sur le serveur (nouvelle participation, renvoyer `Data_k/`).
+- **Afficher le bureau** (Win+D) : recliquer ChiroTool ramène la fenêtre
+  de progression. Plus besoin du Gestionnaire des tâches.
+
 ## Installation
 
 Téléchargez `ChiroTool.exe` ci-dessous (portable, Windows). Remplacez
@@ -35,4 +49,4 @@ API publique. Ce n'est pas un outil officiel du MNHN.
 
 ---
 
-SHA-256 (`ChiroTool.exe`) : `7EC0BFDF69BB5398E3B09CCF3A6D3C831BE6533368AF1D9C43EF16532B50D50A`
+SHA-256 (`ChiroTool.exe`) : `349241B5D771205C26F4B631EB4220BA7E95C97D8D47D1E93747984FB5F6DC27`

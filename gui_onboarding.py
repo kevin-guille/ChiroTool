@@ -49,8 +49,8 @@ class OnboardingWizard(ctk.CTkToplevel):
         self.title("Bienvenue sur ChiroTool")
         self.geometry("720x560")
         self.resizable(False, False)
-        self.transient(master)
-        self.after(50, self.grab_set)
+        from gui_windowing import bind_modal
+        bind_modal(self, master)
 
         # État wizard
         self.current_step = 0
@@ -538,8 +538,8 @@ class _AddMaterielDialog(ctk.CTkToplevel):
         self.title("Ajouter un enregistreur")
         self.geometry("480x360")
         self.resizable(False, False)
-        self.transient(master)
-        self.after(50, self.grab_set)
+        from gui_windowing import bind_modal
+        bind_modal(self, master)
         self.result: Materiel | None = None
 
         self.grid_columnconfigure(0, weight=1)

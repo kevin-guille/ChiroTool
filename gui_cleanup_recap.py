@@ -73,8 +73,8 @@ class CleanupRecapDialog(ctk.CTkToplevel):
         self.title(f"Nettoyage — {self.session_path.name}")
         self.geometry("680x560")
         self.minsize(560, 480)
-        self.transient(master)
-        self.after(50, self.grab_set)
+        from gui_windowing import bind_modal
+        bind_modal(self, master)
 
         self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(1, weight=1)

@@ -52,8 +52,8 @@ class SessionMetaWizard(ctk.CTkToplevel):
         self.geometry("640x600")
         self.minsize(580, 540)
 
-        self.transient(master)
-        self.after(50, self.grab_set)
+        from gui_windowing import bind_modal
+        bind_modal(self, master)
         self.focus()
 
         self._result: SessionMeta | None = None
@@ -837,8 +837,8 @@ class SessionMetaWizard(ctk.CTkToplevel):
         dlg = ctk.CTkToplevel(self)
         dlg.title(title)
         dlg.geometry("420x420")
-        dlg.transient(self)
-        dlg.after(50, dlg.grab_set)
+        from gui_windowing import bind_modal
+        bind_modal(dlg, self)
         dlg.grid_columnconfigure(0, weight=1)
         dlg.grid_rowconfigure(1, weight=1)
 
@@ -892,8 +892,8 @@ class SessionMetaWizard(ctk.CTkToplevel):
         dlg.title("Choisir une date")
         dlg.geometry("300x320")
         dlg.resizable(False, False)
-        dlg.transient(self)
-        dlg.after(50, dlg.grab_set)
+        from gui_windowing import bind_modal
+        bind_modal(dlg, self)
         dlg.grid_columnconfigure(0, weight=1)
 
         state = {"year": current.year, "month": current.month}

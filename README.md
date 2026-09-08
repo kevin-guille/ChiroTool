@@ -69,7 +69,9 @@ confiance Tadarida, issue [#7](https://github.com/kevin-guille/ChiroTool/issues/
 
 **v0.8.0** (release courante, suite [#7](https://github.com/kevin-guille/ChiroTool/issues/7)) :
 case **Méthode MNHN 10 % / 75 %** dans la Synthèse (bandes de confiance Tadarida).
-Note : [`docs/RELEASE_v0.8.0.md`](docs/RELEASE_v0.8.0.md).
+Correctifs de l'exe : code 409 = déjà enregistré (Tadarida peut partir) ;
+après **Afficher le bureau**, recliquer ChiroTool ramène la fenêtre de
+progression. Note : [`docs/RELEASE_v0.8.0.md`](docs/RELEASE_v0.8.0.md).
 
 **v0.7.2** : barre d’actions sur une ligne (glissement si écran étroit) ; une pose soir + matin = une nuit en
 Synthèse (plus de Nuit 1 / Nuit 2 à minuit). Note :
@@ -285,7 +287,7 @@ Moteur Python testable sans UI + interface CustomTkinter.
 | **Logique pure** | `chiro_core`, `naming`, `taxons`, `manifest`, `verify`, `vigiechiro_enums` |
 | **Accès données** | `vigiechiro_api`, `credentials`, `registry`, `suivi`, `suivi_write` |
 | **Opérations** | `scan`, `rename`, `te10`, `cleanup`, `pipeline` |
-| **GUI** | `gui_app`, `gui_validation`, `gui_map`, `gui_registry`, wizards… |
+| **GUI** | `gui_app`, `gui_windowing`, `gui_validation`, `gui_map`, `gui_registry`, wizards… |
 | **Natif (opt.)** | `rust_ext` → `chirotool_fast` |
 
 Tests : `pytest tests/` (également en [CI GitHub Actions](https://github.com/kevin-guille/ChiroTool/actions)).
@@ -296,7 +298,7 @@ Tests : `pytest tests/` (également en [CI GitHub Actions](https://github.com/ke
 
 Vous avez une saison Point Fixe devant vous ? **ChiroTool est fait pour ça.**
 
-1. **[Téléchargez la v0.7](https://github.com/kevin-guille/ChiroTool/releases)** (exe ou sources)
+1. **[Téléchargez la v0.8](https://github.com/kevin-guille/ChiroTool/releases)** (exe ou sources)
 2. Traitez une nuit test de bout en bout
 3. Envoyez un retour — bug, idée, besoin de formation —
    via une [**issue GitHub**](https://github.com/kevin-guille/ChiroTool/issues)

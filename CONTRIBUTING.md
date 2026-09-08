@@ -32,7 +32,7 @@ Nuit biologique D12 (midi, jamais minuit) + barre d'actions glissable :
 Interprétation 10 % / 75 % dans la Synthèse : **v0.8.0** / P8 (bandes de
 confiance Tadarida, `compute_mnhn_synthesis`, issue
 [#7](https://github.com/kevin-guille/ChiroTool/issues/7)). Onglet Activité
-ensuite.
+ensuite. Exe 0.8.0 reconstruit le 2026-09-08 : upload 409, Afficher le bureau.
 
 | Document | Rôle |
 |----------|------|

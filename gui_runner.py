@@ -21,6 +21,8 @@ from typing import Callable
 
 import customtkinter as ctk
 
+from gui_windowing import bind_modal
+
 
 class RunDialog(ctk.CTkToplevel):
     """Modal de progression d'une phase pipeline."""
@@ -32,8 +34,7 @@ class RunDialog(ctk.CTkToplevel):
         self.title(title)
         self.geometry("720x520")
         self.minsize(600, 400)
-        self.transient(master)
-        self.after(50, self.grab_set)
+        bind_modal(self, master)
 
         self.worker = worker
         self.on_done = on_done

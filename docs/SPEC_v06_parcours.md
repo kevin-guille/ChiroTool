@@ -4,7 +4,7 @@
 |--|--|
 | **Statut** | **Livré** : v0.6.0 (2026-08-07, vagues A–C) + **v0.7.0** (2026-08-30, Synthèse autonome, Titley, issues #4–#6) + **v0.7.1** (2026-08-31, issue #7 ChiroSurf CSV+WAV) + **v0.7.2** (2026-09-01, D12 nuit bio + barre d'actions) + **v0.8.0** (2026-09-06, P8 Synthèse MNHN 10 % / 75 %). |
 | **Ouvert** | Onglet Activité : même filtre MNHN 10 % / 75 % que la Synthèse (ensuite). |
-| **Date** | 2026-08-04 (conception) · 2026-08-07 (v0.6) · 2026-08-30 (v0.7) · 2026-09-03 (D13) · 2026-09-06 (P8) |
+| **Date** | 2026-08-04 (conception) · 2026-08-07 (v0.6) · 2026-08-30 (v0.7) · 2026-09-03 (D13) · 2026-09-06 (P8) · 2026-09-08 (exe 0.8.0 : 409 + Win+D) |
 | **Contexte** | Issue [#3](https://github.com/kevin-guille/ChiroTool/issues/3) (retours terrain) + retours carte / meta + issue [#7](https://github.com/kevin-guille/ChiroTool/issues/7) |
 | **Principe** | Pragmatisme — une vérité disque, peu de fichiers, parcours unifiés, libellés humains d’abord |
 
@@ -467,6 +467,7 @@ Le tutoriel **ne décrit pas** les features non livrées comme déjà disponible
 | 2026-09-03 | issue #7 | **D13** + **P8** : proposition chronologique soumise à Benjamin (ne pas coder telle quelle). |
 | 2026-09-06 | issue #7 | P8 **corrigé** : 10 % = bandes de confiance Tadarida (graphe ChiroSurf). `compute_mnhn_synthesis`. Case distincte. D04 : bande F75 doit contenir une validation concordante. |
 | 2026-09-06 | audit | Activité : `_Vu` ne masque plus les autres nuits de l'xlsx. Synthèse MNHN : source par nuit, export diagnostics, garde clic, avertissement hors `_Vu`. |
+| 2026-09-08 | v0.8.0 | Upload HTTP 409 = déjà enregistré (skip + Tadarida). Repair : sonde les titres si listing 403. Win+D : `gui_windowing` restaure les modales (icône barre des tâches, grab). |
 
 ---
 

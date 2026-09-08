@@ -59,6 +59,7 @@ from gui_runner import (
 from gui_validation import ValidationView, find_observations_xlsx
 from gui_synthesis import SynthesisView
 from gui_wizard import open_wizard
+from gui_windowing import bind_modal, install_show_desktop_restore
 
 
 APP_TITLE = "ChiroTool"
@@ -334,6 +335,9 @@ class ChiroToolApp(ctk.CTk):
 
         # Fermeture propre (obligation utilisateur)
         self.protocol("WM_DELETE_WINDOW", self._on_close)
+        # Afficher le bureau (Win+D) masque les Toplevel transients : on les
+        # ramène au <Map>/<FocusIn> de la fenêtre principale.
+        install_show_desktop_restore(self)
 
         self._build_ui()
         self._bind_shortcuts()
@@ -2311,8 +2315,7 @@ class ChiroToolApp(ctk.CTk):
         dlg.title(f"ChiroSurf — nuits · {name}")
         dlg.geometry("680x480")
         dlg.minsize(520, 360)
-        dlg.transient(self)
-        dlg.after(50, dlg.grab_set)
+        bind_modal(dlg, self)
         ctk.CTkLabel(
             dlg, text="CSV pour ChiroSurf (méthode 10 % → 75 %, optionnel)",
             font=ctk.CTkFont(size=14, weight="bold"), anchor="w",
@@ -2713,8 +2716,7 @@ class ChiroToolApp(ctk.CTk):
         dlg.title("Détails avancés")
         dlg.geometry("640x520")
         dlg.minsize(520, 400)
-        dlg.transient(self)
-        dlg.after(50, dlg.grab_set)
+        bind_modal(dlg, self)
 
         dlg.grid_columnconfigure(0, weight=1)
         dlg.grid_rowconfigure(0, weight=1)

@@ -102,8 +102,8 @@ class ExportSessionsWizard(ctk.CTkToplevel):
         self.title("Exporter des sessions (USB / partage)")
         self.geometry("780x640")
         self.minsize(680, 520)
-        self.transient(master)
-        self.after(50, self.grab_set)
+        from gui_windowing import bind_modal
+        bind_modal(self, master)
 
         self.registry = registry
         self.workspace = Path(workspace) if workspace else None

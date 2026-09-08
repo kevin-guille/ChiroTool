@@ -1081,6 +1081,11 @@ Votre index et vos sauvegardes sont dans le sous-dossier `_chirotool/` de votre
 dossier de travail. Un fichier `README.txt` y explique chaque fichier. **Ne le
 supprimez pas** (sinon ChiroTool devra tout re-scanner).
 
+**« Après Afficher le bureau, je ne retrouve plus la fenêtre ChiroTool. »**
+Cliquez l'icône ChiroTool dans la barre des tâches, ou celle de la fenêtre
+de progression (Préparer, Upload, etc.). Elle revient au premier plan.
+Inutile de tuer le process dans le Gestionnaire des tâches.
+
 **« L'application s'est fermée toute seule. »**
 Un fichier de journal est créé dans `%APPDATA%\ChiroTool\chirotool.log`.
 Envoyez-le à votre référent ou via la page Issues du projet, cela aide à
@@ -1133,6 +1138,7 @@ ChiroTool couvre la grande majorité des cas, mais pas (encore) tout :
 | **Titley** | Swift / Ranger : noms usine lus ; TE×10 sans collision (issue #4) |
 | **Démarrage** | Plus de scan auto du dernier dossier (issue #5) |
 | **Upload / Réparer** | Coupure réseau : code 409 = déjà enregistré, Tadarida peut partir. **Vérifier / Réparer** lance l'analyse si le listing portail échoue ; 0 contact → renvoyer Data_k |
+| **Fenêtres** | Après **Afficher le bureau** (Win+D), recliquer ChiroTool ramène la progression. Plus besoin de tuer le process |
 | **Dates** | WAV font foi si Summary cumulé |
 | **SM2** | `.wac` / `.w4v` : conversion Kaleidoscope Lite en amont (issue #6) |
 

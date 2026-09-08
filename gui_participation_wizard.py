@@ -63,8 +63,8 @@ class ParticipationWizard(ctk.CTkToplevel):
         self.meta = meta
         self.result: dict | None = None
 
-        self.transient(master)
-        self.after(50, self.grab_set)
+        from gui_windowing import bind_modal
+        bind_modal(self, master)
         self.focus()
 
         # Données pré-remplies (best-effort)

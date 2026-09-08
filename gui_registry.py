@@ -35,8 +35,8 @@ class SyncPreviewDialog(ctk.CTkToplevel):
         self.title("Synchronisation Vigie-Chiro")
         self.geometry("760x600")
         self.minsize(640, 480)
-        self.transient(master)
-        self.after(50, self.grab_set)
+        from gui_windowing import bind_modal
+        bind_modal(self, master)
 
         self.registry = registry
         self.token = token
@@ -235,8 +235,8 @@ class _FormatChoiceDialog(ctk.CTkToplevel):
         w = max(460, 180 + 160 * len(options))
         self.geometry(f"{w}x220")
         self.resizable(False, False)
-        self.transient(master)
-        self.after(50, self.grab_set)
+        from gui_windowing import bind_modal
+        bind_modal(self, master)
 
         self.choice: str | None = None
 
@@ -298,7 +298,6 @@ class _TextEditDialog(ctk.CTkToplevel):
         super().__init__(master)
         self.title(title)
         self.geometry("480x260")
-        self.transient(master)
         self.result: str | None = None
         self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(1, weight=1)
@@ -316,7 +315,8 @@ class _TextEditDialog(ctk.CTkToplevel):
                        command=self._ok).grid(row=2, column=1, sticky="w",
                                               padx=(6, 12), pady=(4, 12))
         self.protocol("WM_DELETE_WINDOW", self._cancel)
-        self.after(60, self.grab_set)
+        from gui_windowing import bind_modal
+        bind_modal(self, master, grab_delay_ms=60)
         self.after(80, self.box.focus_set)
 
     def _ok(self):

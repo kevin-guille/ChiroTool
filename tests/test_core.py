@@ -3183,6 +3183,161 @@ class TestUploadAlreadyDone:
         assert "non lancé" in skipped
 
 
+class _FakeWin:
+    def __init__(self, cls_name="CTkToplevel", *, state="normal",
+                 exists=True, over=False, modal=False, viewable=None):
+        self._state = state
+        self._exists = exists
+        self._over = over
+        self._children = []
+        self._chiro_modal = modal
+        self._viewable = viewable
+        self.deiconify_n = 0
+        self.lift_n = 0
+        self.grab_n = 0
+        self.focus_n = 0
+        self.topmost = []
+        self.after_fns = []
+        # Garde les méthodes : sous-classe nommée, pas une classe vide.
+        self.__class__ = type(cls_name, (_FakeWin,), {})
+
+    def winfo_children(self):
+        return list(self._children)
+
+    def winfo_exists(self):
+        return self._exists
+
+    def winfo_viewable(self):
+        if self._viewable is not None:
+            return bool(self._viewable)
+        return self._exists and self._state == "normal"
+
+    def state(self):
+        return self._state
+
+    def overrideredirect(self, v=None):
+        if v is None:
+            return self._over
+        self._over = bool(v)
+
+    def deiconify(self):
+        self.deiconify_n += 1
+        self._state = "normal"
+        self._viewable = True
+
+    def lift(self):
+        self.lift_n += 1
+
+    def grab_set(self):
+        self.grab_n += 1
+
+    def focus_force(self):
+        self.focus_n += 1
+
+    def attributes(self, key, val=None):
+        self.topmost.append((key, val))
+
+    def after(self, ms, fn):
+        self.after_fns.append((ms, fn))
+        return len(self.after_fns)
+
+    def winfo_toplevel(self):
+        return self
+
+
+class TestShowDesktopRestore:
+    def test_restores_iconic_modal_and_skips_tooltip(self):
+        from gui_windowing import restore_transient_windows
+        root = _FakeWin("CTk")
+        modal = _FakeWin(state="iconic", modal=True)
+        tip = _FakeWin("Toplevel", over=True)
+        gone = _FakeWin(state="withdrawn", modal=True)
+        root._children = [modal, tip, gone]
+        n = restore_transient_windows(root)
+        assert n == 1
+        assert modal.deiconify_n == 1
+        assert modal.grab_n == 1
+        assert tip.deiconify_n == 0
+        assert gone.deiconify_n == 0
+
+    def test_install_idempotent(self):
+        from gui_windowing import install_show_desktop_restore
+        binds = []
+
+        class Root:
+            def bind(self, seq, fn, add=None):
+                binds.append(seq)
+
+            def winfo_children(self):
+                return []
+
+        r = Root()
+        install_show_desktop_restore(r)
+        install_show_desktop_restore(r)
+        assert binds.count("<Map>") == 1
+        assert binds.count("<FocusIn>") == 1
+
+    def test_bind_modal_marks_and_hooks_root(self):
+        from gui_windowing import bind_modal
+
+        class Master:
+            def __init__(self):
+                self.binds = []
+
+            def bind(self, seq, fn, add=None):
+                self.binds.append(seq)
+
+            def winfo_toplevel(self):
+                return self
+
+            def winfo_children(self):
+                return []
+
+        class Dlg:
+            def __init__(self):
+                self.trans = None
+                self.after_calls = []
+
+            def transient(self, m):
+                self.trans = m
+
+            def grab_set(self):
+                self.grabbed = True
+
+            def after(self, ms, fn):
+                self.after_calls.append((ms, fn))
+                fn()
+                return 1
+
+        m, d = Master(), Dlg()
+        bind_modal(d, m)
+        assert d._chiro_modal is True
+        assert d.trans is m
+        assert getattr(d, "grabbed", False) is True
+        assert "<Map>" in m.binds
+
+    def test_watch_restores_hidden_modal_when_root_visible(self):
+        from gui_windowing import watch_hidden_modals
+        root = _FakeWin("CTk")
+        modal = _FakeWin(state="iconic", modal=True)
+        root._children = [modal]
+        assert watch_hidden_modals(root) is True
+        assert modal.deiconify_n == 1
+        assert modal.grab_n == 1
+
+    def test_watch_skips_when_root_hidden(self):
+        from gui_windowing import watch_hidden_modals
+        root = _FakeWin("CTk", state="iconic")
+        modal = _FakeWin(state="iconic", modal=True)
+        root._children = [modal]
+        assert watch_hidden_modals(root) is False
+        assert modal.deiconify_n == 0
+
+    def test_promote_swallows_missing_hwnd(self):
+        from gui_windowing import promote_to_taskbar
+        assert promote_to_taskbar(object()) is False
+
+
 # =========================================================================
 # point_selection + chirosurf_nights (SPEC v0.6 / issue #3)
 # =========================================================================
