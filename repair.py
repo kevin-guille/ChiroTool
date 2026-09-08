@@ -93,6 +93,9 @@ class RepairClient(Protocol):
     def download_observations_as_xlsx(
         self, participation_id: str, dst: Path, on_progress=None,
     ) -> dict: ...
+    def probe_titre_registered(
+        self, participation_id: str, titre: str,
+    ) -> str: ...
 
 
 class RegistryLike(Protocol):
@@ -142,6 +145,18 @@ def find_local_observations_xlsx(session: Path) -> Path | None:
         return None
     candidates.sort(key=lambda p: p.stat().st_mtime, reverse=True)
     return candidates[0]
+
+
+def pick_probe_names(names: list[str], k: int = 5) -> list[str]:
+    """Échantillon stable de noms (premier, dernier, et répartis)."""
+    clean = [n for n in names if n]
+    if not clean:
+        return []
+    if len(clean) <= k:
+        return list(clean)
+    n = len(clean)
+    idxs = sorted({int(round(i * (n - 1) / (k - 1))) for i in range(k)})
+    return [clean[i] for i in idxs]
 
 
 def _norm_wav_name(name: str) -> str:
@@ -233,11 +248,17 @@ def suggest_actions(
     has_xlsx: bool,
     flag_uploaded: bool,
     has_participation_id: bool,
+    files_registered: bool = False,
 ) -> list[str]:
     """Détermine les actions logiques (pure). Ne regarde pas allow_*.
 
     Ordre stable, déterministe. Retourne toujours au moins ``noop`` si
     aucune action corrective n'est pertinente.
+
+    ``files_registered`` : les titres WAV sont déjà des fiches serveur
+    (listing fiable OU sonde HTTP 409), même si ``GET /fichiers`` est en
+    403. Dans ce cas on propose ``trigger_compute`` plutôt qu'un re-upload
+    qui échouerait en 409.
     """
     if not has_participation_id:
         return [ACTION_NOOP]
@@ -246,7 +267,7 @@ def suggest_actions(
     etat = (traitement_etat or "").strip().upper()
 
     # 1. Fichiers manquants → reprise upload, jamais trigger / set_uploaded
-    if listing_ok and missing_on_server:
+    if listing_ok and missing_on_server and not files_registered:
         actions.append(ACTION_RESUME_UPLOAD)
         # Pas de set_uploaded ni trigger tant que la couverture n'est pas 100 %
         if etat in _ETAT_DONE and not has_xlsx:
@@ -255,8 +276,12 @@ def suggest_actions(
             actions.append(ACTION_FETCH)
         return actions or [ACTION_NOOP]
 
-    # 2. Listing KO → on ne propose rien d'automatique risqué
+    # 2. Listing KO → pas de re-upload massif. Si les titres sont quand
+    # même enregistrés (sonde 409), on peut lancer Tadarida : c'est le
+    # cas « upload coupé, compute jamais parti ».
     if not listing_ok:
+        if files_registered and etat not in _ETAT_NO_RETRIGGER:
+            actions.append(ACTION_TRIGGER)
         if etat in _ETAT_DONE and not has_xlsx:
             actions.append(ACTION_FETCH)
         return actions or [ACTION_NOOP]
@@ -299,6 +324,8 @@ class RepairReport:
     coverage_ok: bool = False
     listing_ok: bool = True
     listing_error: str | None = None
+    files_registered: bool = False
+    registration_via: str | None = None
     traitement_etat: str | None = None
     traitement_date: str | None = None
     has_xlsx: bool = False
@@ -319,7 +346,7 @@ class RepairReport:
 ACTION_LABELS = {
     ACTION_SET_UPLOADED: "Aligner le flag « uploadé » (manifest)",
     ACTION_RESUME_UPLOAD: "Reprendre l'upload des WAV manquants (via bouton Upload)",
-    ACTION_TRIGGER: "Relancer l'analyse Tadarida (trigger_compute)",
+    ACTION_TRIGGER: "Relancer l'analyse Tadarida",
     ACTION_FETCH: "Télécharger le tableur d'observations (xlsx)",
     ACTION_NOOP: "Aucune action nécessaire",
 }
@@ -346,7 +373,15 @@ def format_repair_report(report: dict[str, Any] | RepairReport) -> str:
     lines.append(f"  Local  (Data_k) : {r.get('local_wav_count', 0)} fichier(s)")
     lines.append(f"  Serveur         : {r.get('server_wav_count', 0)} fichier(s)")
     listing_ok = r.get("listing_ok", True)
-    if not listing_ok:
+    files_registered = bool(r.get("files_registered"))
+    via = r.get("registration_via") or ""
+    if not listing_ok and files_registered:
+        cov = "portail : listing indisponible, fichiers déjà enregistrés (code 409)"
+        list_ok = (
+            "listing KO, enregistrement confirmé"
+            if via == "409_probe" else "ÉCHEC listing"
+        )
+    elif not listing_ok:
         cov = "non comparable (listing serveur en échec)"
         list_ok = "ÉCHEC listing"
     elif r.get("coverage_ok"):
@@ -356,6 +391,14 @@ def format_repair_report(report: dict[str, Any] | RepairReport) -> str:
         cov = "✗ incomplète (locaux absents du serveur)"
         list_ok = "OK"
     lines.append(f"  Couverture      : {cov}  (listing {list_ok})")
+    if files_registered and not listing_ok:
+        lines.append(
+            "  Enregistrement  : les WAV Data_k sont déjà connus de cette "
+            "participation. Lancer Tadarida. Si l'analyse sort 0 contact, "
+            "le son n'est probablement pas arrivé sur le serveur "
+            "(coupure pendant l'envoi) : nouvelle participation et "
+            "renvoyer Data_k."
+        )
     missing = r.get("missing_on_server") or []
     if missing and listing_ok:
         preview = ", ".join(missing[:8])
@@ -614,6 +657,60 @@ def diagnose_and_repair_session(
     report.extra_on_server = list(cov["extra_on_server"])
     report.coverage_ok = bool(cov["coverage_ok"])
     report.listing_ok = bool(cov["listing_ok"])
+    report.files_registered = bool(report.coverage_ok)
+    report.registration_via = "listing" if report.coverage_ok else None
+
+    # Listing vide ou 403 (GET /fichiers → S3 AccessDenied) alors que Data_k
+    # a des WAV et que Tadarida n'a jamais produit de /donnees : sonder un
+    # échantillon de titres via POST /fichiers. HTTP 409 = déjà enregistré.
+    need_probe = (
+        bool(local_wavs)
+        and not report.coverage_ok
+        and (not report.listing_ok or not server_names)
+        and (etat or "").strip().upper() not in _ETAT_DONE
+        and not report.has_xlsx
+    )
+    probe_fn = getattr(api, "probe_titre_registered", None)
+    if need_probe and callable(probe_fn):
+        sample = pick_probe_names(local_wavs, 5)
+        probe_hits: list[str] = []
+        for name in sample:
+            try:
+                probe_hits.append(str(probe_fn(report.participation_id, name)))
+            except Exception:
+                probe_hits.append("unknown")
+        n_reg = probe_hits.count("registered")
+        n_abs = probe_hits.count("absent")
+        if sample and n_reg == len(probe_hits):
+            report.files_registered = True
+            report.registration_via = "409_probe"
+            report.listing_ok = False
+            report.missing_on_server = []
+            report.listing_error = (
+                report.listing_error
+                or "listing portail indisponible ou vide ; "
+                   "fichiers confirmés (code 409, déjà enregistrés)"
+            )
+            report.notes.append(
+                "Le portail n'arrive pas à lister les fichiers, mais les "
+                f"{len(sample)} noms sondés de Data_k sont déjà enregistrés "
+                "(code 409). Cas typique : l'envoi a créé les fiches, puis "
+                "s'est interrompu (réseau ou saturation) avant le lancement "
+                "de Tadarida. Lancer l'analyse. Si elle sort 0 contact, "
+                "le son n'est pas sur le serveur : nouvelle participation et "
+                "renvoyer Data_k."
+            )
+        elif sample and n_abs == len(probe_hits):
+            report.notes.append(
+                "Les noms sondés ne sont pas encore sur le serveur. "
+                "Reprends l'upload."
+            )
+        elif n_reg and n_abs:
+            report.notes.append(
+                f"État mixte : {n_reg} déjà enregistré(s), {n_abs} encore "
+                f"absent(s). Relance Upload : les déjà enregistrés (code 409) "
+                f"seront sautés, les manquants renvoyés, puis Tadarida part."
+            )
 
     if not local_wavs:
         report.notes.append("Data_k/ absent ou vide — couverture locale non évaluable.")
@@ -645,6 +742,7 @@ def diagnose_and_repair_session(
         has_xlsx=report.has_xlsx,
         flag_uploaded=report.local_flags["uploaded"],
         has_participation_id=True,
+        files_registered=report.files_registered,
     )
 
     if not apply:
@@ -704,7 +802,7 @@ def diagnose_and_repair_session(
 
     # --- trigger_compute --------------------------------------------------
     if ACTION_TRIGGER in actions_planned:
-        if not report.coverage_ok:
+        if not (report.coverage_ok or report.files_registered):
             _skip(ACTION_TRIGGER, "fichiers manquants sur le serveur")
         elif not allow_trigger:
             _skip(ACTION_TRIGGER, "allow_trigger=False")

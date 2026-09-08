@@ -2703,6 +2703,63 @@ class TestRepairCoveragePure:
         )
         assert acts == [ACTION_NOOP]
 
+    def test_suggest_listing_failed_stays_noop(self):
+        from repair import suggest_actions, ACTION_NOOP, ACTION_TRIGGER
+        acts = suggest_actions(
+            coverage_ok=False,
+            listing_ok=False,
+            missing_on_server=[],
+            traitement_etat=None,
+            has_xlsx=False,
+            flag_uploaded=False,
+            has_participation_id=True,
+        )
+        assert ACTION_TRIGGER not in acts
+        assert acts == [ACTION_NOOP]
+
+    def test_suggest_409_registered_triggers_without_listing(self):
+        from repair import (
+            suggest_actions, ACTION_TRIGGER, ACTION_RESUME_UPLOAD,
+            ACTION_SET_UPLOADED,
+        )
+        acts = suggest_actions(
+            coverage_ok=False,
+            listing_ok=False,
+            missing_on_server=[],
+            traitement_etat=None,
+            has_xlsx=False,
+            flag_uploaded=False,
+            has_participation_id=True,
+            files_registered=True,
+        )
+        assert ACTION_TRIGGER in acts
+        assert ACTION_RESUME_UPLOAD not in acts
+        assert ACTION_SET_UPLOADED not in acts
+
+    def test_suggest_409_registered_en_cours_no_trigger(self):
+        from repair import suggest_actions, ACTION_TRIGGER
+        acts = suggest_actions(
+            coverage_ok=False,
+            listing_ok=False,
+            missing_on_server=[],
+            traitement_etat="EN_COURS",
+            has_xlsx=False,
+            flag_uploaded=False,
+            has_participation_id=True,
+            files_registered=True,
+        )
+        assert ACTION_TRIGGER not in acts
+
+    def test_pick_probe_names_spread(self):
+        from repair import pick_probe_names
+        assert pick_probe_names([]) == []
+        assert pick_probe_names(["a.wav", "b.wav"]) == ["a.wav", "b.wav"]
+        names = [f"f{i}.wav" for i in range(10)]
+        sample = pick_probe_names(names, 5)
+        assert sample[0] == "f0.wav"
+        assert sample[-1] == "f9.wav"
+        assert len(sample) == 5
+
 
 class TestRepairLocalFs:
     def test_list_data_k_and_xlsx(self, tmp_path):
@@ -2744,18 +2801,47 @@ class TestRepairLocalFs:
         assert "EN_COURS" in text
         assert "dry-run" in text
 
+    def test_format_report_409_probe_is_readable(self):
+        from repair import format_repair_report
+        text = format_repair_report({
+            "session": "s",
+            "participation_id": "p",
+            "local_wav_count": 361,
+            "server_wav_count": 0,
+            "coverage_ok": False,
+            "listing_ok": False,
+            "files_registered": True,
+            "registration_via": "409_probe",
+            "listing_error": "listing portail indisponible ou vide ; "
+                             "fichiers confirmés (code 409, déjà enregistrés)",
+            "missing_on_server": [],
+            "extra_on_server": [],
+            "local_flags": {},
+            "suggested_actions": ["trigger_compute"],
+            "errors": [],
+            "notes": [],
+        })
+        assert "déjà enregistrés" in text
+        assert "code 409" in text
+        assert "Tadarida" in text
+        assert "0 contact" in text
+        assert "À uploader" not in text
+
 
 class _FakeRepairClient:
     """Client minimal injecté dans diagnose_and_repair_session."""
 
     def __init__(self, *, etat="TERMINE", files=None, fail_list=False,
-                 fail_status=False, fail_trigger=False, fail_fetch=False):
+                 fail_status=False, fail_trigger=False, fail_fetch=False,
+                 probe_result=None):
         self.etat = etat
         self.files = list(files if files is not None else [])
         self.fail_list = fail_list
         self.fail_status = fail_status
         self.fail_trigger = fail_trigger
         self.fail_fetch = fail_fetch
+        self.probe_result = probe_result
+        self.probe_calls = []
         self.trigger_calls = 0
         self.fetch_calls = 0
 
@@ -2768,6 +2854,12 @@ class _FakeRepairClient:
         if self.fail_list:
             raise RuntimeError("list boom")
         return list(self.files)
+
+    def probe_titre_registered(self, participation_id: str, titre: str) -> str:
+        self.probe_calls.append(titre)
+        if self.probe_result is None:
+            return "unknown"
+        return self.probe_result
 
     def trigger_compute(self, participation_id: str) -> dict:
         self.trigger_calls += 1
@@ -3007,6 +3099,88 @@ class TestDiagnoseAndRepairSession:
             allow_trigger=True, confirm_trigger=True,
         )
         assert client.trigger_calls == 0
+
+    def test_empty_listing_409_probe_suggests_trigger(self, tmp_path):
+        """GET /fichiers vide + sonde 409 → lancer Tadarida, pas re-upload."""
+        from repair import (
+            diagnose_and_repair_session, ACTION_TRIGGER, ACTION_RESUME_UPLOAD,
+        )
+        wavs = [f"f{i}.wav" for i in range(12)]
+        session = _session_with_manifest(tmp_path, wavs=wavs, flags={})
+        client = _FakeRepairClient(etat="", files=[], probe_result="registered")
+        report = diagnose_and_repair_session(
+            session, apply=False, client=client,
+        )
+        assert client.probe_calls
+        assert report["files_registered"] is True
+        assert report["registration_via"] == "409_probe"
+        assert report["listing_ok"] is False
+        assert ACTION_TRIGGER in report["suggested_actions"]
+        assert ACTION_RESUME_UPLOAD not in report["suggested_actions"]
+        assert report["missing_on_server"] == []
+
+    def test_empty_listing_409_probe_apply_trigger(self, tmp_path):
+        from repair import diagnose_and_repair_session
+        session = _session_with_manifest(
+            tmp_path, wavs=["a.wav", "b.wav", "c.wav"], flags={},
+        )
+        client = _FakeRepairClient(etat="", files=[], probe_result="registered")
+        report = diagnose_and_repair_session(
+            session, apply=True, client=client,
+            allow_trigger=True, confirm_trigger=True,
+        )
+        assert client.trigger_calls == 1
+        assert "trigger_compute" in report["applied_actions"]
+        assert "set_uploaded_true" not in report["applied_actions"]
+
+
+class TestUploadAlreadyDone:
+    def test_detects_eve_409_message(self):
+        from vigiechiro_api import ApiError, is_upload_already_done_error
+        err = ApiError(
+            'HTTP 409 sur POST /fichiers : '
+            '{"_errors":"upload is already done",'
+            '"_status":"409 Conflict: upload is already done"}'
+        )
+        assert is_upload_already_done_error(err) is True
+        assert is_upload_already_done_error(ApiError("HTTP 403 AccessDenied")) is False
+        assert is_upload_already_done_error(ApiError("HTTP 422 invalid name")) is False
+
+    def test_upload_wav_409_counts_as_done(self, tmp_path):
+        from vigiechiro_api import VigieChiroClient, ApiError
+        c = VigieChiroClient("A" * 32)
+
+        def boom(method, path, **kw):
+            raise ApiError(
+                'HTTP 409 sur POST /fichiers : '
+                '{"_errors":"upload is already done"}'
+            )
+
+        c._request = boom  # type: ignore[method-assign]
+        wav = tmp_path / "Car430776-2026-Pass1-Z1-SMU03126_20260622_211316_000.wav"
+        wav.write_bytes(b"RIFF....")
+        r = c.upload_wav("pid", wav)
+        assert r["already_done"] is True
+        assert r["titre"] == wav.name
+
+    def test_summarize_upload_step_mentions_already_registered(self):
+        from pipeline import _summarize_step
+        line = _summarize_step({
+            "step": "upload_wavs",
+            "uploaded": 361,
+            "already_done_409": 361,
+            "failed": [],
+            "n_failed": 0,
+        })
+        assert "0 envoyés" in line
+        assert "361 déjà enregistrés" in line
+        assert "0 KO" in line
+        skipped = _summarize_step({
+            "step": "trigger_compute",
+            "skipped": True,
+            "reason": "3 échecs d'upload",
+        })
+        assert "non lancé" in skipped
 
 
 # =========================================================================

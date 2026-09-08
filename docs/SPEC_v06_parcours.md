@@ -320,6 +320,11 @@ Légende fichiers : `+` créé · `~` modifié · `=` inchangé · `→` lecture
 
 1. Pastille ⏳ ou **🔧 Vérifier / Réparer**.
 2. Diagnostic local ↔ serveur → actions confirmées (download xlsx, flags, relance Tadarida…).
+3. **Upload coupé** : `GET /fichiers` 403 ou listing vide, titres Data_k en
+   HTTP 409 (`upload is already done`) → proposer **trigger Tadarida**, pas un
+   re-upload bloqué. Si Tadarida sort 0 contact : audio absent sur S3,
+   nouvelle participation + renvoyer Data_k. L'upload traite le 409 comme
+   « déjà enregistré » (skip + compute).
 
 Indépendant de P2–P5 ; livrable Vague A.
 

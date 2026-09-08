@@ -654,12 +654,15 @@ def run_phase_upload(session: Path, meta: SessionMeta, dry_run: bool,
         start_ts = time.monotonic()
         total = len(wavs)
         done_counter = {"n": 0}
+        already_done_409: list[str] = []
 
         def _upload_one(wav):
             try:
-                client.upload_wav(part_id, wav)
+                res = client.upload_wav(part_id, wav)
                 with lock:
                     uploaded.append(wav.name)
+                    if isinstance(res, dict) and res.get("already_done"):
+                        already_done_409.append(wav.name)
                     done_counter["n"] += 1
                     n_done = done_counter["n"]
             except Exception as e:
@@ -681,12 +684,17 @@ def run_phase_upload(session: Path, meta: SessionMeta, dry_run: bool,
                 rate = n_done / elapsed if elapsed > 0 else 0
                 eta = int((total - n_done) / rate) if rate > 0 else -1
                 with lock:
+                    extra_409 = (
+                        f", déjà enregistrés: {len(already_done_409)}"
+                        if already_done_409 else ""
+                    )
                     print(
                         f"  upload : {n_done}/{total}  "
-                        f"(erreurs: {len(failed)})  "
+                        f"(erreurs: {len(failed)}{extra_409})  "
                         f"~{rate:.1f} WAV/s  "
                         f"ETA {eta}s" if eta >= 0 else
-                        f"  upload : {n_done}/{total}  (erreurs: {len(failed)})",
+                        f"  upload : {n_done}/{total}  "
+                        f"(erreurs: {len(failed)}{extra_409})",
                         flush=True,
                     )
 
@@ -699,10 +707,20 @@ def run_phase_upload(session: Path, meta: SessionMeta, dry_run: bool,
             # Attend la complétion de toutes les tasks
             for _ in as_completed(futures):
                 pass
+        if already_done_409:
+            print(
+                f"  ↻ {len(already_done_409)} WAV déjà enregistrés sur cette "
+                f"participation (code 409 : l'envoi a déjà eu lieu). "
+                f"Pas de re-envoi. Tadarida sera lancée si aucun autre "
+                f"fichier n'a échoué.",
+                flush=True,
+            )
         out["steps"].append({
             "step": "upload_wavs",
             "uploaded": len(uploaded),
+            "already_done_409": len(already_done_409),
             "failed": failed[:10],
+            "n_failed": len(failed),
             "workers": mw,
         })
 
@@ -752,6 +770,10 @@ def run_phase_upload(session: Path, meta: SessionMeta, dry_run: bool,
         notes_bits = []
         if n_skipped:
             notes_bits.append(f"{n_skipped} déjà présents (reprise)")
+        if already_done_409:
+            notes_bits.append(
+                f"{len(already_done_409)} déjà enregistrés (code 409)"
+            )
         return _finish_upload_with_trigger(
             client, m, session, out,
             part_id=part_id,
@@ -1203,8 +1225,20 @@ def _summarize_step(step: dict) -> str:
     if s == "upload_wavs":
         if step.get("dry_run"):
             return f"upload : {step.get('would_upload', 0)} WAV (dry-run)"
-        return f"upload : {step.get('uploaded', 0)} OK, {len(step.get('failed', []))} KO"
+        n_ok = int(step.get("uploaded", 0) or 0)
+        n_409 = int(step.get("already_done_409", 0) or 0)
+        n_fail = step.get("n_failed")
+        if n_fail is None:
+            n_fail = len(step.get("failed") or [])
+        n_new = max(0, n_ok - n_409)
+        bits = [f"{n_new} envoyés"]
+        if n_409:
+            bits.append(f"{n_409} déjà enregistrés")
+        bits.append(f"{int(n_fail)} KO")
+        return "upload : " + ", ".join(bits)
     if s == "trigger_compute":
+        if step.get("skipped"):
+            return f"compute: non lancé ({step.get('reason', 'incomplet')})"
         return "compute: lancé"
     if s == "list_wavs":
         return f"list   : {step.get('n', 0)} WAV"

@@ -116,7 +116,7 @@ Vérifier / Réparer, export USB, pick + FOCUS carte, ChiroSurf multi-nuits
 - **Expansion temporelle TE×10** intégrée, validée *bit-à-bit* (remplace Kaleidoscope) : tout le son est conservé (tranches de 5 s)
 - **Participation + upload** via l’API (workers parallèles, reprise, trigger compute ; dates WAV si le Summary couvre plusieurs jours)
 - **Suivi Tadarida** et récupération des observations
-- **Vérifier / Réparer** une nuit (diagnostic API + disque, alignement d’état, fetch / trigger avec confirmation)
+- **Vérifier / Réparer** une nuit (diagnostic API + disque, alignement d'état, fetch / trigger avec confirmation ; code 409 = déjà enregistré, Tadarida peut partir)
 - **Nettoyage par seuils** (chiros / orthos / micromammifères / oiseaux) avec aperçu et garde-fous
 
 ### Après l’analyse

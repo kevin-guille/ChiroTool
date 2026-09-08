@@ -5,6 +5,16 @@ Les versions publiées suivent le SemVer du fichier `version.py` / tags GitHub.
 
 ## [Unreleased]
 
+### Corrigé
+
+- **Upload code 409** : un WAV déjà enregistré n'est plus un échec. Il est
+  sauté et Tadarida peut partir. Cas typique : l'envoi a créé les fiches,
+  puis s'est interrompu (réseau ou saturation) avant l'analyse.
+- **Vérifier / Réparer** : si le portail n'arrive pas à lister les fichiers,
+  sonde les noms Data_k. Tous déjà enregistrés (code 409) : propose de
+  lancer Tadarida au lieu d'un re-upload bloqué. Si l'analyse sort 0 contact,
+  le son n'est probablement pas sur le serveur (nouvelle participation).
+
 ## [0.8.0] — 2026-09-06
 
 Issue [#7](https://github.com/kevin-guille/ChiroTool/issues/7) : interprétation

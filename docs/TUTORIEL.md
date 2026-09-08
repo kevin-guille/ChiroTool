@@ -389,13 +389,21 @@ seul.
 4. Selon le cas, vous pourrez **confirmer explicitement** :
    - aligner le flag « uploadé » si tous les WAV **locaux restants** sont en ligne ;
    - **télécharger le xlsx** si l'analyse est terminée côté serveur ;
-   - **relancer Tadarida** (double confirmation — uniquement si la couverture est
-     complète et que le compute n'est pas déjà en cours / terminé).
+   - **relancer Tadarida** (double confirmation). Y compris si le portail
+     n'arrive pas à *lister* les fichiers, mais que ChiroTool a vérifié qu'ils
+     sont **déjà enregistrés** (code 409 : l'envoi a déjà eu lieu).
 5. Si des WAV **encore présents dans Data_k** manquent vraiment sur le serveur,
-   l'outil propose de reprendre via **« ☁ Upload »**.
+   l'outil propose de reprendre via **« ☁ Upload »**. Les fichiers déjà
+   enregistrés (code 409) sont sautés, Tadarida peut partir ensuite.
+
+> 💡 **Après une coupure** : un re-clic **Upload** suffit souvent. Si l'app
+> affiche encore des échecs ou refuse de lancer Tadarida, passez par
+> **🔧 Vérifier / Réparer**. Si Tadarida sort **0 contact** alors que la nuit
+> n'était pas silencieuse, le son n'est probablement pas arrivé sur le
+> serveur : il faut une **nouvelle participation** et renvoyer `Data_k/`.
 
 > 💡 **Après nettoyage** : des fichiers peuvent rester « sur le serveur seulement »
-> (ex. 185 purgés localement). C'est **normal** — seuls les WAV encore dans
+> (ex. 185 purgés localement). C'est **normal**, seuls les WAV encore dans
 > `Data_k/` comptent pour la couverture 100 %.
 
 > ⚠️ **Token API** : si le token est expiré (HTTP 401), le listing serveur
@@ -995,8 +1003,18 @@ Le NTFS est fortement recommandé pour les campagnes de plus de quelques
 centaines de WAV. Sinon on peut croire à tort que le logiciel est trop lent.
 
 **« L'upload s'est interrompu (PC éteint, coupure réseau). »**
-Aucun problème : la nuit s'affiche en orange ⏳ « à reprendre ». Re-cliquez
-« Upload + Tadarida » : seuls les fichiers manquants seront renvoyés.
+La nuit s'affiche en orange ⏳ « à reprendre ». Re-cliquez **Upload + Tadarida** :
+les fichiers manquants sont renvoyés, ceux **déjà enregistrés** (code 409) sont
+sautés, puis Tadarida peut partir. Si l'app affiche encore des échecs ou refuse
+de lancer l'analyse : **🔧 Vérifier / Réparer**. Si Tadarida sort **0 contact**
+alors que la nuit n'était pas silencieuse, le son n'est pas sur le serveur :
+nouvelle participation et renvoyer `Data_k/`.
+
+**« Vérifier / Réparer dit que le listing a échoué, mais propose Tadarida. »**
+C'est voulu. Le portail n'arrive parfois pas à *lister* les fichiers (erreur
+403), alors que les noms sont déjà enregistrés (code 409). ChiroTool le
+vérifie, puis vous laisse lancer l'analyse. Copiez le rapport dans une
+[issue GitHub](https://github.com/kevin-guille/ChiroTool/issues) si besoin.
 
 **« Je ne peux pas cliquer sur "Nettoyer". »**
 Le bouton est grisé tant que le tableur d'observations n'a pas été récupéré
@@ -1009,10 +1027,11 @@ trompeur). Solution : une fois **🗺️ Choisir sur la carte…** ou create/reu
 Pour revoir **tous** les sites après un FOCUS : **🔄 Recharger sites**.
 
 **« Vérifier / Réparer propose de tout re-uploader. »**
-Vérifiez d’abord le **token** (401 = expiré → Préférences → API). Avec un bon
-token, le rapport doit distinguer : couverture 100 % des locaux restants,
-fichiers « sur serveur seul » après nettoyage, ou vrais manquants dans Data_k.
-Le journal complet peut être collé dans une [issue GitHub](https://github.com/kevin-guille/ChiroTool/issues).
+Vérifiez d'abord le **token** (401 = expiré → Préférences → API). Avec un bon
+token, le rapport distingue : couverture 100 % des locaux restants, fichiers
+« sur serveur seul » après nettoyage, vrais manquants dans Data_k, ou fichiers
+déjà enregistrés (code 409, pas un re-upload). Le journal complet peut être
+collé dans une [issue GitHub](https://github.com/kevin-guille/ChiroTool/issues).
 
 **« Comment valider une participation multi-nuits dans ChiroSurf ? »**
 **🌊 ChiroSurf nuits** → **▶ ChiroSurf** sur le CSV brut (sans `_Vu`) → le `_Vu`
@@ -1113,6 +1132,7 @@ ChiroTool couvre la grande majorité des cas, mais pas (encore) tout :
 | **Valider** | Tri des colonnes, filtres observateur / chiros, bilan `X / Y` (issue #4) |
 | **Titley** | Swift / Ranger : noms usine lus ; TE×10 sans collision (issue #4) |
 | **Démarrage** | Plus de scan auto du dernier dossier (issue #5) |
+| **Upload / Réparer** | Coupure réseau : code 409 = déjà enregistré, Tadarida peut partir. **Vérifier / Réparer** lance l'analyse si le listing portail échoue ; 0 contact → renvoyer Data_k |
 | **Dates** | WAV font foi si Summary cumulé |
 | **SM2** | `.wac` / `.w4v` : conversion Kaleidoscope Lite en amont (issue #6) |
 

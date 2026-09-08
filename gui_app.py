@@ -1914,7 +1914,15 @@ class ChiroToolApp(ctk.CTk):
         n_loc = diag.get("local_wav_count", 0)
         n_srv = diag.get("server_wav_count", 0)
         etat = diag.get("traitement_etat") or "(vide)"
-        if not diag.get("listing_ok", True):
+        if (not diag.get("listing_ok", True)
+                and diag.get("files_registered")):
+            cov = (
+                f"le portail n'arrive pas à lister les fichiers, mais "
+                f"les {n_loc} WAV Data_k sont déjà enregistrés (code 409)\n"
+                f"  → tu peux lancer Tadarida ; si 0 contact, renvoyer "
+                f"Data_k sur une nouvelle participation"
+            )
+        elif not diag.get("listing_ok", True):
             cov = (
                 f"listing serveur non fiable "
                 f"(local {n_loc} · listé {n_srv})\n"
@@ -2003,13 +2011,30 @@ class ChiroToolApp(ctk.CTk):
 
         if "trigger_compute" in suggested:
             # Double confirmation, défaut Non (action serveur coûteuse)
+            if diag.get("files_registered") and not diag.get("listing_ok", True):
+                trigger_msg = (
+                    "ChiroTool n'arrive pas à lister les fichiers sur le "
+                    "portail, mais tes WAV Data_k sont déjà enregistrés "
+                    "pour cette nuit (code 409 : l'envoi a déjà eu lieu).\n\n"
+                    "Cas typique : l'upload s'est interrompu (réseau ou "
+                    "saturation) après avoir créé les fiches, sans lancer "
+                    "Tadarida. Jusqu'ici l'app bloquait la relance.\n\n"
+                    "Lancer Tadarida maintenant ?\n"
+                    "Si l'analyse sort 0 contact, le son n'est probablement "
+                    "pas sur le serveur : il faudra une nouvelle participation "
+                    "et renvoyer Data_k."
+                )
+            else:
+                trigger_msg = (
+                    "La couverture WAV est complète, mais l'analyse ne semble "
+                    "pas lancée (ou a échoué) côté serveur.\n\n"
+                    "⚠ Cela envoie un POST /compute sur Vigie-Chiro pour "
+                    "CETTE nuit uniquement.\n\n"
+                    "Relancer Tadarida ?"
+                )
             if messagebox.askyesno(
                 "Relancer l'analyse Tadarida ?",
-                "La couverture WAV est complète, mais l'analyse ne semble pas "
-                "lancée (ou a échoué) côté serveur.\n\n"
-                "⚠ Cela envoie un POST /compute sur Vigie-Chiro pour CETTE nuit "
-                "uniquement.\n\n"
-                "Relancer Tadarida ?",
+                trigger_msg,
                 default=messagebox.NO,
                 icon=messagebox.WARNING,
             ):

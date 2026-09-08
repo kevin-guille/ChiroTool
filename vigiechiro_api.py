@@ -130,6 +130,21 @@ class ValidationError(ApiError):
     status_code = 422
 
 
+def is_upload_already_done_error(exc: BaseException) -> bool:
+    """True si POST /fichiers est refusé parce que ce titre est déjà finalisé.
+
+    Message Eve observé (nuit RN88 430776, 2026-09) :
+    ``HTTP 409 ... {"_errors":"upload is already done"}``.
+
+    Ce n'est **pas** un échec d'envoi à reprendre : la fiche fichier existe.
+    L'audio S3 peut malgré tout être vide si le PUT a été coupé après le POST.
+    """
+    text = str(exc or "").lower()
+    if "already done" in text:
+        return True
+    return "409" in text and "upload is already" in text
+
+
 # Valeurs de confiance observateur acceptées par le backend (enum confirmé sur
 # Scille/vigiechiro-api, resources/donnees.py). Doit rester aligné avec
 # CONFIDENCE_VALUES côté GUI (gui_validation.py).
@@ -1455,7 +1470,20 @@ class VigieChiroClient:
             "multipart": use_multipart,
             "lien_participation": participation_id,
         }
-        meta = self._request("POST", "/fichiers", json=body)
+        try:
+            meta = self._request("POST", "/fichiers", json=body)
+        except ApiError as e:
+            if is_upload_already_done_error(e):
+                # Fiche déjà finalisée (retry après coupure, listing /fichiers
+                # 403, etc.). Ne pas re-PUT. L'appelant peut lancer Tadarida.
+                return {
+                    "_id": None,
+                    "titre": path.name,
+                    "size": size,
+                    "multipart": use_multipart,
+                    "already_done": True,
+                }
+            raise
         file_id = meta.get("_id") or meta.get("id")
         if not file_id:
             raise ApiError(f"réponse POST /fichiers sans _id : {meta}")
@@ -1475,6 +1503,44 @@ class VigieChiroClient:
 
         return {"_id": file_id, "titre": path.name, "size": size,
                 "multipart": use_multipart}
+
+    def probe_titre_registered(self, participation_id: str, titre: str) -> str:
+        """Sonde si un nom WAV est déjà enregistré sur la participation.
+
+        POST /fichiers **sans** PUT S3 :
+          - ``registered`` : HTTP 409 ``upload is already done``
+          - ``absent``     : création OK, la fiche sonde est **supprimée**
+          - ``unknown``    : 401/403/422/réseau, on ne conclut pas
+
+        Sert à Vérifier/Réparer quand ``GET /fichiers`` est en 403 (S3
+        AccessDenied) et que ``/donnees`` est encore vide (Tadarida jamais
+        lancée).
+        """
+        try:
+            meta = self._request(
+                "POST", "/fichiers",
+                json={
+                    "titre": titre,
+                    "multipart": False,
+                    "lien_participation": participation_id,
+                },
+            )
+        except ApiError as e:
+            if is_upload_already_done_error(e):
+                return "registered"
+            return "unknown"
+        except Exception:
+            return "unknown"
+        file_id = None
+        if isinstance(meta, dict):
+            file_id = meta.get("_id") or meta.get("id")
+        if file_id:
+            try:
+                self._request("DELETE", f"/fichiers/{file_id}")
+            except Exception:
+                pass
+            return "absent"
+        return "unknown"
 
     def _put_single_s3(self, signed_url: str, path: Path, on_progress=None,
                         max_retries: int = 3) -> None:

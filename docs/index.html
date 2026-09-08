@@ -576,7 +576,7 @@
       <div class="f"><div class="ic">☁️</div><h3>Upload &amp; Tadarida</h3>
         <p>Participation API, upload parallèle avec reprise, suivi de l’analyse et récupération des résultats. Météo non bloquante.</p></div>
       <div class="f"><div class="ic">🔧</div><h3>Vérifier / Réparer</h3>
-        <p>Diagnostic local ↔ serveur (couverture WAV, flags, fetch xlsx, trigger Tadarida) pour reprendre une nuit en ⏳.</p></div>
+        <p>Diagnostic local ↔ serveur (couverture WAV, flags, fetch xlsx, trigger Tadarida) pour reprendre une nuit en ⏳. Après une coupure, lance Tadarida si les fichiers sont déjà enregistrés (code 409).</p></div>
       <div class="f"><div class="ic">🧹</div><h3>Nettoyage par seuils</h3>
         <p>Seuils par groupe (chiros, orthos, micromam, oiseaux), aperçu chiffré et garde-fou mass-delete.</p></div>
       <div class="f"><div class="ic">🔍</div><h3>Validation &amp; envoi</h3>
@@ -603,7 +603,7 @@
       <div class="step"><div class="num">1</div><h3>Préparer</h3>
         <p>Déposez vos dossiers de nuits, scannez, cliquez «&nbsp;Préparer&nbsp;» : renommage + expansion temporelle.</p></div>
       <div class="step"><div class="num">2</div><h3>Upload + Tadarida</h3>
-        <p>L’assistant pré-remplit la participation (météo optionnelle). ChiroTool uploade, suit l’analyse et récupère les observations. En cas de coupure&nbsp;: <strong>Vérifier / Réparer</strong>.</p></div>
+        <p>L'assistant pré-remplit la participation (météo optionnelle). ChiroTool uploade, suit l'analyse et récupère les observations. En cas de coupure&nbsp;: <strong>Vérifier / Réparer</strong> (Tadarida peut partir si les fichiers sont déjà enregistrés).</p></div>
       <div class="step"><div class="num">3</div><h3>Nettoyer &amp; valider</h3>
         <p>Aperçu des suppressions, synthèse par nuit, validation contact-par-contact, envoi des identifications. ChiroSurf 10&nbsp;%→75&nbsp;% si vous l’utilisez.</p></div>
     </div>
