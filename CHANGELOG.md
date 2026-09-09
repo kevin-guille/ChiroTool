@@ -226,15 +226,20 @@ Issue [#3](https://github.com/kevin-guille/ChiroTool/issues/3) (retours terrain)
   optionnelle, FAQ) + PDF régénéré.
 - SPEC, samples issue #3, CONTRIBUTING, README, landing GitHub Pages.
 
-### Suite possible (post-0.7)
+### Suite possible (post-0.8)
 
-- Onglet **Activité** : même filtre MNHN 10 % / 75 % que la Synthèse.
+Ne pas relire le 1er message de l'issue
+[#4](https://github.com/kevin-guille/ChiroTool/issues/4) comme backlog :
+bilan v0.8 dans la SPEC §0.1. **Pas plusieurs exe** (D14) : le mode Batch
+enchaîne les nuits dans une instance.
+
+- Graphes **Activité** : même filtre MNHN 10 % / 75 % que la Synthèse
+  (optionnel, P8 « ensuite ». La Synthèse v0.8 l'a déjà).
 - Robustesse / UX **mode batch** (données complémentaires participation,
   template avant lot, journal d'upload).
 - Export multi-nuits compilé (espèces × nuits).
 - Fusion `_Vu` → xlsx (choix produit : la méthode 10 % / 75 % n'alimente pas
   l'envoi Vigie-Chiro aujourd'hui).
-- Lancer plusieurs instances de ChiroTool en parallèle (issue #4.2).
 - Modes export formalisés Léger / Travail / Complet.
 
 ## [0.5.0] — 2026-07-19

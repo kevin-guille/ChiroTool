@@ -469,7 +469,9 @@ disque libéré, et la possibilité de supprimer aussi les WAV bruts d'origine
 
 ## 7 · Traiter plusieurs nuits d'un coup (mode Batch)
 
-Vous avez 10 nuits à traiter ? Pas besoin de les faire une par une.
+Vous avez 10 nuits à traiter ? Pas besoin de les faire une par une, et
+**pas besoin de lancer plusieurs fois** ChiroTool : le Batch enchaîne les
+nuits dans **une** instance.
 
 1. En haut de la liste des sessions, cliquez sur **« ☐ Batch »**.
 2. Des **cases à cocher** apparaissent sur chaque nuit. Cochez celles à traiter.
@@ -1147,6 +1149,8 @@ ChiroTool couvre la grande majorité des cas, mais pas (encore) tout :
 | **ChiroSurf nuits** | Optionnel (CSV pour valider dans ChiroSurf, méthode 10 % / 75 %) ; distinct de la Synthèse ; coupure **midi**. **v0.7.1** : CSV à côté des WAV ; `_Vu` `Nuit_1_…`. **v0.7.2** : boutons sous le libellé (écran classique) |
 | **Barre d'actions** | **v0.7.2** : une ligne, glissement horizontal si l'écran est étroit |
 | **Valider** | Tri des colonnes, filtres observateur / chiros, bilan `X / Y` (issue #4) |
+| **Valider / Nettoyer** | **Nettoyer** à droite de **Valider** (on identifie, puis on purge) |
+| **Batch** | Plusieurs nuits dans **une** instance (case ☐ Batch). Pas plusieurs exe. |
 | **Titley** | Swift / Ranger : noms usine lus ; un WAV > 5 s est découpé **en entier** (plus seulement les 5 premières secondes, issue #4) |
 | **Démarrage** | Plus de scan auto du dernier dossier (issue #5) |
 | **Upload / Réparer** | Coupure réseau : code 409 = déjà enregistré, Tadarida peut partir. **Vérifier / Réparer** lance l'analyse si le listing portail échoue ; 0 contact → renvoyer Data_k |

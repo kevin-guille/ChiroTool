@@ -21,25 +21,26 @@ décrivant :
   sites précis et coordonnées GPS de points d'écoute avant de joindre une capture
   ou un fichier d'exemple.
 
-## Conception livrée (v0.6 + v0.7)
+## Conception livrée (v0.8 courante)
 
-Parcours PointSelection / carte / ChiroSurf : **v0.6**. Synthèse autonome
-(sélecteur de nuit, sans ChiroSurf), Titley, Valider, démarrage sans scan auto,
-WAC documenté : **v0.7** ([release](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.7.0)).
-Liaison ChiroSurf (CSV à côté des WAV, `_Vu` `Nuit_1_…`) : **v0.7.1**.
-Nuit biologique D12 (midi, jamais minuit) + barre d'actions glissable :
-**v0.7.2**.
-Interprétation 10 % / 75 % dans la Synthèse : **v0.8.0** / P8 (bandes de
-confiance Tadarida, `compute_mnhn_synthesis`, issue
-[#7](https://github.com/kevin-guille/ChiroTool/issues/7)). Onglet Activité
-ensuite. Exe 0.8.0 reconstruit le 2026-09-08 : upload 409, Afficher le bureau.
-Titley TE×10 (issue
-[#4](https://github.com/kevin-guille/ChiroTool/issues/4)) : un WAV > 5 s
-est découpé en entier (moteur Rust + garde-fou `Data_k` tronqué).
+**Ne pas** traiter le 1er message de l'issue
+[#4](https://github.com/kevin-guille/ChiroTool/issues/4) comme une todo.
+Bilan point par point : SPEC [`§0.1`](docs/SPEC_v06_parcours.md). En
+particulier : **pas plusieurs exe** (mode Batch, D14) ; **Valider puis
+Nettoyer** déjà en 0.7 ; **MNHN 10 % / 75 %** dans la **Synthèse** (v0.8),
+pas sur les graphes Activité.
+
+- **v0.6** : PointSelection, carte pick/FOCUS, Vérifier / Réparer, export USB.
+- **v0.7** : Synthèse autonome, Titley (noms), Valider tri/filtres, Batch,
+  plus de scan auto (#5), WAC documenté (#6). **v0.7.1 / 0.7.2** : ChiroSurf
+  CSV + `_Vu`, nuit bio midi (D12), barre d'actions glissable.
+- **v0.8.0** : MNHN 10 % / 75 % dans la Synthèse (P8, issue #7). Exe du
+  2026-09-08 : upload 409, Afficher le bureau. Correctif Titley TE×10
+  (2026-09-09) : WAV > 5 s découpé en entier.
 
 | Document | Rôle |
 |----------|------|
-| [`docs/SPEC_v06_parcours.md`](docs/SPEC_v06_parcours.md) | **Source de vérité** parcours (A–C livrées ; P8 Synthèse MNHN ; D / Activité MNHN plus tard) |
+| [`docs/SPEC_v06_parcours.md`](docs/SPEC_v06_parcours.md) | **Source de vérité** (v0.8 livrée ; §0.1 issue #4 ; D14 Batch) |
 | [`CHANGELOG.md`](CHANGELOG.md) | Versions publiées + *Suite possible* |
 | [`docs/RELEASE_v0.6.0.md`](docs/RELEASE_v0.6.0.md) | Note de release GitHub v0.6 |
 | [`docs/RELEASE_v0.7.0.md`](docs/RELEASE_v0.7.0.md) | Note de release GitHub v0.7 |
