@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
 <title>ChiroTool — Automatiser le traitement Vigie-Chiro Point Fixe (chiroptères)</title>
-<meta name="description" content="ChiroTool v0.8 automatise le traitement des nuits chiroptères Vigie-Chiro Point Fixe (MNHN) : renommage, TE×10, upload, Tadarida, synthèse par nuit, méthode MNHN 10 % / 75 %, ChiroSurf optionnel, Titley, Vérifier/Réparer, carte, nettoyage sécurisé, validation et registre. Logiciel libre pour bureaux d'études et naturalistes.">
+<meta name="description" content="ChiroTool v0.8 automatise le traitement des nuits chiroptères Vigie-Chiro Point Fixe (MNHN) : renommage, TE×10, upload, Tadarida, synthèse et graphes d'activité (méthode MNHN 10 % / 75 %), ChiroSurf optionnel, Titley, Vérifier/Réparer, carte, nettoyage sécurisé, validation et registre. Logiciel libre pour bureaux d'études et naturalistes.">
 <meta name="keywords" content="ChiroTool, Vigie-Chiro, Point Fixe, chiroptères, chauves-souris, Tadarida, Kaleidoscope, expansion temporelle, bioacoustique, ultrasons, MNHN, logiciel libre, open source, bureau d'études, Kevin Guille">
 <meta name="author" content="Kevin Guille">
 <link rel="canonical" href="https://kevin-guille.github.io/ChiroTool/">
@@ -37,7 +37,7 @@
       "applicationCategory": "ScientificApplication",
       "applicationSubCategory": "Bioacoustique / traitement Vigie-Chiro",
       "softwareVersion": "0.8.0",
-      "description": "Logiciel libre qui automatise le traitement des enregistrements ultrason de chauves-souris pour le protocole Vigie-Chiro Point Fixe (MNHN) : renommage, expansion temporelle TE×10, participation et upload API, suivi Tadarida, synthèse par nuit, ChiroSurf optionnel, Vérifier/Réparer, carte pick/FOCUS, nettoyage avec garde-fous, envoi des identifications, graphes d'activité et registre de campagne.",
+      "description": "Logiciel libre qui automatise le traitement des enregistrements ultrason de chauves-souris pour le protocole Vigie-Chiro Point Fixe (MNHN) : renommage, expansion temporelle TE×10, participation et upload API, suivi Tadarida, synthèse par nuit, méthode MNHN 10 % / 75 % (Synthèse et Activité), ChiroSurf optionnel, Titley Swift/Ranger, Vérifier/Réparer, carte pick/FOCUS, nettoyage avec garde-fous, envoi des identifications, graphes d'activité et registre de campagne.",
       "url": "https://kevin-guille.github.io/ChiroTool/",
       "downloadUrl": "https://github.com/kevin-guille/ChiroTool/releases",
       "softwareHelp": "https://kevin-guille.github.io/ChiroTool/ChiroTool-Tutoriel.pdf",
@@ -393,7 +393,7 @@
 <header class="hero">
   <div class="wrap hero-grid">
     <div>
-      <div class="pill"><span class="dot"></span> v0.8 : méthode MNHN 10 % / 75 % dans la Synthèse</div>
+      <div class="pill"><span class="dot"></span> v0.8 : MNHN 10 % / 75 % (Synthèse et Activité)</div>
       <h1>Le traitement de vos nuits chiroptères, automatisé de A à Z.</h1>
       <p class="tag">Logiciel libre pour le protocole Vigie-Chiro Point Fixe (MNHN).</p>
       <p class="lead">
@@ -500,7 +500,7 @@
     <div class="banner-v">
       <div>
         <strong>Nouveautés v0.8</strong>
-        <span> : case Méthode MNHN 10 % / 75 % dans la Synthèse (bandes de confiance Tadarida, issue #7). Un _Vu ne masque plus les autres nuits dans l’onglet Activité. Correctifs : code 409 (déjà enregistré, Tadarida peut partir) ; après Afficher le bureau, recliquer ChiroTool ramène la progression ; Titley / Wildlife, un WAV de plus de 5&nbsp;s est découpé en entier (issue #4).</span>
+        <span> : case Méthode MNHN 10 % / 75 % dans la Synthèse et l’onglet Activité (bandes de confiance Tadarida, issue #7). Un _Vu ne masque plus les autres nuits. Titley / Wildlife : un WAV de plus de 5&nbsp;s est découpé en entier (issue #4). Correctifs : code 409 (déjà enregistré, Tadarida peut partir) ; après Afficher le bureau, recliquer ChiroTool ramène la progression.</span>
       </div>
       <a class="btn outline sm" href="https://github.com/kevin-guille/ChiroTool/releases">Voir les releases →</a>
     </div>
@@ -520,7 +520,7 @@
         <div class="ic">📊</div>
         <div>
           <h3>Synthèse par nuit</h3>
-          <p>Récapitulatif et niveaux d’activité. Une pose soir + matin = <strong>une</strong> nuit (coupure midi). Le choix de nuit n’apparaît que s’il y a plusieurs soirs. ChiroSurf n’est pas requis. Après un <code>_Vu</code> : « identifications validées seulement » = contacts écoutés ; « Méthode MNHN 10&nbsp;% / 75&nbsp;% » reconstitue l’interprétation (bandes de confiance Tadarida).</p>
+          <p>Récapitulatif et niveaux d’activité. Une pose soir + matin = <strong>une</strong> nuit (coupure midi). Le choix de nuit n’apparaît que s’il y a plusieurs soirs. ChiroSurf n’est pas requis. Après un <code>_Vu</code> : « identifications validées seulement » = contacts écoutés ; « Méthode MNHN 10&nbsp;% / 75&nbsp;% » reconstitue l’interprétation (bandes de confiance Tadarida), aussi dans l’onglet Activité.</p>
         </div>
       </div>
       <div class="news">
@@ -572,7 +572,7 @@
       <div class="f"><div class="ic">🏷️</div><h3>Renommage normé</h3>
         <p>Métadonnées détectées (site, point, passage, série) et noms au format Vigie-Chiro. Wildlife, Passive/Bat Recorder, AudioMoth expandé, Titley Swift/Ranger.</p></div>
       <div class="f"><div class="ic">⏱️</div><h3>Expansion TE×10</h3>
-        <p>Intégrée, reproduisant Kaleidoscope bit-à-bit. Accélération Rust optionnelle, fallback Python transparent.</p></div>
+        <p>Intégrée, reproduisant Kaleidoscope bit-à-bit. Un WAV de plus de 5&nbsp;s (Titley Swift / Ranger, Wildlife) est découpé en entier. Accélération Rust, fallback Python.</p></div>
       <div class="f"><div class="ic">☁️</div><h3>Upload &amp; Tadarida</h3>
         <p>Participation API, upload parallèle avec reprise, suivi de l’analyse et récupération des résultats. Météo non bloquante.</p></div>
       <div class="f"><div class="ic">🔧</div><h3>Vérifier / Réparer</h3>
@@ -582,7 +582,7 @@
       <div class="f"><div class="ic">🔍</div><h3>Validation &amp; envoi</h3>
         <p>Contacts filtrables, taxons, envoi des identifications vers le portail. ChiroSurf reste optionnel (méthode 10&nbsp;%→75&nbsp;%).</p></div>
       <div class="f"><div class="ic">📈</div><h3>Graphes &amp; synthèse</h3>
-        <p>Activité horaire et récap par espèce, avec choix de nuit. Source xlsx ou <code>_Vu</code> si présent.</p></div>
+        <p>Activité horaire et récap par espèce, avec choix de nuit. Source xlsx ou <code>_Vu</code>. Case Méthode MNHN 10&nbsp;% / 75&nbsp;% (même règle que la Synthèse).</p></div>
       <div class="f"><div class="ic">🗂️</div><h3>Registre &amp; export USB</h3>
         <p>Suivi multi-sites / multi-contrats, export CSV/xlsx, paquet portable Data_k ± Data pour un collègue.</p></div>
       <div class="f"><div class="ic">🗺️</div><h3>Carte pick &amp; FOCUS</h3>

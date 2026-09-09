@@ -397,9 +397,10 @@ Comment (graphe ChiroSurf, mode cumulé) :
 un test en validation partielle (capture #7 : 3 écoutés, Pipkuh 316 / Nyclei
 147 / Barbar 12).
 
-**Fichiers** : `synthesis.py` (logique + tests) · `gui_synthesis.py` (case).
-Onglet Activité : pas MNHN en v1. Un `_Vu` y remplace l'xlsx **nuit par nuit**
-(`aggregate_multi_xlsx`), pas toute la participation.
+**Fichiers** : `synthesis.py` (logique + `iter_mnhn_contacts`) ·
+`gui_synthesis.py` · `gui_activity.py` / `activity_graph.py` (même case).
+Un `_Vu` remplace l'xlsx **nuit par nuit** (`aggregate_multi_xlsx`), pas
+toute la participation.
 
 ---
 

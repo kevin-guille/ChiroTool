@@ -1821,49 +1821,45 @@ class TestTitleyNaming:
         assert verify_te10(tmp_path).ok
 
     @pytest.mark.parametrize("raw_subdir", ["", "Data", "wavs"])
-    @pytest.mark.parametrize("duration,n_src,n_k,done", [
-        (12, 1, 1, False), (12, 1, 3, True), (5, 1, 1, True),
-        (5, 2, 1, False), (5.05, 1, 1, True), (5.06, 1, 1, False),
-    ])
-    def test_session_te10_mirror_coverage(self, tmp_path, raw_subdir,
-                                        duration, n_src, n_k, done):
+    def test_session_te10_mirror_coverage(self, tmp_path, raw_subdir):
         from chiro_core import analyze_session
-        from manifest import Manifest
+        from te10 import plan_file, write_segment
         raw = tmp_path / raw_subdir
         raw.mkdir(exist_ok=True)
         dst = tmp_path / "Data_k"
         dst.mkdir()
-        for i in range(n_src):
-            self._wav(raw / f"Car220505-2026-Pass2-Z2-669153_20260830_2029{i:02}.wav",
-                      frames=round(duration * 320000), sr=320000)
-        for i in range(n_k):
-            self._wav(dst / f"Car220505-2026-Pass2-Z2-669153_20260830_2029{i:02}_000.wav",
-                      sr=32000)
-        manifest = Manifest.load_or_create(tmp_path)
-        manifest.record_action("te10", status="ok")  # Ancien flag 0.7.2.
-        manifest.save(tmp_path)
+        wav = raw / "Car220505-2026-Pass2-Z2-669153_20260830_202905.wav"
+        self._wav(wav, frames=12 * 8000, sr=8000)
+        plans = plan_file(wav, dst, 10, 5.0)
+        assert len(plans) == 3
+        write_segment(plans[0])
+        assert analyze_session(tmp_path).flag_te10_done is False
+        write_segment(plans[1])
+        assert analyze_session(tmp_path).flag_te10_done is False
+        write_segment(plans[2])
         state = analyze_session(tmp_path)
         assert state.has_data_k_mirror
-        assert state.flag_te10_done is done
-        assert bool(state.flag_renamed and state.flag_te10_done) is done
+        assert state.flag_te10_done is True
 
-    def test_session_te10_reads_only_three_largest_headers(self, tmp_path, monkeypatch):
+    def test_session_te10_checks_at_most_three_sources(self, tmp_path, monkeypatch):
+        from te10 import plan_file
         import chiro_core
         raw, dst = tmp_path / "wavs", tmp_path / "Data_k"
         raw.mkdir()
         dst.mkdir()
         for i in range(10):
-            self._wav(raw / f"raw{i}.wav", frames=(12 if i == 9 else 5) * 8000)
+            src = raw / f"raw{i}.wav"
+            self._wav(src, frames=(12 if i == 9 else 5) * 8000)
             self._wav(dst / f"segment{i}.wav")
-        original = chiro_core.read_wav_info
-        reads = []
-        def read_header(path):
-            reads.append(path)
-            return original(path)
-        monkeypatch.setattr(chiro_core, "read_wav_info", read_header)
+        calls = []
+        real = plan_file
+        def wrapped(src, out, factor, segment_s):
+            calls.append(Path(src).name)
+            return real(src, out, factor, segment_s)
+        monkeypatch.setattr("te10.plan_file", wrapped)
         assert not chiro_core.analyze_session(tmp_path, sample_wav_for_sr=0).flag_te10_done
-        assert 1 <= len(reads) <= 3
-        assert reads[0].name == "raw9.wav"
+        assert 1 <= len(calls) <= 3
+        assert calls[0] == "raw9.wav"
 
     def test_plan_file_titley_15s_distinct_names(self, tmp_path):
         """Défense TE×10 : même sans rename, les 3 tranches ont des noms distincts."""

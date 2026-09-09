@@ -5,27 +5,11 @@ Les versions publiées suivent le SemVer du fichier `version.py` / tags GitHub.
 
 ## [Unreleased]
 
-### Corrigé
-
-- **Activité, méthode MNHN 10 % / 75 %** (issue #7 / P8) : même case que
-  la Synthèse, même moteur (`iter_mnhn_contacts`). Distinct de « Validés
-  humains seulement ». Sans `_Vu`, rappel dans la barre de statut.
-
-- **TE×10 Titley / Wildlife (issue #4)** : le moteur Rust n'incrémentait
-  pas l'heure des tranches de 5 s quand le timestamp était en fin de nom
-  (cas après rename Vigie-Chiro). Un WAV de 12 à 15 s ne gardait que les
-  5 premières secondes ; les suivantes étaient ignorées (même nom de
-  sortie). Vérification : les tranches prévues des plus gros WAV doivent
-  être présentes dans Data_k. Un Data_k tronqué (autant de fichiers que
-  de bruts, alors qu'un brut dure plus de 5 s) n'est plus marqué
-  « TE×10 fait » : l'upload reste grisé tant qu'on n'a pas relancé
-  Préparer.
-
 ## [0.8.0] — 2026-09-06
 
 Issue [#7](https://github.com/kevin-guille/ChiroTool/issues/7) : interprétation
 MNHN 10 % / 75 % dans la Synthèse (bandes de confiance Tadarida).
-Exe reconstruit le 2026-09-08 (correctifs ci-dessous, version inchangée).
+Exe reconstruit le 2026-09-08 et le 2026-09-09 (version inchangée).
 
 ### Ajouté
 
@@ -58,6 +42,13 @@ Exe reconstruit le 2026-09-08 (correctifs ci-dessous, version inchangée).
 - **Afficher le bureau (Win+D)** : les fenêtres de progression / wizards
   réapparaissent en recliquant ChiroTool (plus besoin de tuer le process).
   Sous Windows, elles ont aussi une icône dans la barre des tâches.
+- **Activité, méthode MNHN 10 % / 75 %** (issue #7 / P8, rebuild 2026-09-09) :
+  même case que la Synthèse (`iter_mnhn_contacts`). Distinct de « Validés
+  humains seulement ». Sans `_Vu`, rappel dans la barre de statut.
+- **TE×10 Titley / Wildlife (issue #4, rebuild 2026-09-09)** : le moteur
+  Rust n'incrémentait pas l'heure des tranches de 5 s en fin de nom.
+  Un WAV de 12 à 15 s ne gardait que les 5 premières secondes. Un Data_k
+  tronqué n'est plus marqué « TE×10 fait » (upload grisé).
 
 ### Tests
 
@@ -66,6 +57,8 @@ Exe reconstruit le 2026-09-08 (correctifs ci-dessous, version inchangée).
 - `_Vu` nuit 1 + xlsx nuit 2 : les deux nuits restent dans Activité.
 - Upload 409 = déjà enregistré ; repair sonde titres ; restauration
   des fenêtres après Afficher le bureau.
+- Activité MNHN : totaux graphe = Synthèse (71 / 102). TE×10 Titley :
+  3 dest distincts, Data_k tronqué refusé.
 
 ## [0.7.2] — 2026-09-01
 

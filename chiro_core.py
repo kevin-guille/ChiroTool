@@ -578,21 +578,29 @@ def _scan_wavs(wav_dir: Path, state: SessionState, sample_wav_for_sr: int = 3) -
 def _te10_mirror_incomplete(wav_dir: Path, mirror: Path) -> bool:
     """True si Data_k n'a pas toutes les tranches de 5 s.
 
-    Signature du trou Titley 0.7.2 (issue #4) : autant de WAV dans le miroir
-    que de bruts, alors qu'un brut dure plus de 5 s. Au plus 3 en-têtes lus.
+    Compare les dest de ``te10.plan_file`` (en-têtes seulement) aux WAV du
+    miroir, pour les 3 plus gros bruts. Couvre le trou Titley 0.7.2 (1:1)
+    et un découpage partiel (ex. 2/3 d'un WAV de 12 s).
     """
     try:
         raws = [p for p in wav_dir.iterdir()
                 if p.is_file() and p.suffix.lower() == ".wav"]
-        n_k = sum(p.is_file() and p.suffix.lower() == ".wav"
-                  for p in mirror.iterdir())
-        if n_k != len(raws):
-            return n_k < len(raws)
+        if not raws:
+            return False
+        k_names = {p.name.lower() for p in mirror.iterdir()
+                   if p.is_file() and p.suffix.lower() == ".wav"}
+        if len(k_names) < len(raws):
+            return True
+        from te10 import plan_file
         largest = sorted(raws, key=lambda p: p.stat().st_size, reverse=True)[:3]
         for source in largest:
-            info = read_wav_info(source)
-            if info is None or info.duration_s > 5.05:
+            try:
+                plans = plan_file(source, mirror, 10, 5.0)
+            except (OSError, ValueError, EOFError, wave.Error):
                 return True
+            for plan in plans:
+                if plan.dst.name.lower() not in k_names:
+                    return True
     except OSError:
         return True
     return False

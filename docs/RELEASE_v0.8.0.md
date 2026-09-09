@@ -13,8 +13,8 @@ ChiroSurf, la Synthèse peut reconstituer l'interprétation 10 % / 75 %.
   illisibles. Un `_Vu` cassé affiche le nom du fichier et replie sur
   le tableur.
 - **Activité** : un `_Vu` remplace le tableur **pour cette nuit seulement**
-  (une nuit 2 n'est plus masquée). Les graphes n'appliquent pas encore
-  la méthode MNHN.
+  (une nuit 2 n'est plus masquée). Case **Méthode MNHN 10 % / 75 %**,
+  même règle que la Synthèse.
 - Avertissement si MNHN tourne sur un xlsx sans `_Vu` (ce n'est pas le
   même protocole qu'une validation contact par contact).
 
@@ -35,10 +35,9 @@ Version toujours **0.8.0**. Même tag GitHub.
 - **Afficher le bureau** (Win+D) : recliquer ChiroTool ramène la fenêtre
   de progression. Plus besoin du Gestionnaire des tâches.
 
-## Correctifs Titley TE×10 (2026-09-09, même version 0.8.0)
+## Correctifs inclus dans cet exe (2026-09-09)
 
-À inclure dans le prochain rebuild de l'exe. Recalculer le SHA-256
-ci-dessous après `build_exe.ps1`.
+Version toujours **0.8.0**. Même tag GitHub.
 
 - **TE×10 Titley / Wildlife** (issue
   [#4](https://github.com/kevin-guille/ChiroTool/issues/4)) : un WAV de
@@ -46,8 +45,9 @@ ci-dessous après `build_exe.ps1`.
   entier. La 0.7.2 ne gardait que les 5 premières secondes. Relancer
   **▶ Préparer** : les tranches manquantes s'ajoutent, Upload reste
   grisé tant que `Data_k` est incomplet.
-- Dans l'Historique, `N sources → M segments · W écrits` avec W < M
-  signale le trou.
+- Historique : `N sources → M segments · W écrits` avec W < M signale
+  le trou.
+- **Activité** : case **Méthode MNHN 10 % / 75 %** (issue #7).
 
 ## Installation
 
@@ -63,4 +63,4 @@ API publique. Ce n'est pas un outil officiel du MNHN.
 
 ---
 
-SHA-256 (`ChiroTool.exe`) : `349241B5D771205C26F4B631EB4220BA7E95C97D8D47D1E93747984FB5F6DC27`
+SHA-256 (`ChiroTool.exe`) : `225FD7B1D96740724459A76DB46601FDBC26F667F9D988897023AA3E71964ED7`
