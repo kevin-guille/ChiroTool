@@ -74,6 +74,7 @@ class ActivityPanel(ctk.CTkFrame):
         self._filters_initialized = False
         self._bin_minutes = 30
         self._only_validated = False
+        self._use_mnhn = False
         self._chiros_only = False
         self._observer_taxon = False
         # Mode d'agrégation : "cumul" (toute la sélection sommée) ou
@@ -95,7 +96,7 @@ class ActivityPanel(ctk.CTkFrame):
     def _build_toolbar(self):
         bar = ctk.CTkFrame(self, fg_color="transparent")
         bar.grid(row=0, column=0, columnspan=2, sticky="ew", padx=8, pady=(8, 4))
-        bar.grid_columnconfigure(4, weight=1)
+        bar.grid_columnconfigure(5, weight=1)
 
         ctk.CTkLabel(
             bar, text="Activité",
@@ -120,7 +121,13 @@ class ActivityPanel(ctk.CTkFrame):
             bar, text="Validés humains seulement",
             variable=self.validated_var,
             command=self._on_validated_toggle,
-        ).grid(row=0, column=3, padx=(0, 16))
+        ).grid(row=0, column=3, padx=(0, 8))
+        self.mnhn_var = ctk.BooleanVar(value=False)
+        ctk.CTkCheckBox(
+            bar, text="Méthode MNHN 10 % / 75 %",
+            variable=self.mnhn_var,
+            command=self._on_mnhn_toggle,
+        ).grid(row=0, column=4, padx=(0, 8))
 
         ctk.CTkButton(
             bar, text="⟳ Recharger", height=28, width=110,
@@ -128,7 +135,7 @@ class ActivityPanel(ctk.CTkFrame):
             text_color=("gray15", "gray90"),
             hover_color=("gray75", "gray35"),
             command=self.refresh,
-        ).grid(row=0, column=5, padx=(0, 4))
+        ).grid(row=0, column=6, padx=(0, 4))
 
         # Bouton "Exporter" : capture le graphe + légende en PNG (sans perte).
         # Format unique PNG : qualité parfaite, supporte la transparence, taille
@@ -140,14 +147,14 @@ class ActivityPanel(ctk.CTkFrame):
             text_color="white",
             hover_color=("#1158c7", "#1158c7"),
             command=self._on_export_png,
-        ).grid(row=0, column=6, padx=(0, 8))
+        ).grid(row=0, column=7, padx=(0, 8))
 
         self.status_lbl = ctk.CTkLabel(
             bar, text="(aucun workspace)",
             font=ctk.CTkFont(size=10),
             text_color=("gray40", "gray60"), anchor="e",
         )
-        self.status_lbl.grid(row=0, column=4, sticky="e", padx=(0, 8))
+        self.status_lbl.grid(row=0, column=5, sticky="e", padx=(0, 8))
 
     # =========================================================================
     # UI : panneau filtres (gauche)
@@ -421,6 +428,7 @@ class ActivityPanel(ctk.CTkFrame):
                     use_only_validated=self._only_validated,
                     use_observer_taxon=self._observer_taxon,
                     chiros_only=self._chiros_only,
+                    use_mnhn=self._use_mnhn,
                 )
             except Exception as e:
                 self.after(0, lambda: self.status_lbl.configure(
@@ -436,8 +444,14 @@ class ActivityPanel(ctk.CTkFrame):
         self._aggregated = aggregated
         n_nights = len(list_nights(aggregated))
         n_contacts = sum(sum(bins) for bins in aggregated.values())
+        prefix = ""
+        if self._use_mnhn:
+            has_vu = any(p.suffix.lower() == ".csv" for p in xlsx_paths)
+            prefix = "MNHN · "
+            if not has_vu:
+                prefix = "MNHN (xlsx, pas un _Vu) · "
         self.status_lbl.configure(
-            text=f"{len(xlsx_paths)} source(s) · {n_nights} nuits · "
+            text=f"{prefix}{len(xlsx_paths)} source(s) · {n_nights} nuits · "
                  f"{n_contacts:,} contacts",
             text_color=("gray40", "gray60"),
         )
@@ -781,7 +795,19 @@ class ActivityPanel(ctk.CTkFrame):
         self.refresh()
 
     def _on_validated_toggle(self):
+        if self.validated_var.get():
+            self.mnhn_var.set(False)
+            self._use_mnhn = False
         self._only_validated = bool(self.validated_var.get())
+        self.refresh()
+
+    def _on_mnhn_toggle(self):
+        if self.mnhn_var.get():
+            self.validated_var.set(False)
+            self._only_validated = False
+            self.observer_taxon_var.set(False)
+            self._observer_taxon = False
+        self._use_mnhn = bool(self.mnhn_var.get())
         self.refresh()
 
     def _on_chiros_toggle(self):
@@ -789,6 +815,9 @@ class ActivityPanel(ctk.CTkFrame):
         self.refresh()
 
     def _on_observer_toggle(self):
+        if self.observer_taxon_var.get() and self.mnhn_var.get():
+            self.mnhn_var.set(False)
+            self._use_mnhn = False
         self._observer_taxon = bool(self.observer_taxon_var.get())
         self.refresh()
 
@@ -906,6 +935,8 @@ class ActivityPanel(ctk.CTkFrame):
             else:
                 sub_parts.append(f"{len(nights)} nuits ({nights[0]} → {nights[-1]})")
         sub_parts.append(f"tranche : {self._bin_minutes} min")
+        if self._use_mnhn:
+            sub_parts.append("méthode MNHN 10 % / 75 %")
         if self._only_validated:
             sub_parts.append("validés humains uniquement")
         if self._observer_taxon:

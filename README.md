@@ -65,10 +65,12 @@ et **sépare** Synthèse et ChiroSurf :
 utilise la Synthèse ; ChiroSurf sert à valider avec la méthode 10 % / 75 %.
 Après un `_Vu`, « Identifications validées seulement » = contacts **écoutés**.
 « Méthode MNHN 10 % / 75 % » reconstitue l'interprétation (bandes de
-confiance Tadarida, issue [#7](https://github.com/kevin-guille/ChiroTool/issues/7)).
+confiance Tadarida, issue [#7](https://github.com/kevin-guille/ChiroTool/issues/7)),
+dans la Synthèse **et** l'onglet Activité.
 
 **v0.8.0** (release courante, suite [#7](https://github.com/kevin-guille/ChiroTool/issues/7)) :
-case **Méthode MNHN 10 % / 75 %** dans la Synthèse (bandes de confiance Tadarida).
+case **Méthode MNHN 10 % / 75 %** dans la Synthèse et l'onglet Activité
+(bandes de confiance Tadarida).
 Correctifs de l'exe : code 409 = déjà enregistré (Tadarida peut partir) ;
 après **Afficher le bureau**, recliquer ChiroTool ramène la fenêtre de
 progression. Titley / Wildlife > 5 s : tout le son est conservé (issue
@@ -130,7 +132,7 @@ Vérifier / Réparer, export USB, pick + FOCUS carte, ChiroSurf multi-nuits
 - **Vue session** : bilan `X / Y` ; **Valider** · **Nettoyer** · **Synthèse**
 - **Synthèse** par espèce + niveaux d’activité (`_Vu` optionnel ; menu Nuit seulement si plusieurs soirs)
 - **ChiroSurf nuits** (optionnel) : scission lazy `chirosurf/Nuit{n}_…csv` ; ▶ brut / 📈 `_Vu`
-- **Graphes d’activité** (chiros seulement, taxons observateur, `_Vu`)
+- **Graphes d’activité** (chiros seulement, taxons observateur, `_Vu`, méthode MNHN 10 % / 75 %)
 - **Registre de campagne** multi-sites (SQLite, export CSV / xlsx)
 - **Export portable de sessions** (clé USB / partage : Data_k ± Data + métadonnées + `chirosurf/` si présent)
 - **Carte OSM** : pick depuis les meta (5 km), FOCUS session, carrés STOC, create/reuse (y compris autre observateur)

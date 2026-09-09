@@ -1125,6 +1125,35 @@ class TestActivityAggregate:
             self.HEADERS, rows, bin_minutes=30, use_only_validated=True)
         assert {k[-1] for k in out} == {"Nyclas"}
 
+    def test_mnhn_counts_match_synthesis(self):
+        from activity_graph import aggregate_rows
+        from synthesis import compute_mnhn_synthesis
+        headers = ["nom du fichier", "tadarida_taxon", "tadarida_probabilite",
+                   "observateur_taxon"]
+
+        def fname(i):
+            total = 21 * 3600 + i
+            h, rem = divmod(total, 3600)
+            m, s = divmod(rem, 60)
+            return (f"Car212097-2026-Pass1-Z1-SMU03126_20260821_"
+                    f"{h:02d}{m:02d}{s:02d}.wav")
+
+        rows = ([[fname(0), "Nyclei", 0.95, "Nyclei"]]
+                + [[fname(1 + i), "Nyclei", 0.95, ""] for i in range(70)]
+                + [[fname(71 + i), "Nyclei", 0.85, ""] for i in range(7)]
+                + [[fname(78 + i), "Nyclei", 0.40, ""] for i in range(24)])
+        syn = compute_mnhn_synthesis(headers, rows)
+        out = aggregate_rows(headers, rows, bin_minutes=30, use_mnhn=True)
+        assert sum(sum(b) for b in out.values()) == syn["total_contacts"]
+        assert syn["total_contacts"] == 71
+
+        rows[71][3] = "Nyclei"
+        syn = compute_mnhn_synthesis(headers, rows)
+        out = aggregate_rows(headers, rows, bin_minutes=30, use_mnhn=True)
+        assert syn["total_contacts"] == 102
+        assert sum(sum(b) for b in out.values()) == 102
+        assert {k[-1] for k in out} == {"Nyclei"}
+
     def test_vu_csv_does_not_hide_other_nights(self, tmp_path):
         """Un _Vu nuit 1 ne doit pas faire disparaître la nuit 2 de l'xlsx."""
         import csv
@@ -3937,6 +3966,20 @@ class TestMnhnSynthesis:
         ]
         res = compute_mnhn_synthesis(self.HEADERS, rows, chiros_only=True)
         assert {s["taxon"] for s in res["species"]} == {"Pippip"}
+
+    def test_iter_contacts_matches_n_contacts(self):
+        from synthesis import compute_mnhn_synthesis, iter_mnhn_contacts
+        rows = ([["a", "Nyclei", 0.95, "Nyclei"]]
+                + [["a", "Nyclei", 0.95, ""] for _ in range(70)]
+                + [["a", "Nyclei", 0.85, ""] for _ in range(7)]
+                + [["a", "Nyclei", 0.40, ""] for _ in range(24)])
+        syn = compute_mnhn_synthesis(self.HEADERS, rows)
+        yielded = list(iter_mnhn_contacts(self.HEADERS, rows))
+        assert len(yielded) == syn["total_contacts"] == 71
+        rows[71][3] = "Nyclei"
+        syn = compute_mnhn_synthesis(self.HEADERS, rows)
+        yielded = list(iter_mnhn_contacts(self.HEADERS, rows))
+        assert len(yielded) == syn["total_contacts"] == 102
 
     def test_does_not_break_validated_only_contract(self):
         from pathlib import Path

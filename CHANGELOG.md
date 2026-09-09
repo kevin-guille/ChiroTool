@@ -7,6 +7,10 @@ Les versions publiées suivent le SemVer du fichier `version.py` / tags GitHub.
 
 ### Corrigé
 
+- **Activité, méthode MNHN 10 % / 75 %** (issue #7 / P8) : même case que
+  la Synthèse, même moteur (`iter_mnhn_contacts`). Distinct de « Validés
+  humains seulement ». Sans `_Vu`, rappel dans la barre de statut.
+
 - **TE×10 Titley / Wildlife (issue #4)** : le moteur Rust n'incrémentait
   pas l'heure des tranches de 5 s quand le timestamp était en fin de nom
   (cas après rename Vigie-Chiro). Un WAV de 12 à 15 s ne gardait que les
@@ -233,8 +237,6 @@ Ne pas relire le 1er message de l'issue
 bilan v0.8 dans la SPEC §0.1. **Pas plusieurs exe** (D14) : le mode Batch
 enchaîne les nuits dans une instance.
 
-- Graphes **Activité** : même filtre MNHN 10 % / 75 % que la Synthèse
-  (optionnel, P8 « ensuite ». La Synthèse v0.8 l'a déjà).
 - Robustesse / UX **mode batch** (données complémentaires participation,
   template avant lot, journal d'upload).
 - Export multi-nuits compilé (espèces × nuits).

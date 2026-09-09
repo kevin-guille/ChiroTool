@@ -3,7 +3,7 @@
 | | |
 |--|--|
 | **Statut** | **Livré** : v0.6.0 (2026-08-07, vagues A–C) + **v0.7.0** (2026-08-30, Synthèse autonome, Titley, issues #4–#6) + **v0.7.1** (2026-08-31, issue #7 ChiroSurf CSV+WAV) + **v0.7.2** (2026-09-01, D12 nuit bio + barre d'actions) + **v0.8.0** (2026-09-06, P8 Synthèse MNHN 10 % / 75 %). Titley TE×10 : tranches 5 s intégrales (issue #4, source 2026-09-09). |
-| **Ouvert** | Optionnel, **pas** un reste 0.7.2 : graphes Activité avec le même filtre MNHN 10 % / 75 % que la Synthèse (P8 « ensuite »). L'issue [#4](https://github.com/kevin-guille/ChiroTool/issues/4) est close côté v0.8, voir §0.1. |
+| **Ouvert** | Issue [#4](https://github.com/kevin-guille/ChiroTool/issues/4) close côté v0.8, voir §0.1. Vague D (export compilé, fusion `_Vu` → xlsx) plus tard. |
 | **Date** | 2026-08-04 (conception) · 2026-08-07 (v0.6) · 2026-08-30 (v0.7) · 2026-09-03 (D13) · 2026-09-06 (P8) · 2026-09-08 (exe 0.8.0 : 409 + Win+D) · 2026-09-09 (Titley TE×10, issue #4) |
 | **Contexte** | Issue [#3](https://github.com/kevin-guille/ChiroTool/issues/3) (retours terrain) + retours carte / meta + issues [#4](https://github.com/kevin-guille/ChiroTool/issues/4) / [#7](https://github.com/kevin-guille/ChiroTool/issues/7) |
 | **Principe** | Pragmatisme — une vérité disque, peu de fichiers, parcours unifiés, libellés humains d’abord |
@@ -29,7 +29,7 @@ Le body du 17 août 2026 est **périmé**. Statut à la **v0.8** (plus le correc
 | 9 | Filtre chiros (Activité, etc.) | **Livré** 0.7.0 |
 | 10 | Taxons observateur dans Activité | **Livré** 0.7.0 |
 
-Méthode MNHN 10 % / 75 % : **Synthèse v0.8** (P8, D13). Ce n'est pas un oubli de l'onglet Activité, les graphes restent sans cette case.
+Méthode MNHN 10 % / 75 % : **Synthèse et Activité** (P8, D13). Même moteur.
 
 ---
 
@@ -49,7 +49,7 @@ Méthode MNHN 10 % / 75 % : **Synthèse v0.8** (P8, D13). Ce n'est pas un oubli 
 | D10 | Rayon de chargement mode **PICK** = **5 km** (constante unique, ajustable plus tard si retour terrain). |
 | D11 | Naming CSV nuit : **préfixe** `Nuit{n}_` + stem d’origine (voir §1.2.1) — aligné usage Benjamin + contrainte ChiroSurf `_Vu`. |
 | D12 | **Nuit biologique = coupure à midi, jamais à minuit.** Une pose soir + matin = **une** nuit. Le sélecteur Synthèse n'apparaît que s'il y a **plusieurs soirs**. Voir §1.2.2 — **non négociable**. |
-| D13 | **Méthode MNHN 10 % / 75 %** = bandes de **confiance Tadarida** (pas des paquets chronologiques). Case « identifications validées seulement » = contacts **écoutés** (inchangée). Case distincte « Méthode MNHN 10 % / 75 % ». Voir P8. **Livré dans la Synthèse (v0.8).** Les graphes Activité n'appliquent pas cette méthode. |
+| D13 | **Méthode MNHN 10 % / 75 %** = bandes de **confiance Tadarida** (pas des paquets chronologiques). Case « identifications validées seulement » = contacts **écoutés** (inchangée). Case distincte « Méthode MNHN 10 % / 75 % ». Voir P8. **Livré Synthèse + Activité.** |
 | D14 | **Pas plusieurs exe.** Une instance, le mode **Batch** enchaîne les nuits (issue #4 point 2). Thomas : déjà résolu par la case Batch. Ne pas rouvrir. |
 
 ---
@@ -354,7 +354,7 @@ Indépendant de P2–P5 ; livrable Vague A.
 
 **Statut** : **validé** Benjamin 2026-09-04 (issue [#7](https://github.com/kevin-guille/ChiroTool/issues/7),
 graphe ChiroSurf). Logique dans `synthesis.compute_mnhn_synthesis`.
-v1 = Synthèse ; onglet Activité ensuite.
+v1 = Synthèse ; onglet Activité : **même case** (`iter_mnhn_contacts`).
 
 **Constat** : ChiroSurf n'écrit pas le 10 % / 75 % dans le `_Vu`. On reconstitue
 depuis `tadarida_taxon` + `tadarida_probabilite` + `observateur_taxon`.
@@ -454,7 +454,7 @@ Onglet Activité : pas MNHN en v1. Un `_Vu` y remplace l'xlsx **nuit par nuit**
 | **B — Point** | D8 lat/lon manifest · PointSelection · wizard 3 entrées · FOCUS carte · mode PICK | **Livré v0.6** |
 | **C — ChiroSurf** | Split lazy · UI nuits · import `_Vu` · synthèse proba min | **Livré v0.6** ; v0.7 : Synthèse autonome (sélecteur de nuit, sans passer par ChiroSurf) |
 | **D — Polish** | Export multi-nuits compilé · fusion `_Vu` → xlsx · captures tuto | **Plus tard** (pas un oubli) |
-| **E : Synthèse 10 % / 75 %** | Interprétation statistique du `_Vu` (P8) | **Livré v0.8.0** (Synthèse). Graphes Activité : optionnel, pas un reste #4. |
+| **E : Synthèse 10 % / 75 %** | Interprétation statistique du `_Vu` (P8) | **Livré v0.8.0** (Synthèse + Activité). |
 
 ---
 
@@ -489,6 +489,7 @@ Le tutoriel **ne décrit pas** les features non livrées comme déjà disponible
 | 2026-09-06 | audit | Activité : `_Vu` ne masque plus les autres nuits de l'xlsx. Synthèse MNHN : source par nuit, export diagnostics, garde clic, avertissement hors `_Vu`. |
 | 2026-09-08 | v0.8.0 | Upload HTTP 409 = déjà enregistré (skip + Tadarida). Repair : sonde les titres si listing 403. Win+D : `gui_windowing` restaure les modales (icône barre des tâches, grab). |
 | 2026-09-09 | issue #4 | TE×10 Rust : timestamp en fin de stem. WAV > 5 s découpé en entier. `Data_k` tronqué : plus d'upload. **D14** : pas plusieurs exe (Batch). §0.1 : bilan #4 vs v0.8 (ne plus relire le 1er message). |
+| 2026-09-09 | P8 Activité | Case MNHN 10 % / 75 % dans l'onglet Activité (`iter_mnhn_contacts`, même règle que la Synthèse). |
 
 ---
 

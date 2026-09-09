@@ -238,6 +238,111 @@ def _empty_species_acc() -> dict:
     }
 
 
+def _mnhn_accumulate(headers: list, rows: list
+                      ) -> tuple[set[str], dict[str, dict], dict[str, int]]:
+    """Premier passage MNHN : espèces écoutées + accumulateurs par taxon."""
+    ci = _col_index(headers)
+    t_file = ci.get("nom du fichier")
+    per: dict[str, dict] = {}
+
+    def acc_for(taxon: str) -> dict:
+        d = per.get(taxon)
+        if d is None:
+            d = _empty_species_acc()
+            per[taxon] = d
+        return d
+
+    listened: set[str] = set()
+    for row in rows:
+        if not row:
+            continue
+        tad = _taxon_str(_cell(row, ci, "tadarida_taxon"))
+        obs = _taxon_str(_cell(row, ci, "observateur_taxon"))
+        fn = ""
+        if t_file is not None and t_file < len(row) and row[t_file]:
+            fn = str(row[t_file])
+        pbin = mnhn_proba_bin(_cell(row, ci, "tadarida_probabilite"))
+
+        if obs:
+            listened.add(obs)
+            d_obs = acc_for(obs)
+            d_obs["n_val"] += 1
+            if fn:
+                d_obs["files_direct"].add(fn)
+
+        if tad and obs and obs != tad:
+            acc_for(obs)["n_forced"] += 1
+            continue
+
+        if tad:
+            d = acc_for(tad)
+            if pbin is None:
+                d["n_pool_invalid"] += 1
+                if obs == tad:
+                    d["n_direct"] += 1
+                continue
+            d["bins"][pbin] += 1
+            if fn:
+                d["files_pool"][pbin].add(fn)
+            if obs == tad:
+                d["val_bins"].add(pbin)
+            continue
+
+        if obs:
+            acc_for(obs)["n_direct"] += 1
+    return listened, per, ci
+
+
+def _mnhn_keep_rules(listened: set[str], per: dict[str, dict]) -> dict[str, dict]:
+    """Pour chaque espèce écoutée : ``reached_75`` et bandes concordantes."""
+    rules: dict[str, dict] = {}
+    for taxon in listened:
+        d = per[taxon]
+        bins = d["bins"]
+        n_pool = sum(bins)
+        f75 = mnhn_f75(bins) if n_pool else None
+        val_bins = d["val_bins"]
+        rules[taxon] = {
+            "reached_75": f75 is not None and f75 in val_bins,
+            "val_bins": val_bins,
+        }
+    return rules
+
+
+def iter_mnhn_contacts(headers: list, rows: list):
+    """Yield ``(row, taxon)`` pour chaque contact retenu (méthode MNHN).
+
+    Même règle que ``compute_mnhn_synthesis`` : pool Tadarida filtré par
+    bandes de confiance, corrections forcées, espèces absentes de Tadarida.
+    Sert aux graphes Activité (horodatage du nom de fichier).
+    """
+    listened, per, ci = _mnhn_accumulate(headers, rows)
+    rules = _mnhn_keep_rules(listened, per)
+    for row in rows:
+        if not row:
+            continue
+        tad = _taxon_str(_cell(row, ci, "tadarida_taxon"))
+        obs = _taxon_str(_cell(row, ci, "observateur_taxon"))
+        pbin = mnhn_proba_bin(_cell(row, ci, "tadarida_probabilite"))
+        if tad and obs and obs != tad:
+            if obs in rules:
+                yield row, obs
+            continue
+        if tad:
+            rule = rules.get(tad)
+            if rule is None:
+                continue
+            if pbin is None:
+                if obs == tad:
+                    yield row, tad
+                continue
+            if rule["reached_75"] or pbin in rule["val_bins"]:
+                yield row, tad
+            continue
+        if obs in rules:
+            yield row, obs
+
+
 def compute_mnhn_synthesis(headers: list, rows: list, *,
                            chiros_only: bool = False) -> dict:
     """Synthèse méthode MNHN / ChiroSurf 10 % / 75 % (SPEC P8).
@@ -263,63 +368,7 @@ def compute_mnhn_synthesis(headers: list, rows: list, *,
     champs ``reached_75``, ``f75``, ``n_pool``, ``n_forced`` sont des
     diagnostics par espèce. ``tadarida_taxon_autre`` est ignoré.
     """
-    ci = _col_index(headers)
-    t_file = ci.get("nom du fichier")
-    per: dict[str, dict] = {}
-
-    def acc_for(taxon: str) -> dict:
-        d = per.get(taxon)
-        if d is None:
-            d = _empty_species_acc()
-            per[taxon] = d
-        return d
-
-    def filename(row: list) -> str:
-        if t_file is None or t_file >= len(row):
-            return ""
-        fn = row[t_file]
-        return str(fn) if fn else ""
-
-    listened: set[str] = set()
-
-    for row in rows:
-        if not row:
-            continue
-        tad = _taxon_str(_cell(row, ci, "tadarida_taxon"))
-        obs = _taxon_str(_cell(row, ci, "observateur_taxon"))
-        fn = filename(row)
-        pbin = mnhn_proba_bin(_cell(row, ci, "tadarida_probabilite"))
-
-        if obs:
-            listened.add(obs)
-            d_obs = acc_for(obs)
-            d_obs["n_val"] += 1
-            if fn:
-                d_obs["files_direct"].add(fn)
-
-        if tad and obs and obs != tad:
-            # Correction sortante : hors pool source. Destination : +1 forcé.
-            d_obs = acc_for(obs)
-            d_obs["n_forced"] += 1
-            continue
-
-        if tad:
-            d = acc_for(tad)
-            if pbin is None:
-                d["n_pool_invalid"] += 1
-                if obs == tad:
-                    d["n_direct"] += 1
-                continue
-            d["bins"][pbin] += 1
-            if fn:
-                d["files_pool"][pbin].add(fn)
-            if obs == tad:
-                d["val_bins"].add(pbin)
-            continue
-
-        if obs:
-            # Observateur sans proposition Tadarida.
-            acc_for(obs)["n_direct"] += 1
+    listened, per, _ci = _mnhn_accumulate(headers, rows)
 
     species: list[dict] = []
     by_group: dict[str, int] = {}

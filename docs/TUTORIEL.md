@@ -711,8 +711,8 @@ Filtres utiles :
   pas un `_Vu`, un avertissement rappelle que la méthode suppose
   l'échantillonnage ChiroSurf (pas une validation contact par contact).
   En cumul multi-nuits, le calcul se fait **nuit par nuit** puis s'additionne
-  (pas de classe d'activité sur le cumul). L'onglet Activité n'applique
-  pas encore cette méthode. Voir issue
+  (pas de classe d'activité sur le cumul). L'onglet **Activité** a la même
+  case (graphes). Voir issue
   [#7](https://github.com/kevin-guille/ChiroTool/issues/7).
 - **« Chiros seulement »** : masquer orthoptères, bruit, oiseaux.
 - **« Proba Tadarida ≥ »** : seuil optionnel (ex. `0.5` ou `50`) pour la synthèse
@@ -782,10 +782,13 @@ d'activité horaire** — parfait pour un rapport ou une analyse.
   l'espèce (ex. un Nyclas que Tadarida avait mis en Nycnoc).
 - **Validés humains seulement** : lignes avec identification observateur ou
   validateur.
+- **Méthode MNHN 10 % / 75 %** : même reconstitution que la Synthèse (bandes
+  de confiance Tadarida, `_Vu` nuit par nuit). Distinct de « validés
+  humains ». Les deux cases s'excluent. Sans `_Vu`, un rappel s'affiche
+  (la méthode suppose l'échantillonnage ChiroSurf).
 - Un `_Vu` dans `chirosurf/` (ou `Data_k/`) **remplace le tableur pour cette
   nuit seulement**. Les autres nuits de la participation restent lues dans
-  l'xlsx. Ce graphe ne reconstitue **pas** la méthode MNHN 10 % / 75 %
-  (c'est la case de la Synthèse).
+  l'xlsx.
 
 Chaque section se **replie** et affiche son état (`8 / 42`), pour garder le
 panneau lisible même sur une grosse campagne. Les listes longues (nuits, taxons)
@@ -1082,10 +1085,11 @@ Glissez la barre d'actions vers la **droite** (molette sur la ligne, ou le
 curseur sous les boutons). Dans la fenêtre ChiroSurf nuits, ▶ / 📈 / Synthèse
 sont **sous** le nom de la nuit.
 
-**« Où est le filtre méthode MNHN / 10 % / 75 % dans la Synthèse ? »**
-Case **« Méthode MNHN 10 % / 75 % »**, distincte de **« Identifications
-validées seulement »** (lignes écoutées). La reconstitution se fait depuis
-le `_Vu` (bandes de confiance Tadarida). Voir
+**« Où est le filtre méthode MNHN / 10 % / 75 % ? »**
+Case **« Méthode MNHN 10 % / 75 % »** dans **📊 Synthèse** et dans l'onglet
+**Activité**, distincte de **« Identifications validées seulement »**
+(lignes écoutées). La reconstitution se fait depuis le `_Vu` (bandes de
+confiance Tadarida). Voir
 [§8 B](#b--méthode-mnhn--team-chiro-via-chirosurf-10--75-) et l'issue
 [#7](https://github.com/kevin-guille/ChiroTool/issues/7).
 
@@ -1145,7 +1149,7 @@ ChiroTool couvre la grande majorité des cas, mais pas (encore) tout :
 | Zone | Ce qui change |
 |------|----------------|
 | **Synthèse** | **v0.8.0** : case **Méthode MNHN 10 % / 75 %** (bandes de confiance Tadarida, colonne 75 %, issue #7). `_Vu` lu s'il existe. Menu Nuit **seulement** s'il y a plusieurs soirs (v0.7.2 : une pose minuit = 1 nuit) |
-| **Activité** | Un `_Vu` remplace le tableur **pour cette nuit seulement** (les autres nuits restent). Pas de méthode MNHN sur les graphes (c'est la Synthèse) |
+| **Activité** | Un `_Vu` remplace le tableur **pour cette nuit seulement**. Case **Méthode MNHN 10 % / 75 %** (même règle que la Synthèse) |
 | **ChiroSurf nuits** | Optionnel (CSV pour valider dans ChiroSurf, méthode 10 % / 75 %) ; distinct de la Synthèse ; coupure **midi**. **v0.7.1** : CSV à côté des WAV ; `_Vu` `Nuit_1_…`. **v0.7.2** : boutons sous le libellé (écran classique) |
 | **Barre d'actions** | **v0.7.2** : une ligne, glissement horizontal si l'écran est étroit |
 | **Valider** | Tri des colonnes, filtres observateur / chiros, bilan `X / Y` (issue #4) |
@@ -1169,12 +1173,11 @@ Conception / dev : [`SPEC_v06_parcours.md`](SPEC_v06_parcours.md) · issues
 [#6](https://github.com/kevin-guille/ChiroTool/issues/6),
 [#7](https://github.com/kevin-guille/ChiroTool/issues/7).
 
-### Suite (hors v0.7)
+### Suite (hors v0.8)
 
-- Onglet **Activité** : même filtre MNHN 10 % / 75 % que la Synthèse.
 - Robustesse / UX du **mode batch**, journal d'upload.
 - Export compilé espèces × nuits ; fusion `_Vu` → xlsx (choix produit).
-- Plusieurs instances de ChiroTool en parallèle (demande issue #4).
+- Pas plusieurs exe : le Batch enchaîne les nuits (SPEC D14).
 
 ---
 

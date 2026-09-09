@@ -27,15 +27,14 @@ décrivant :
 [#4](https://github.com/kevin-guille/ChiroTool/issues/4) comme une todo.
 Bilan point par point : SPEC [`§0.1`](docs/SPEC_v06_parcours.md). En
 particulier : **pas plusieurs exe** (mode Batch, D14) ; **Valider puis
-Nettoyer** déjà en 0.7 ; **MNHN 10 % / 75 %** dans la **Synthèse** (v0.8),
-pas sur les graphes Activité.
+Nettoyer** déjà en 0.7 ; **MNHN 10 % / 75 %** dans la **Synthèse et Activité** (v0.8, P8).
 
 - **v0.6** : PointSelection, carte pick/FOCUS, Vérifier / Réparer, export USB.
 - **v0.7** : Synthèse autonome, Titley (noms), Valider tri/filtres, Batch,
   plus de scan auto (#5), WAC documenté (#6). **v0.7.1 / 0.7.2** : ChiroSurf
   CSV + `_Vu`, nuit bio midi (D12), barre d'actions glissable.
-- **v0.8.0** : MNHN 10 % / 75 % dans la Synthèse (P8, issue #7). Exe du
-  2026-09-08 : upload 409, Afficher le bureau. Correctif Titley TE×10
+- **v0.8.0** : MNHN 10 % / 75 % dans la Synthèse et Activité (P8, issue #7).
+  Exe du 2026-09-08 : upload 409, Afficher le bureau. Correctif Titley TE×10
   (2026-09-09) : WAV > 5 s découpé en entier.
 
 | Document | Rôle |

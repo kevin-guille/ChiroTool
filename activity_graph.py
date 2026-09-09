@@ -212,12 +212,28 @@ def _bin_count(bin_size: int) -> int:
     return 1440 // bin_size
 
 
+def _contact_key_from_filename(fname_s: str, taxon: str, bin_minutes: int):
+    parsed_time = parse_filename_time(fname_s)
+    if not parsed_time:
+        return None
+    date_s, mins = parsed_time
+    night_date = _night_date_iso(date_s, mins)
+    ctx = parse_filename_context(fname_s)
+    if ctx is not None:
+        site, point, passage = ctx["site"], ctx["point"], ctx["passage"]
+    else:
+        site, point, passage = "?", "?", None
+    key = (site, point, passage, night_date, taxon)
+    return key, mins
+
+
 def aggregate_rows(headers, rows, *,
                    bin_minutes: int = 30,
                    taxon_filter: str | None = None,
                    use_only_validated: bool = False,
                    use_observer_taxon: bool = False,
                    chiros_only: bool = False,
+                   use_mnhn: bool = False,
                    ) -> dict[tuple[str, str, int | None, str, str], list[int]]:
     """Agrège des lignes d'observations en
     ``{(site, point, passage, night_date, taxon): bins}``.
@@ -227,6 +243,8 @@ def aggregate_rows(headers, rows, *,
     - ``use_observer_taxon`` : ne garder que les lignes avec
       ``observateur_taxon`` et grouper sous ce code (issue #4.10).
     - ``chiros_only`` : ignorer orthoptères / bruit / oiseaux (issue #4.9).
+    - ``use_mnhn`` : méthode MNHN 10 % / 75 % (même règle que la Synthèse).
+      Prime sur ``use_only_validated`` et ``use_observer_taxon``.
     """
     if bin_minutes <= 0 or 1440 % bin_minutes != 0:
         raise ValueError("bin_minutes doit diviser 1440 (1, 5, 15, 30, 60…)")
@@ -245,6 +263,30 @@ def aggregate_rows(headers, rows, *,
     nbins = _bin_count(bin_minutes)
     result: dict[tuple[str, str, int | None, str, str], list[int]] = {}
 
+    def _add(fname_s: str, taxon: str):
+        if taxon_filter and taxon != taxon_filter:
+            return
+        if chiros_only and not is_chiro_taxon(taxon):
+            return
+        parsed = _contact_key_from_filename(fname_s, taxon, bin_minutes)
+        if parsed is None:
+            return
+        key, mins = parsed
+        if key not in result:
+            result[key] = [0] * nbins
+        result[key][_bin_index(mins, bin_minutes)] += 1
+
+    if use_mnhn:
+        from synthesis import iter_mnhn_contacts
+        for r, taxon in iter_mnhn_contacts(headers, rows):
+            if not r or len(r) <= idx_filename:
+                continue
+            fname = r[idx_filename]
+            if not fname:
+                continue
+            _add(str(fname), taxon)
+        return result
+
     for r in rows:
         if not r or len(r) <= idx_filename:
             continue
@@ -252,19 +294,6 @@ def aggregate_rows(headers, rows, *,
         if not fname:
             continue
         fname_s = str(fname)
-        parsed_time = parse_filename_time(fname_s)
-        if not parsed_time:
-            continue
-        date_s, mins = parsed_time
-        night_date = _night_date_iso(date_s, mins)
-
-        ctx = parse_filename_context(fname_s)
-        if ctx is not None:
-            site = ctx["site"]
-            point = ctx["point"]
-            passage = ctx["passage"]
-        else:
-            site, point, passage = "?", "?", None
 
         obs = _cell(r, idx_observateur)
         obs_s = str(obs).strip() if obs not in (None, "") else ""
@@ -281,16 +310,7 @@ def aggregate_rows(headers, rows, *,
             row_lookup = {i: r[i] if i < len(r) else None for i in range(len(r))}
             taxon = best_taxon(row_lookup, idx_validateur,
                                 idx_observateur, idx_tadarida) or "(?)"
-
-        if taxon_filter and taxon != taxon_filter:
-            continue
-        if chiros_only and not is_chiro_taxon(taxon):
-            continue
-
-        key = (site, point, passage, night_date, taxon)
-        if key not in result:
-            result[key] = [0] * nbins
-        result[key][_bin_index(mins, bin_minutes)] += 1
+        _add(fname_s, taxon)
 
     return result
 
@@ -336,6 +356,7 @@ def aggregate_xlsx(xlsx_path: Path, *,
                     use_only_validated: bool = False,
                     use_observer_taxon: bool = False,
                     chiros_only: bool = False,
+                    use_mnhn: bool = False,
                     ) -> dict[tuple[str, str, int | None, str, str], list[int]]:
     """Agrège un xlsx **ou** un CSV ``_Vu`` / nuit ChiroSurf."""
     result: dict[tuple[str, str, int | None, str, str], list[int]] = {}
@@ -347,6 +368,7 @@ def aggregate_xlsx(xlsx_path: Path, *,
             use_only_validated=use_only_validated,
             use_observer_taxon=use_observer_taxon,
             chiros_only=chiros_only,
+            use_mnhn=use_mnhn,
         )
         for k, bins in partial.items():
             if k not in result:
