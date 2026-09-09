@@ -575,6 +575,29 @@ def _scan_wavs(wav_dir: Path, state: SessionState, sample_wav_for_sr: int = 3) -
         state.looks_time_expanded = te_hits > len(state.sr_samples) / 2
 
 
+def _te10_mirror_incomplete(wav_dir: Path, mirror: Path) -> bool:
+    """True si Data_k n'a pas toutes les tranches de 5 s.
+
+    Signature du trou Titley 0.7.2 (issue #4) : autant de WAV dans le miroir
+    que de bruts, alors qu'un brut dure plus de 5 s. Au plus 3 en-têtes lus.
+    """
+    try:
+        raws = [p for p in wav_dir.iterdir()
+                if p.is_file() and p.suffix.lower() == ".wav"]
+        n_k = sum(p.is_file() and p.suffix.lower() == ".wav"
+                  for p in mirror.iterdir())
+        if n_k != len(raws):
+            return n_k < len(raws)
+        largest = sorted(raws, key=lambda p: p.stat().st_size, reverse=True)[:3]
+        for source in largest:
+            info = read_wav_info(source)
+            if info is None or info.duration_s > 5.05:
+                return True
+    except OSError:
+        return True
+    return False
+
+
 def analyze_session(folder: Path, sample_wav_for_sr: int = 3) -> SessionState:
     """
     Inspecte un dossier de session et renvoie son état.
@@ -614,14 +637,19 @@ def analyze_session(folder: Path, sample_wav_for_sr: int = 3) -> SessionState:
         folder / "Data_k",
         folder / "1-K",
     ]
+    te10_mirror = None
     for m in mirror_candidates:
         if m.is_dir() and _dir_has_wavs(m):
             s.has_data_k_mirror = True
+            te10_mirror = m
             break
 
     # Drapeaux haut niveau
     s.flag_renamed = s.n_wav > 0 and s.n_wav_vigiechiro >= s.n_wav_raw and s.n_wav_vigiechiro > 0
     s.flag_te10_done = s.looks_time_expanded is True or s.has_data_k_mirror or s.n_wav_with_000_suffix > 0
+    if (wav_dir is not None and te10_mirror is not None
+            and _te10_mirror_incomplete(wav_dir, te10_mirror)):
+        s.flag_te10_done = False
     s.flag_analyzed = s.has_observations_xlsx
     s.flag_cleaned = s.has_stats_snapshot
     s.flag_uploaded_hint = s.flag_analyzed

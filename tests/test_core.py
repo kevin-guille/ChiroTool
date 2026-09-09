@@ -1747,6 +1747,95 @@ class TestTitleyNaming:
         m = Manifest.load(sess)
         assert m is None or not m.is_done("rename")
 
+    @pytest.mark.parametrize("stem", [
+        "Car220505-2026-Pass2-Z2-669153_20260830_202905",
+        "2026-08-30 20-29-05",
+    ])
+    def test_rust_process_15s_distinct_names(self, tmp_path, stem):
+        import te10
+        if not te10.RUST_ENGINE:
+            pytest.skip("Extension Rust non disponible")
+        src = tmp_path / "raw"
+        src.mkdir()
+        wav = src / f"{stem}.wav"
+        self._wav(wav, frames=15 * 320000, sr=320000)
+        dst = tmp_path / "out"
+        expected = {p.dst.name for p in te10.plan_file(wav, dst, 10, 5.0)}
+        assert len(expected) == 3
+        for run in range(2):
+            stats = te10.process_folder(src, dst, factor=10, segment_s=5.0,
+                                        jobs=1, overwrite=False)
+            assert stats["engine"] == "rust"  # Un fallback Python ne valide pas Rust.
+            assert stats["n_planned_segments"] == 3
+            assert stats["written"] == (3 if run == 0 else 0)
+            assert stats["skipped"] == (0 if run == 0 else 3)
+            assert stats["errors"] == 0
+            assert {p.name for p in dst.glob("*.wav")} == expected
+
+    @pytest.mark.parametrize("duration", [5, 12, 15])
+    def test_verify_te10_requires_later_segments(self, tmp_path, duration):
+        from te10 import plan_file, write_segment
+        from verify import verify_te10
+        raw = tmp_path / "Data"
+        raw.mkdir()
+        dst = tmp_path / "Data_k"
+        dst.mkdir()
+        wav = raw / "Car220505-2026-Pass2-Z2-669153_20260830_202905.wav"
+        self._wav(wav, frames=duration * 8000, sr=8000)
+        plans = plan_file(wav, dst, 10, 5.0)
+        write_segment(plans[0])
+        result = verify_te10(tmp_path)
+        assert result.verdict == ("PASS" if duration == 5 else "FAIL")
+        assert result.stats["missing_planned_segments"] == len(plans) - 1
+        for plan in plans[1:]:
+            write_segment(plan)
+        assert verify_te10(tmp_path).ok
+
+    @pytest.mark.parametrize("raw_subdir", ["", "Data", "wavs"])
+    @pytest.mark.parametrize("duration,n_src,n_k,done", [
+        (12, 1, 1, False), (12, 1, 3, True), (5, 1, 1, True),
+        (5, 2, 1, False), (5.05, 1, 1, True), (5.06, 1, 1, False),
+    ])
+    def test_session_te10_mirror_coverage(self, tmp_path, raw_subdir,
+                                        duration, n_src, n_k, done):
+        from chiro_core import analyze_session
+        from manifest import Manifest
+        raw = tmp_path / raw_subdir
+        raw.mkdir(exist_ok=True)
+        dst = tmp_path / "Data_k"
+        dst.mkdir()
+        for i in range(n_src):
+            self._wav(raw / f"Car220505-2026-Pass2-Z2-669153_20260830_2029{i:02}.wav",
+                      frames=round(duration * 320000), sr=320000)
+        for i in range(n_k):
+            self._wav(dst / f"Car220505-2026-Pass2-Z2-669153_20260830_2029{i:02}_000.wav",
+                      sr=32000)
+        manifest = Manifest.load_or_create(tmp_path)
+        manifest.record_action("te10", status="ok")  # Ancien flag 0.7.2.
+        manifest.save(tmp_path)
+        state = analyze_session(tmp_path)
+        assert state.has_data_k_mirror
+        assert state.flag_te10_done is done
+        assert bool(state.flag_renamed and state.flag_te10_done) is done
+
+    def test_session_te10_reads_only_three_largest_headers(self, tmp_path, monkeypatch):
+        import chiro_core
+        raw, dst = tmp_path / "wavs", tmp_path / "Data_k"
+        raw.mkdir()
+        dst.mkdir()
+        for i in range(10):
+            self._wav(raw / f"raw{i}.wav", frames=(12 if i == 9 else 5) * 8000)
+            self._wav(dst / f"segment{i}.wav")
+        original = chiro_core.read_wav_info
+        reads = []
+        def read_header(path):
+            reads.append(path)
+            return original(path)
+        monkeypatch.setattr(chiro_core, "read_wav_info", read_header)
+        assert not chiro_core.analyze_session(tmp_path, sample_wav_for_sr=0).flag_te10_done
+        assert 1 <= len(reads) <= 3
+        assert reads[0].name == "raw9.wav"
+
     def test_plan_file_titley_15s_distinct_names(self, tmp_path):
         """Défense TE×10 : même sans rename, les 3 tranches ont des noms distincts."""
         from te10 import plan_file

@@ -56,7 +56,7 @@ et **sépare** Synthèse et ChiroSurf :
 |---|-----------|------------------|
 | 📊 | **Synthèse** (xlsx, `_Vu` si présent) | Récap + activité **sans** ChiroSurf. Une pose qui passe minuit = **1** nuit ; menu Nuit seulement s’il y a **plusieurs soirs** |
 | 🌊 | **ChiroSurf nuits** optionnel (▶ brut / 📈 `_Vu`) | CSV pour valider **dans ChiroSurf** (méthode 10 % / 75 %). **v0.7.1** : CSV à côté des WAV ; `_Vu` `Nuit_1_…` ([#7](https://github.com/kevin-guille/ChiroTool/issues/7)). **v0.7.2** : barre d’actions glissable. **Synthèse** : case **Méthode MNHN 10 % / 75 %** (bandes de confiance Tadarida). |
-| 🏷️ | **Titley** Anabat Swift / Ranger | Noms usine lus ; plus besoin de XnView |
+| 🏷️ | **Titley** Anabat Swift / Ranger | Noms usine lus ; WAV > 5 s découpés en entier (issue #4) |
 | 🔍 | **Valider** : tri, filtres, bilan `X / Y` | Lecture plus rapide d’une nuit |
 | 📂 | Plus de **scan auto** au démarrage | SSD EXFAT endormi ne fige plus l’UI |
 | 📅 | **Dates** : WAV font foi si Summary cumulé | Carte SD non formatée : plus de mauvaise nuit |
@@ -71,7 +71,10 @@ confiance Tadarida, issue [#7](https://github.com/kevin-guille/ChiroTool/issues/
 case **Méthode MNHN 10 % / 75 %** dans la Synthèse (bandes de confiance Tadarida).
 Correctifs de l'exe : code 409 = déjà enregistré (Tadarida peut partir) ;
 après **Afficher le bureau**, recliquer ChiroTool ramène la fenêtre de
-progression. Note : [`docs/RELEASE_v0.8.0.md`](docs/RELEASE_v0.8.0.md).
+progression. Titley / Wildlife > 5 s : tout le son est conservé (issue
+[#4](https://github.com/kevin-guille/ChiroTool/issues/4) ; relancer Préparer
+si un Historique 0.7.2 montre moins d'écrits que de segments). Note :
+[`docs/RELEASE_v0.8.0.md`](docs/RELEASE_v0.8.0.md).
 
 **v0.7.2** : barre d’actions sur une ligne (glissement si écran étroit) ; une pose soir + matin = une nuit en
 Synthèse (plus de Nuit 1 / Nuit 2 à minuit). Note :
@@ -115,7 +118,7 @@ Vérifier / Réparer, export USB, pick + FOCUS carte, ChiroSurf multi-nuits
 ### Chaîne de traitement
 
 - **Renommage automatique** au format Vigie-Chiro (Wildlife, AudioMoth expandé, Titley Swift/Ranger, auto-réparation de noms proches)
-- **Expansion temporelle TE×10** intégrée, validée *bit-à-bit* (remplace Kaleidoscope) : tout le son est conservé (tranches de 5 s)
+- **Expansion temporelle TE×10** intégrée, validée *bit-à-bit* (remplace Kaleidoscope) : tout le son est conservé (tranches de 5 s, y compris Titley / Wildlife > 5 s)
 - **Participation + upload** via l’API (workers parallèles, reprise, trigger compute ; dates WAV si le Summary couvre plusieurs jours)
 - **Suivi Tadarida** et récupération des observations
 - **Vérifier / Réparer** une nuit (diagnostic API + disque, alignement d'état, fetch / trigger avec confirmation ; code 409 = déjà enregistré, Tadarida peut partir)
@@ -151,7 +154,7 @@ Tout enregistreur dont les fichiers sont **horodatés** dans le nom :
 | **Wildlife Acoustics** | SM2 / SM3 / SM4(BAT) / Mini Bat (`SERIE_YYYYMMDD_HHMMSS.wav`). SM2 en **`.wac`** : conversion en WAV d’abord (ci-dessous). |
 | **Autres horodatés** | Passive Recorder, Bat Recorder, etc. |
 | **AudioMoth** | Fichiers *déjà expandés* via l’AudioMoth Configuration App (*File → Expand*). ChiroTool assure ensuite renommage + TE×10 (alternative à Kaleidoscope, devenu payant pour l’AudioMoth). |
-| **Titley** | Anabat Swift / Ranger, nom usine `YYYY-MM-DD HH-MM-SS.wav` (espace ou underscore, n° d’enregistreur optionnel). |
+| **Titley** | Anabat Swift / Ranger, nom usine `YYYY-MM-DD HH-MM-SS.wav` (espace ou underscore, n° d’enregistreur optionnel). Un WAV plus long que 5 s est découpé en entier. |
 
 Les formats à noms **non datés** (ex. Peersonic, Pettersson D500x) nécessitent un renommage préalable (XnView vers `YYYYMMDD_HHMMSS.wav`).
 

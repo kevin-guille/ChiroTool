@@ -33,6 +33,9 @@ Interprétation 10 % / 75 % dans la Synthèse : **v0.8.0** / P8 (bandes de
 confiance Tadarida, `compute_mnhn_synthesis`, issue
 [#7](https://github.com/kevin-guille/ChiroTool/issues/7)). Onglet Activité
 ensuite. Exe 0.8.0 reconstruit le 2026-09-08 : upload 409, Afficher le bureau.
+Titley TE×10 (issue
+[#4](https://github.com/kevin-guille/ChiroTool/issues/4)) : un WAV > 5 s
+est découpé en entier (moteur Rust + garde-fou `Data_k` tronqué).
 
 | Document | Rôle |
 |----------|------|

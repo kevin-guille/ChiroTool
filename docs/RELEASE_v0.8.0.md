@@ -35,6 +35,20 @@ Version toujours **0.8.0**. Même tag GitHub.
 - **Afficher le bureau** (Win+D) : recliquer ChiroTool ramène la fenêtre
   de progression. Plus besoin du Gestionnaire des tâches.
 
+## Correctifs Titley TE×10 (2026-09-09, même version 0.8.0)
+
+À inclure dans le prochain rebuild de l'exe. Recalculer le SHA-256
+ci-dessous après `build_exe.ps1`.
+
+- **TE×10 Titley / Wildlife** (issue
+  [#4](https://github.com/kevin-guille/ChiroTool/issues/4)) : un WAV de
+  plus de 5 s (Anabat Swift / Ranger jusqu'à 15 s) est découpé en
+  entier. La 0.7.2 ne gardait que les 5 premières secondes. Relancer
+  **▶ Préparer** : les tranches manquantes s'ajoutent, Upload reste
+  grisé tant que `Data_k` est incomplet.
+- Dans l'Historique, `N sources → M segments · W écrits` avec W < M
+  signale le trou.
+
 ## Installation
 
 Téléchargez `ChiroTool.exe` ci-dessous (portable, Windows). Remplacez

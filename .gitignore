@@ -19,6 +19,9 @@ rust_ext/target/
 rust_ext/*.so
 rust_ext/*.pyd
 
+# Jeux de test locaux (WAV Titley, manifests, packets Astra)
+samples/issue4_mickael/
+
 # Données utilisateur / test (jamais versionnées)
 test_output/
 scan_report.json

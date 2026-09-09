@@ -5,6 +5,18 @@ Les versions publiées suivent le SemVer du fichier `version.py` / tags GitHub.
 
 ## [Unreleased]
 
+### Corrigé
+
+- **TE×10 Titley / Wildlife (issue #4)** : le moteur Rust n'incrémentait
+  pas l'heure des tranches de 5 s quand le timestamp était en fin de nom
+  (cas après rename Vigie-Chiro). Un WAV de 12 à 15 s ne gardait que les
+  5 premières secondes ; les suivantes étaient ignorées (même nom de
+  sortie). Vérification : les tranches prévues des plus gros WAV doivent
+  être présentes dans Data_k. Un Data_k tronqué (autant de fichiers que
+  de bruts, alors qu'un brut dure plus de 5 s) n'est plus marqué
+  « TE×10 fait » : l'upload reste grisé tant qu'on n'a pas relancé
+  Préparer.
+
 ## [0.8.0] — 2026-09-06
 
 Issue [#7](https://github.com/kevin-guille/ChiroTool/issues/7) : interprétation

@@ -134,10 +134,11 @@ fn reframe_timestamp(stem: &str, offset_seconds: i64) -> String {
     // Cherche la dernière occurrence de `_YYYYMMDD_HHMMSS` en fin de stem
     // (possiblement suivi de `_NNN` ou autre).
     let bytes = stem.as_bytes();
-    // On cherche le pattern "_DDDDDDDD_DDDDDD" (8 chiffres, _, 6 chiffres)
-    // en partant de la droite.
-    for i in (0..bytes.len().saturating_sub(16)).rev() {
-        if bytes[i] != b'_' { continue; }
+    // Pattern "_DDDDDDDD_DDDDDD" (8 chiffres, _, 6 chiffres), depuis la droite.
+    // Inclusive (`0..=`) : le '_' de `_YYYYMMDD_HHMMSS` en fin de stem est
+    // à l'index len-16. `0..len-16` l'excluait (issue #4 Titley, v0.7.2).
+    for i in (0..=bytes.len().saturating_sub(16)).rev() {
+        if bytes.get(i) != Some(&b'_') { continue; }
         // Vérifier 8 chiffres + _ + 6 chiffres
         if i + 16 > bytes.len() { continue; }
         let slice = &bytes[i + 1..i + 16];
@@ -518,4 +519,40 @@ fn chirotool_fast(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(version, m)?)?;
     m.add("__version__", env!("CARGO_PKG_VERSION"))?;
     Ok(())
+}
+
+#[cfg(test)]
+mod timestamp_tests {
+    use super::reframe_timestamp;
+
+    #[test]
+    fn vigie_timestamp_at_end() {
+        assert_eq!(reframe_timestamp("Car220505-2026-Pass2-Z2-669153_20260830_202905", 5),
+                   "Car220505-2026-Pass2-Z2-669153_20260830_202910");
+    }
+
+    #[test]
+    fn titley_factory_timestamp() {
+        assert_eq!(reframe_timestamp("2026-08-30 20-29-05", 5), "2026-08-30 20-29-10");
+    }
+
+    #[test]
+    fn wildlife_timestamp_at_end() {
+        assert_eq!(reframe_timestamp("SMU03126_20250903_194608", 5), "SMU03126_20250903_194613");
+    }
+
+    #[test]
+    fn timestamp_preserves_suffix() {
+        for suffix in ["_000", "_other"] {
+            assert_eq!(reframe_timestamp(&format!("SMU03126_20250903_194608{suffix}"), 5),
+                       format!("SMU03126_20250903_194613{suffix}"));
+        }
+    }
+
+    #[test]
+    fn short_stems_do_not_panic() {
+        for stem in ["", "a", "_"] {
+            assert_eq!(reframe_timestamp(stem, 5), stem);
+        }
+    }
 }

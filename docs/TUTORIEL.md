@@ -29,7 +29,7 @@
 11. [Travailler en équipe](#11--travailler-en-équipe)
 12. [Questions fréquentes & dépannage](#12--questions-fréquentes--dépannage)
 13. [Limites connues](#13--limites-connues)
-14. [Nouveautés v0.7](#14--nouveautés-v07)
+14. [Nouveautés v0.8 / v0.7](#14-nouveautes-v08-v07)
 15. [Crédits & licence](#15--crédits--licence)
 
 ---
@@ -320,11 +320,13 @@ ChiroTool exécute alors :
 1. Le **renommage** des WAV au format Vigie-Chiro (`Car260155-2026-Pass1-Z6-…`)
 2. L'**expansion temporelle ×10** (création du dossier `Data_k/`) : chaque
    fichier est découpé en tranches de **5 secondes** (temps brut), comme
-   Kaleidoscope. Un WAV déjà en 5 s reste un fichier ; un WAV plus long sort
-   en plusieurs WAV (nouveau timestamp toutes les 5 s). **Tout le son est
-   conservé**, ce n'est pas un prélèvement des 5 premières secondes. Le
-   protocole Point Fixe règle en général les SM4 sur 5 s : dans ce cas le
-   nombre de fichiers ne change pas.
+   Kaleidoscope. Un WAV déjà en 5 s reste un fichier ; un WAV plus long
+   (Anabat Swift / Ranger jusqu'à 15 s, par exemple) sort en plusieurs WAV
+   (nouveau timestamp toutes les 5 s). **Tout le son est conservé**, ce
+   n'est pas un prélèvement des 5 premières secondes. Le protocole Point
+   Fixe règle en général les SM4 sur 5 s : dans ce cas le nombre de
+   fichiers ne change pas. Si l'Historique affiche moins d'écrits que de
+   segments prévus, relancez Préparer (voir [§12](#12--questions-fréquentes--dépannage)).
 
 Une **barre de progression** vous indique l'avancement en temps réel.
 
@@ -947,6 +949,15 @@ en tranches horodatées (tout le son est conservé). Si **Préparer s'arrête**
 faute de nom lisible, passez une fois par XnView vers `YYYYMMDD_HHMMSS.wav`
 et joignez un exemple de nom à une [issue](https://github.com/kevin-guille/ChiroTool/issues).
 
+**« Avec la 0.7.2, seuls les 5 premières secondes des Anabat longs partent. »**
+Oui : le moteur TE×10 (Rust) réutilisait le même nom pour chaque tranche
+d'un WAV de plus de 5 s. Seule la première était gardée. C'est corrigé
+dans l'exe suivant. **Ne pas uploader** ce `Data_k`. Installez le nouvel
+exe, relancez **▶ Préparer** : les fichiers déjà écrits restent, les
+tranches manquantes s'ajoutent. Dans l'Historique, une ligne du type
+`402 sources → 470 segments · 402 écrits` signale le trou. Tant que
+Préparer n'a pas rattrapé, **Upload** reste grisé.
+
 **« Mes fichiers SM2 sont en .WAC (ou .w4v). »**
 ChiroTool **ne décompresse pas** les formats Wildlife **`.wac`** (SM2, parfois
 SM3) et **`.w4v`**. Un `.wac` SM2 peut coller **toute une heure de triggers**
@@ -1099,7 +1110,8 @@ ChiroTool couvre la grande majorité des cas, mais pas (encore) tout :
 
 - **Enregistreurs compatibles** : Wildlife (SM2/3/4/Mini Bat), Passive Recorder,
   Bat Recorder, **AudioMoth** (fichiers *expandés*) et **Titley** Anabat Swift /
-  Ranger (`YYYY-MM-DD HH-MM-SS`, voir [§12](#12--questions-fréquentes--dépannage)).
+  Ranger (`YYYY-MM-DD HH-MM-SS`, WAV > 5 s découpés en entier, voir
+  [§12](#12--questions-fréquentes--dépannage)).
   Les AudioMoth bruts `…HHMMSS**T**.WAV` doivent d'abord être expandés
   (Configuration App → *Expand*). Les noms **non datés** (Peersonic,
   Pettersson D500x) nécessitent un renommage préalable (XnView vers
@@ -1135,7 +1147,7 @@ ChiroTool couvre la grande majorité des cas, mais pas (encore) tout :
 | **ChiroSurf nuits** | Optionnel (CSV pour valider dans ChiroSurf, méthode 10 % / 75 %) ; distinct de la Synthèse ; coupure **midi**. **v0.7.1** : CSV à côté des WAV ; `_Vu` `Nuit_1_…`. **v0.7.2** : boutons sous le libellé (écran classique) |
 | **Barre d'actions** | **v0.7.2** : une ligne, glissement horizontal si l'écran est étroit |
 | **Valider** | Tri des colonnes, filtres observateur / chiros, bilan `X / Y` (issue #4) |
-| **Titley** | Swift / Ranger : noms usine lus ; TE×10 sans collision (issue #4) |
+| **Titley** | Swift / Ranger : noms usine lus ; un WAV > 5 s est découpé **en entier** (plus seulement les 5 premières secondes, issue #4) |
 | **Démarrage** | Plus de scan auto du dernier dossier (issue #5) |
 | **Upload / Réparer** | Coupure réseau : code 409 = déjà enregistré, Tadarida peut partir. **Vérifier / Réparer** lance l'analyse si le listing portail échoue ; 0 contact → renvoyer Data_k |
 | **Fenêtres** | Après **Afficher le bureau** (Win+D), recliquer ChiroTool ramène la progression. Plus besoin de tuer le process |

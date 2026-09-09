@@ -2,10 +2,10 @@
 
 | | |
 |--|--|
-| **Statut** | **Livré** : v0.6.0 (2026-08-07, vagues A–C) + **v0.7.0** (2026-08-30, Synthèse autonome, Titley, issues #4–#6) + **v0.7.1** (2026-08-31, issue #7 ChiroSurf CSV+WAV) + **v0.7.2** (2026-09-01, D12 nuit bio + barre d'actions) + **v0.8.0** (2026-09-06, P8 Synthèse MNHN 10 % / 75 %). |
+| **Statut** | **Livré** : v0.6.0 (2026-08-07, vagues A–C) + **v0.7.0** (2026-08-30, Synthèse autonome, Titley, issues #4–#6) + **v0.7.1** (2026-08-31, issue #7 ChiroSurf CSV+WAV) + **v0.7.2** (2026-09-01, D12 nuit bio + barre d'actions) + **v0.8.0** (2026-09-06, P8 Synthèse MNHN 10 % / 75 %). Titley TE×10 : tranches 5 s intégrales (issue #4, source 2026-09-09). |
 | **Ouvert** | Onglet Activité : même filtre MNHN 10 % / 75 % que la Synthèse (ensuite). |
-| **Date** | 2026-08-04 (conception) · 2026-08-07 (v0.6) · 2026-08-30 (v0.7) · 2026-09-03 (D13) · 2026-09-06 (P8) · 2026-09-08 (exe 0.8.0 : 409 + Win+D) |
-| **Contexte** | Issue [#3](https://github.com/kevin-guille/ChiroTool/issues/3) (retours terrain) + retours carte / meta + issue [#7](https://github.com/kevin-guille/ChiroTool/issues/7) |
+| **Date** | 2026-08-04 (conception) · 2026-08-07 (v0.6) · 2026-08-30 (v0.7) · 2026-09-03 (D13) · 2026-09-06 (P8) · 2026-09-08 (exe 0.8.0 : 409 + Win+D) · 2026-09-09 (Titley TE×10, issue #4) |
+| **Contexte** | Issue [#3](https://github.com/kevin-guille/ChiroTool/issues/3) (retours terrain) + retours carte / meta + issues [#4](https://github.com/kevin-guille/ChiroTool/issues/4) / [#7](https://github.com/kevin-guille/ChiroTool/issues/7) |
 | **Principe** | Pragmatisme — une vérité disque, peu de fichiers, parcours unifiés, libellés humains d’abord |
 
 Ce document **prime** sur l’improvisation au codage. En cas de doute : revenir ici, ou amender le §8 avant de coder autre chose.

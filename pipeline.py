@@ -359,12 +359,21 @@ def run_phase_prep(session: Path, meta: SessionMeta, dry_run: bool,
         if te_r.get("errors", 0) > 0 and te_status == "ok":
             te_status = "error"
             te_notes = f"{te_r['errors']} erreur(s) TE×10 signalée(s) par le backend"
+        if te_r.get("written", 0) < te_r.get("n_planned_segments", 0):
+            warning = (
+                f"TE×10 : {te_r.get('written', 0)}/{te_r['n_planned_segments']} "
+                f"tranches écrites, {te_r.get('skipped', 0)} ignorées car déjà présentes. "
+                "Reprise possible ; couverture contrôlée par vérification indépendante."
+            )
+            te_notes = f"{te_notes}; {warning}" if te_notes else warning
+            out.setdefault("warnings", []).append(warning)
         m.record_action(
             "te10", status=te_status, notes=te_notes,
             params={"factor": 10, "segment_s": 5.0},
             stats={"n_source_wavs": te_r.get("n_source_wavs"),
                    "n_segments": te_r.get("n_planned_segments"),
-                   "written": te_r.get("written", 0)},
+                   "written": te_r.get("written", 0),
+                   "skipped": te_r.get("skipped", 0)},
             tool_version=TOOL_VERSION,
         )
         m.save(final)
