@@ -587,7 +587,9 @@ unique**. ChiroTool prépare les CSV :
    est lu à la place du xlsx. Cases **« identifications validées seulement »**
    et **« Chiros seulement »**. Cochez **« Méthode MNHN 10 % / 75 % »** pour
    reconstituer l'interprétation (bandes de confiance Tadarida). La case
-   « validées seulement » reste les lignes **écoutées**. Voir issue
+   « validées seulement » reste les lignes **écoutées**. Même case dans
+   l'onglet **Activité** : les totaux du graphe collent à la Synthèse.
+   Les deux cases s'excluent. Voir issue
    [#7](https://github.com/kevin-guille/ChiroTool/issues/7).
 
 > ⚠️ Les CSV bruts peuvent être **régénérés** (bouton dans la fenêtre) ; les
@@ -957,8 +959,8 @@ et joignez un exemple de nom à une [issue](https://github.com/kevin-guille/Chir
 **« Avec la 0.7.2, seuls les 5 premières secondes des Anabat longs partent. »**
 Oui : le moteur TE×10 (Rust) réutilisait le même nom pour chaque tranche
 d'un WAV de plus de 5 s. Seule la première était gardée. C'est corrigé
-dans l'exe suivant. **Ne pas uploader** ce `Data_k`. Installez le nouvel
-exe, relancez **▶ Préparer** : les fichiers déjà écrits restent, les
+dans la **v0.8.0**. **Ne pas uploader** ce `Data_k`. Installez l'exe 0.8.0,
+relancez **▶ Préparer** : les fichiers déjà écrits restent, les
 tranches manquantes s'ajoutent. Dans l'Historique, une ligne du type
 `402 sources → 470 segments · 402 écrits` signale le trou. Tant que
 Préparer n'a pas rattrapé, **Upload** reste grisé.
@@ -1134,7 +1136,8 @@ ChiroTool couvre la grande majorité des cas, mais pas (encore) tout :
   que s'il y a **plusieurs soirs** (une pose qui passe minuit = une nuit).
   **🌊 ChiroSurf nuits** sert à valider dans ChiroSurf
   (méthode 10 % / 75 %, voir [§8](#règle-de-la-nuit-ne-plus-la-recasser)).
-  La Synthèse reconstitue cette interprétation via **« Méthode MNHN 10 % / 75 % »**.
+  La Synthèse **et** l'onglet Activité reconstituent cette interprétation
+  via **« Méthode MNHN 10 % / 75 % »**.
   La validation contact par contact reste disponible en parallèle.
 - **Bouton 📍 Carte** : si les GPS n’ont jamais été mémorisés pour la session,
   choisissez une fois le point (pick carte ou create/reuse) pour les enregistrer.
@@ -1174,6 +1177,11 @@ Conception / dev : [`SPEC_v06_parcours.md`](SPEC_v06_parcours.md) · issues
 [#7](https://github.com/kevin-guille/ChiroTool/issues/7).
 
 ### Suite (hors v0.8)
+
+Ne pas relire le 1er message des issues
+[#4](https://github.com/kevin-guille/ChiroTool/issues/4) et
+[#7](https://github.com/kevin-guille/ChiroTool/issues/7) comme une todo
+(SPEC §0.1 et §0.2).
 
 - Robustesse / UX du **mode batch**, journal d'upload.
 - Export compilé espèces × nuits ; fusion `_Vu` → xlsx (choix produit).

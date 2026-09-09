@@ -23,11 +23,14 @@ décrivant :
 
 ## Conception livrée (v0.8 courante)
 
-**Ne pas** traiter le 1er message de l'issue
-[#4](https://github.com/kevin-guille/ChiroTool/issues/4) comme une todo.
-Bilan point par point : SPEC [`§0.1`](docs/SPEC_v06_parcours.md). En
-particulier : **pas plusieurs exe** (mode Batch, D14) ; **Valider puis
-Nettoyer** déjà en 0.7 ; **MNHN 10 % / 75 %** dans la **Synthèse et Activité** (v0.8, P8).
+**Ne pas** traiter le 1er message des issues
+[#4](https://github.com/kevin-guille/ChiroTool/issues/4) (SPEC
+[`§0.1`](docs/SPEC_v06_parcours.md)) et
+[#7](https://github.com/kevin-guille/ChiroTool/issues/7) (SPEC
+[`§0.2`](docs/SPEC_v06_parcours.md)) comme une todo.
+En particulier : **pas plusieurs exe** (mode Batch, D14) ; **Valider puis
+Nettoyer** déjà en 0.7 ; **MNHN 10 % / 75 %** dans la **Synthèse et Activité**
+(v0.8, P8) ; ChiroSurf / `_Vu` déjà en 0.7.1.
 
 - **v0.6** : PointSelection, carte pick/FOCUS, Vérifier / Réparer, export USB.
 - **v0.7** : Synthèse autonome, Titley (noms), Valider tri/filtres, Batch,
@@ -39,7 +42,7 @@ Nettoyer** déjà en 0.7 ; **MNHN 10 % / 75 %** dans la **Synthèse et Activité
 
 | Document | Rôle |
 |----------|------|
-| [`docs/SPEC_v06_parcours.md`](docs/SPEC_v06_parcours.md) | **Source de vérité** (v0.8 livrée ; §0.1 issue #4 ; D14 Batch) |
+| [`docs/SPEC_v06_parcours.md`](docs/SPEC_v06_parcours.md) | **Source de vérité** (v0.8 livrée ; §0.1 issue #4 ; §0.2 issue #7 ; D14 Batch) |
 | [`CHANGELOG.md`](CHANGELOG.md) | Versions publiées + *Suite possible* |
 | [`docs/RELEASE_v0.6.0.md`](docs/RELEASE_v0.6.0.md) | Note de release GitHub v0.6 |
 | [`docs/RELEASE_v0.7.0.md`](docs/RELEASE_v0.7.0.md) | Note de release GitHub v0.7 |

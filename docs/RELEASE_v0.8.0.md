@@ -1,8 +1,11 @@
-# ChiroTool v0.8.0 : méthode MNHN 10 % / 75 % dans la Synthèse
+# ChiroTool v0.8.0 : méthode MNHN 10 % / 75 % (Synthèse et Activité)
 
 Release courante. Répond à l'issue
 [#7](https://github.com/kevin-guille/ChiroTool/issues/7) : après un `_Vu`
-ChiroSurf, la Synthèse peut reconstituer l'interprétation 10 % / 75 %.
+ChiroSurf, la Synthèse **et** l'onglet Activité reconstituent
+l'interprétation 10 % / 75 %. Issue
+[#4](https://github.com/kevin-guille/ChiroTool/issues/4) : un WAV Titley
+de plus de 5 s est découpé en entier.
 
 ## Ce qui arrive avec cette version
 

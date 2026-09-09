@@ -45,38 +45,45 @@ Idéal pour les **bureaux d’études**, **associations** et **observateurs** qu
 
 ---
 
-## Nouveautés v0.7
+## Nouveautés v0.8
 
-La **v0.7** reprend les retours [#4](https://github.com/kevin-guille/ChiroTool/issues/4)
-(Titley, Valider), [#5](https://github.com/kevin-guille/ChiroTool/issues/5)
-(démarrage) et [#6](https://github.com/kevin-guille/ChiroTool/issues/6) (WAC),
-et **sépare** Synthèse et ChiroSurf :
+La **v0.8.0** (release courante) reconstitue la méthode MNHN 10 % / 75 %
+après un `_Vu` ChiroSurf, et conserve tout le son des WAV Titley de plus
+de 5 s.
+
+| | Nouveauté | Bénéfice terrain |
+|---|-----------|------------------|
+| 📊 | **Méthode MNHN 10 % / 75 %** (Synthèse et Activité) | Bandes de **confiance Tadarida**, pas le temps. Distinct de « identifications validées seulement » ([#7](https://github.com/kevin-guille/ChiroTool/issues/7)) |
+| 🏷️ | **Titley TE×10** | WAV > 5 s découpé **en entier** ([#4](https://github.com/kevin-guille/ChiroTool/issues/4)). Upload grisé si `Data_k` incomplet |
+| ☁️ | **Upload 409** | WAV déjà enregistré : Tadarida peut partir |
+| 🪟 | **Afficher le bureau** | Recliquer ChiroTool ramène la progression |
+
+Après un `_Vu`, « Identifications validées seulement » = contacts **écoutés**.
+« Méthode MNHN 10 % / 75 % » reconstitue l'interprétation (bandes de
+confiance Tadarida), dans la Synthèse **et** l'onglet Activité.
+
+Note : [`docs/RELEASE_v0.8.0.md`](docs/RELEASE_v0.8.0.md). Bilan des issues
+[#4](https://github.com/kevin-guille/ChiroTool/issues/4) et
+[#7](https://github.com/kevin-guille/ChiroTool/issues/7) : SPEC
+[`§0.1`](docs/SPEC_v06_parcours.md) et [`§0.2`](docs/SPEC_v06_parcours.md)
+(ne pas relire le 1er message comme une todo). Relancer **Préparer** si un
+Historique 0.7.2 montre moins d'écrits que de segments.
+
+### v0.7 (rappel)
+
+La **v0.7** sépare Synthèse et ChiroSurf, lit les noms Titley, et reprend
+[#4](https://github.com/kevin-guille/ChiroTool/issues/4) (Valider),
+[#5](https://github.com/kevin-guille/ChiroTool/issues/5) (démarrage) et
+[#6](https://github.com/kevin-guille/ChiroTool/issues/6) (WAC) :
 
 | | Nouveauté | Bénéfice terrain |
 |---|-----------|------------------|
 | 📊 | **Synthèse** (xlsx, `_Vu` si présent) | Récap + activité **sans** ChiroSurf. Une pose qui passe minuit = **1** nuit ; menu Nuit seulement s’il y a **plusieurs soirs** |
-| 🌊 | **ChiroSurf nuits** optionnel (▶ brut / 📈 `_Vu`) | CSV pour valider **dans ChiroSurf** (méthode 10 % / 75 %). **v0.7.1** : CSV à côté des WAV ; `_Vu` `Nuit_1_…` ([#7](https://github.com/kevin-guille/ChiroTool/issues/7)). **v0.7.2** : barre d’actions glissable. **Synthèse** : case **Méthode MNHN 10 % / 75 %** (bandes de confiance Tadarida). |
-| 🏷️ | **Titley** Anabat Swift / Ranger | Noms usine lus ; WAV > 5 s découpés en entier (issue #4) |
+| 🌊 | **ChiroSurf nuits** optionnel (▶ brut / 📈 `_Vu`) | CSV pour valider **dans ChiroSurf**. **v0.7.1** : CSV à côté des WAV ; `_Vu` `Nuit_1_…`. **v0.7.2** : barre d’actions glissable |
+| 🏷️ | **Titley** Anabat Swift / Ranger | Noms usine lus (la découpe 5 s intégrale est en v0.8) |
 | 🔍 | **Valider** : tri, filtres, bilan `X / Y` | Lecture plus rapide d’une nuit |
 | 📂 | Plus de **scan auto** au démarrage | SSD EXFAT endormi ne fige plus l’UI |
 | 📅 | **Dates** : WAV font foi si Summary cumulé | Carte SD non formatée : plus de mauvaise nuit |
-
-**📊 Synthèse** et **🌊 ChiroSurf nuits** sont complémentaires : tout le monde
-utilise la Synthèse ; ChiroSurf sert à valider avec la méthode 10 % / 75 %.
-Après un `_Vu`, « Identifications validées seulement » = contacts **écoutés**.
-« Méthode MNHN 10 % / 75 % » reconstitue l'interprétation (bandes de
-confiance Tadarida, issue [#7](https://github.com/kevin-guille/ChiroTool/issues/7)),
-dans la Synthèse **et** l'onglet Activité.
-
-**v0.8.0** (release courante, suite [#7](https://github.com/kevin-guille/ChiroTool/issues/7)) :
-case **Méthode MNHN 10 % / 75 %** dans la Synthèse et l'onglet Activité
-(bandes de confiance Tadarida).
-Correctifs de l'exe : code 409 = déjà enregistré (Tadarida peut partir) ;
-après **Afficher le bureau**, recliquer ChiroTool ramène la fenêtre de
-progression. Titley / Wildlife > 5 s : tout le son est conservé (issue
-[#4](https://github.com/kevin-guille/ChiroTool/issues/4) ; relancer Préparer
-si un Historique 0.7.2 montre moins d'écrits que de segments). Note :
-[`docs/RELEASE_v0.8.0.md`](docs/RELEASE_v0.8.0.md).
 
 **v0.7.2** : barre d’actions sur une ligne (glissement si écran étroit) ; une pose soir + matin = une nuit en
 Synthèse (plus de Nuit 1 / Nuit 2 à minuit). Note :

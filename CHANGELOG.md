@@ -8,8 +8,10 @@ Les versions publiées suivent le SemVer du fichier `version.py` / tags GitHub.
 ## [0.8.0] — 2026-09-06
 
 Issue [#7](https://github.com/kevin-guille/ChiroTool/issues/7) : interprétation
-MNHN 10 % / 75 % dans la Synthèse (bandes de confiance Tadarida).
-Exe reconstruit le 2026-09-08 et le 2026-09-09 (version inchangée).
+MNHN 10 % / 75 % dans la Synthèse **et** l'onglet Activité (bandes de
+confiance Tadarida). Issue [#4](https://github.com/kevin-guille/ChiroTool/issues/4) :
+TE×10 Titley, tout le son. Exe reconstruit le 2026-09-08 et le 2026-09-09
+(version inchangée). Bilan issues : SPEC §0.1 (#4) et §0.2 (#7).
 
 ### Ajouté
 
@@ -21,6 +23,9 @@ Exe reconstruit le 2026-09-08 et le 2026-09-09 (version inchangée).
   retenue ; sinon, seulement les bandes 10 % qui contiennent un contact
   écouté. « Identifications validées seulement » reste les lignes
   écoutées. SPEC P8.
+- **Activité, méthode MNHN 10 % / 75 %** (issue #7 / P8, rebuild 2026-09-09) :
+  même case que la Synthèse (`iter_mnhn_contacts`). Distinct de « Validés
+  humains seulement ». Sans `_Vu`, rappel dans la barre de statut.
 
 ### Corrigé
 
@@ -42,9 +47,6 @@ Exe reconstruit le 2026-09-08 et le 2026-09-09 (version inchangée).
 - **Afficher le bureau (Win+D)** : les fenêtres de progression / wizards
   réapparaissent en recliquant ChiroTool (plus besoin de tuer le process).
   Sous Windows, elles ont aussi une icône dans la barre des tâches.
-- **Activité, méthode MNHN 10 % / 75 %** (issue #7 / P8, rebuild 2026-09-09) :
-  même case que la Synthèse (`iter_mnhn_contacts`). Distinct de « Validés
-  humains seulement ». Sans `_Vu`, rappel dans la barre de statut.
 - **TE×10 Titley / Wildlife (issue #4, rebuild 2026-09-09)** : le moteur
   Rust n'incrémentait pas l'heure des tranches de 5 s en fin de nom.
   Un WAV de 12 à 15 s ne gardait que les 5 premières secondes. Un Data_k
@@ -225,10 +227,11 @@ Issue [#3](https://github.com/kevin-guille/ChiroTool/issues/3) (retours terrain)
 
 ### Suite possible (post-0.8)
 
-Ne pas relire le 1er message de l'issue
-[#4](https://github.com/kevin-guille/ChiroTool/issues/4) comme backlog :
-bilan v0.8 dans la SPEC §0.1. **Pas plusieurs exe** (D14) : le mode Batch
-enchaîne les nuits dans une instance.
+Ne pas relire le 1er message des issues
+[#4](https://github.com/kevin-guille/ChiroTool/issues/4) (SPEC §0.1) et
+[#7](https://github.com/kevin-guille/ChiroTool/issues/7) (SPEC §0.2) comme
+backlog. **Pas plusieurs exe** (D14) : le mode Batch enchaîne les nuits
+dans une instance.
 
 - Robustesse / UX **mode batch** (données complémentaires participation,
   template avant lot, journal d'upload).

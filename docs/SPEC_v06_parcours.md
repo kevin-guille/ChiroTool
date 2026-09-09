@@ -2,9 +2,9 @@
 
 | | |
 |--|--|
-| **Statut** | **Livré** : v0.6.0 (2026-08-07, vagues A–C) + **v0.7.0** (2026-08-30, Synthèse autonome, Titley, issues #4–#6) + **v0.7.1** (2026-08-31, issue #7 ChiroSurf CSV+WAV) + **v0.7.2** (2026-09-01, D12 nuit bio + barre d'actions) + **v0.8.0** (2026-09-06, P8 Synthèse MNHN 10 % / 75 %). Titley TE×10 : tranches 5 s intégrales (issue #4, source 2026-09-09). |
-| **Ouvert** | Issue [#4](https://github.com/kevin-guille/ChiroTool/issues/4) close côté v0.8, voir §0.1. Vague D (export compilé, fusion `_Vu` → xlsx) plus tard. |
-| **Date** | 2026-08-04 (conception) · 2026-08-07 (v0.6) · 2026-08-30 (v0.7) · 2026-09-03 (D13) · 2026-09-06 (P8) · 2026-09-08 (exe 0.8.0 : 409 + Win+D) · 2026-09-09 (Titley TE×10, issue #4) |
+| **Statut** | **Livré** : v0.6.0 (2026-08-07, vagues A–C) + **v0.7.0** (2026-08-30, Synthèse autonome, Titley, issues #4–#6) + **v0.7.1** (2026-08-31, issue #7 ChiroSurf CSV+WAV) + **v0.7.2** (2026-09-01, D12 nuit bio + barre d'actions) + **v0.8.0** (2026-09-06, P8 MNHN 10 % / 75 % Synthèse ; 2026-09-09 Activité + Titley TE×10). |
+| **Ouvert** | Issues [#4](https://github.com/kevin-guille/ChiroTool/issues/4) et [#7](https://github.com/kevin-guille/ChiroTool/issues/7) close côté v0.8 (confirmation terrain), voir §0.1 et §0.2. Vague D (export compilé, fusion `_Vu` → xlsx) plus tard. |
+| **Date** | 2026-08-04 (conception) · 2026-08-07 (v0.6) · 2026-08-30 (v0.7) · 2026-09-03 (D13) · 2026-09-06 (P8) · 2026-09-08 (exe 0.8.0 : 409 + Win+D) · 2026-09-09 (Titley TE×10, issue #4 ; Activité MNHN + bilan #7, issue #7) |
 | **Contexte** | Issue [#3](https://github.com/kevin-guille/ChiroTool/issues/3) (retours terrain) + retours carte / meta + issues [#4](https://github.com/kevin-guille/ChiroTool/issues/4) / [#7](https://github.com/kevin-guille/ChiroTool/issues/7) |
 | **Principe** | Pragmatisme — une vérité disque, peu de fichiers, parcours unifiés, libellés humains d’abord |
 
@@ -25,11 +25,29 @@ Le body du 17 août 2026 est **périmé**. Statut à la **v0.8** (plus le correc
 | 5 | Nettoyer à droite de Valider | **Livré** 0.7.0 (`gui_app`, issue #4.5) |
 | 6 | Vue session : bilan validés | **Livré** 0.7.0 (`X / Y`) |
 | 7 | Doc : saucissonnage 5 s | **Livré** (tutoriel §6 / §12) |
-| 8 | Graphes type ChiroSurf en bout de chaîne | **Livré** 0.7 : 🌊 ChiroSurf nuits (optionnel) + 📊 Synthèse. Issue #7 : CSV + `_Vu` + MNHN dans la Synthèse. |
+| 8 | Graphes type ChiroSurf en bout de chaîne | **Livré** 0.7 : 🌊 ChiroSurf nuits (optionnel) + 📊 Synthèse. Issue #7 : CSV + `_Vu` + MNHN Synthèse et Activité. |
 | 9 | Filtre chiros (Activité, etc.) | **Livré** 0.7.0 |
 | 10 | Taxons observateur dans Activité | **Livré** 0.7.0 |
 
 Méthode MNHN 10 % / 75 % : **Synthèse et Activité** (P8, D13). Même moteur.
+
+### 0.2 Issue #7 vs v0.8 (ne pas relire le 1er message comme backlog)
+
+Le body du 31 août 2026 (crash ChiroSurf + `_Vu` hors ChiroTool) est **périmé**.
+La méthode 10 % / 75 % est dans les commentaires (2 sept, précisée 4 sept,
+graphe Nyclei). Statut à la **v0.8** (rebuild 2026-09-09) :
+
+| # | Demande | v0.8 |
+|---|---------|------|
+| 1 | ▶ ChiroSurf plante à l'ouverture | **Livré** 0.7.1 : CSV copié à côté des WAV (`Data_k/`) |
+| 2 | `_Vu` produit hors ChiroTool non reconnu | **Livré** 0.7.1 : `Nuit1_`, `Nuit_1_`, `Nuit_1-` ; harvest `Data_k/` → `chirosurf/` |
+| 3 | Barre d'actions : Synthèse / ChiroSurf hors cadre | **Livré** 0.7.2 : une ligne + glissement |
+| 4 | Case méthode 10 % / 75 % dans la Synthèse | **Livré** 0.8.0 (P8). Distinct de « Identifications validées seulement » |
+| 5 | Bandes = confiance Tadarida, pas le temps | **Livré** 0.8.0 (D13 / P8, graphe Nyclei) |
+| 6 | Même méthode dans l'onglet Activité | **Livré** 0.8.0 rebuild 2026-09-09 |
+
+« Identifications validées seulement » = lignes écoutées. Ce n'est pas la
+méthode MNHN.
 
 ---
 
@@ -425,7 +443,7 @@ toute la participation.
 | Ne plus jamais charger l’API carte | **Non** | Browse / pick create ont encore besoin de l’API ; FOCUS non |
 | Carte 100 % offline pour create point | **Non** | `resolve_carre` + create site = API |
 | Auto-organisation multi-contrats / sites d’étude dans un contrat | **Plus tard** | Demandé par Benjamin en exploration — hors v0.6 cœur |
-| Interprétation 10 % / 75 % dans la Synthèse | **Oui** | Issue #7 / P8. Bandes de confiance Tadarida (Benjamin 2026-09-04). |
+| Interprétation 10 % / 75 % (Synthèse et Activité) | **Oui** | Issue #7 / P8. Bandes de confiance Tadarida (Benjamin 2026-09-04). |
 
 ---
 
@@ -491,6 +509,7 @@ Le tutoriel **ne décrit pas** les features non livrées comme déjà disponible
 | 2026-09-08 | v0.8.0 | Upload HTTP 409 = déjà enregistré (skip + Tadarida). Repair : sonde les titres si listing 403. Win+D : `gui_windowing` restaure les modales (icône barre des tâches, grab). |
 | 2026-09-09 | issue #4 | TE×10 Rust : timestamp en fin de stem. WAV > 5 s découpé en entier. `Data_k` tronqué : plus d'upload. **D14** : pas plusieurs exe (Batch). §0.1 : bilan #4 vs v0.8 (ne plus relire le 1er message). |
 | 2026-09-09 | P8 Activité | Case MNHN 10 % / 75 % dans l'onglet Activité (`iter_mnhn_contacts`, même règle que la Synthèse). |
+| 2026-09-09 | issue #7 | §0.2 : bilan #7 vs v0.8 (ne plus relire le 1er message). MNHN Synthèse + Activité. |
 
 ---
 
@@ -498,7 +517,7 @@ Le tutoriel **ne décrit pas** les features non livrées comme déjà disponible
 
 - Issue #3 : méthode validation MNHN, multi-nuits, pièces CSV Benjamin.
 - Issue [#4](https://github.com/kevin-guille/ChiroTool/issues/4) : retours Thomas / Mickaël. Bilan v0.8 en §0.1. Ne pas traiter le 1er message comme une todo.
-- Issue [#7](https://github.com/kevin-guille/ChiroTool/issues/7) : liaison ChiroSurf (v0.7.1 / 0.7.2) ; interprétation 10 % / 75 % Synthèse (P8, bandes de confiance).
+- Issue [#7](https://github.com/kevin-guille/ChiroTool/issues/7) : liaison ChiroSurf (v0.7.1 / 0.7.2) ; interprétation 10 % / 75 % Synthèse et Activité (P8). Bilan v0.8 en §0.2. Ne pas traiter le 1er message comme une todo.
 - Échantillons : `samples/issue3_benjamin/` (multi + Nuit_1/2 + `_Vu`).
 - Forum Vigie-Chiro :
   - [t483 — analyser plusieurs nuits consécutives](https://vigie-chiro.forumactif.com/t483-chiro-surf-analyser-plusieurs-nuits-consecutives) (Yann T., Yves Bas, LouSauvajon)
