@@ -1,6 +1,14 @@
 # ChiroTool v0.8.0 : méthode MNHN 10 % / 75 % (Synthèse et Activité)
 
-Release courante. Répond à l'issue
+> **Pre-release GitHub** (2026-09-09) :
+> [v0.8.0](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.0).
+> SHA-256 de l'asset `ChiroTool.exe` vérifié :
+> `225FD7B1D96740724459A76DB46601FDBC26F667F9D988897023AA3E71964ED7`.
+> GitHub « Latest » reste [v0.7.2](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.7.2)
+> tant que la case pre-release est cochée. L'app lit la liste des releases
+> (pre-releases comprises).
+
+Release courante à tester. Répond à l'issue
 [#7](https://github.com/kevin-guille/ChiroTool/issues/7) : après un `_Vu`
 ChiroSurf, la Synthèse **et** l'onglet Activité reconstituent
 l'interprétation 10 % / 75 %. Issue

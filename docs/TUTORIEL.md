@@ -102,8 +102,8 @@ repartent vers le portail national en un clic.
 ChiroTool est un **logiciel portable** : pas d'installation, pas de droits
 administrateur requis.
 
-1. Récupérez le fichier **`ChiroTool.exe`** (≈ 34 Mo) auprès de votre référent ou
-   sur la page de téléchargement officielle.
+1. Récupérez le fichier **`ChiroTool.exe`** (≈ 36 Mo) auprès de votre référent ou
+   sur la [pre-release v0.8.0](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.0).
 2. Placez-le où vous voulez (Bureau, clé USB, disque dur externe…).
 3. Double-cliquez pour le lancer.
 

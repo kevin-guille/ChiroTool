@@ -1,6 +1,11 @@
 # ChiroTool v0.7.2 : nuit biologique + barre d'actions
 
-Release courante. Inclut le correctif ChiroSurf de la
+> **Remplacée par [v0.8.0](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.0)**
+> (pre-release, 2026-09-09). Pour Titley TE×10 et la méthode MNHN, tester
+> la 0.8.0. GitHub « Latest » reste cette 0.7.2 tant que la 0.8.0 est en
+> pre-release.
+
+Inclut le correctif ChiroSurf de la
 [#7](https://github.com/kevin-guille/ChiroTool/issues/7) (pre-release 0.7.1)
 plus les retours de test.
 

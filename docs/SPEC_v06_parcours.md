@@ -4,7 +4,7 @@
 |--|--|
 | **Statut** | **Livré** : v0.6.0 (2026-08-07, vagues A–C) + **v0.7.0** (2026-08-30, Synthèse autonome, Titley, issues #4–#6) + **v0.7.1** (2026-08-31, issue #7 ChiroSurf CSV+WAV) + **v0.7.2** (2026-09-01, D12 nuit bio + barre d'actions) + **v0.8.0** (2026-09-06, P8 MNHN 10 % / 75 % Synthèse ; 2026-09-09 Activité + Titley TE×10). |
 | **Ouvert** | Issues [#4](https://github.com/kevin-guille/ChiroTool/issues/4) et [#7](https://github.com/kevin-guille/ChiroTool/issues/7) close côté v0.8 (confirmation terrain), voir §0.1 et §0.2. Vague D (export compilé, fusion `_Vu` → xlsx) plus tard. |
-| **Date** | 2026-08-04 (conception) · 2026-08-07 (v0.6) · 2026-08-30 (v0.7) · 2026-09-03 (D13) · 2026-09-06 (P8) · 2026-09-08 (exe 0.8.0 : 409 + Win+D) · 2026-09-09 (Titley TE×10, issue #4 ; Activité MNHN + bilan #7, issue #7) |
+| **Date** | 2026-08-04 (conception) · 2026-08-07 (v0.6) · 2026-08-30 (v0.7) · 2026-09-03 (D13) · 2026-09-06 (P8) · 2026-09-08 (exe 0.8.0 : 409 + Win+D) · 2026-09-09 (Titley TE×10, Activité MNHN, pre-release GitHub [v0.8.0](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.0)) |
 | **Contexte** | Issue [#3](https://github.com/kevin-guille/ChiroTool/issues/3) (retours terrain) + retours carte / meta + issues [#4](https://github.com/kevin-guille/ChiroTool/issues/4) / [#7](https://github.com/kevin-guille/ChiroTool/issues/7) |
 | **Principe** | Pragmatisme — une vérité disque, peu de fichiers, parcours unifiés, libellés humains d’abord |
 
@@ -510,6 +510,7 @@ Le tutoriel **ne décrit pas** les features non livrées comme déjà disponible
 | 2026-09-09 | issue #4 | TE×10 Rust : timestamp en fin de stem. WAV > 5 s découpé en entier. `Data_k` tronqué : plus d'upload. **D14** : pas plusieurs exe (Batch). §0.1 : bilan #4 vs v0.8 (ne plus relire le 1er message). |
 | 2026-09-09 | P8 Activité | Case MNHN 10 % / 75 % dans l'onglet Activité (`iter_mnhn_contacts`, même règle que la Synthèse). |
 | 2026-09-09 | issue #7 | §0.2 : bilan #7 vs v0.8 (ne plus relire le 1er message). MNHN Synthèse + Activité. |
+| 2026-09-09 | v0.8.0 | Pre-release GitHub publiée (tag v0.8.0, SHA exe vérifié). Latest GitHub reste 0.7.2 tant que la case pre-release est cochée. |
 
 ---
 

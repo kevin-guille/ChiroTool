@@ -11,7 +11,10 @@ Issue [#7](https://github.com/kevin-guille/ChiroTool/issues/7) : interprétation
 MNHN 10 % / 75 % dans la Synthèse **et** l'onglet Activité (bandes de
 confiance Tadarida). Issue [#4](https://github.com/kevin-guille/ChiroTool/issues/4) :
 TE×10 Titley, tout le son. Exe reconstruit le 2026-09-08 et le 2026-09-09
-(version inchangée). Bilan issues : SPEC §0.1 (#4) et §0.2 (#7).
+(version inchangée). **Publiée** GitHub le 2026-09-09 en pre-release
+([v0.8.0](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.0),
+SHA-256 `225FD7B1D96740724459A76DB46601FDBC26F667F9D988897023AA3E71964ED7`).
+Bilan issues : SPEC §0.1 (#4) et §0.2 (#7).
 
 ### Ajouté
 
@@ -61,6 +64,13 @@ TE×10 Titley, tout le son. Exe reconstruit le 2026-09-08 et le 2026-09-09
   des fenêtres après Afficher le bureau.
 - Activité MNHN : totaux graphe = Synthèse (71 / 102). TE×10 Titley :
   3 dest distincts, Data_k tronqué refusé.
+
+### Documentation
+
+- Pre-release GitHub [v0.8.0](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.0)
+  (2026-09-09). Notes 0.7.1 / 0.7.2 : plus courantes. Liens de
+  téléchargement vers le tag (GitHub Latest reste 0.7.2 tant que 0.8.0
+  est pre-release).
 
 ## [0.7.2] — 2026-09-01
 

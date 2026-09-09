@@ -15,7 +15,7 @@ Outil libre pour le protocole **[Vigie-Chiro Point Fixe](https://www.vigienature
 [![Python](https://img.shields.io/badge/Python-3.11%2B-3776ab.svg)](https://www.python.org/)
 [![Windows](https://img.shields.io/badge/Windows-portable-0d419d.svg)](#installation)
 
-**[⬇ Télécharger l’exe](https://github.com/kevin-guille/ChiroTool/releases)** ·
+**[⬇ Télécharger l’exe](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.0)** ·
 **[📖 Tutoriel PDF](docs/ChiroTool-Tutoriel.pdf)** ·
 **[💬 Ouvrir une issue](https://github.com/kevin-guille/ChiroTool/issues)**
 
@@ -47,9 +47,10 @@ Idéal pour les **bureaux d’études**, **associations** et **observateurs** qu
 
 ## Nouveautés v0.8
 
-La **v0.8.0** (release courante) reconstitue la méthode MNHN 10 % / 75 %
-après un `_Vu` ChiroSurf, et conserve tout le son des WAV Titley de plus
-de 5 s.
+La **v0.8.0** (pre-release GitHub du 2026-09-09,
+[tag v0.8.0](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.0))
+reconstitue la méthode MNHN 10 % / 75 % après un `_Vu` ChiroSurf, et
+conserve tout le son des WAV Titley de plus de 5 s.
 
 | | Nouveauté | Bénéfice terrain |
 |---|-----------|------------------|
@@ -176,7 +177,7 @@ Les fichiers compressés Wildlife **`.wac`** (SM2, parfois SM3) et **`.w4v`** ne
 ### Option A — Exe portable (recommandé sur le terrain)
 
 1. Téléchargez **`ChiroTool.exe`** depuis la
-   [dernière release](https://github.com/kevin-guille/ChiroTool/releases).
+   [pre-release v0.8.0](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.0).
 2. Placez-le où vous voulez (clé USB, dossier campagne…).
 3. Double-cliquez pour lancer.
 
@@ -310,7 +311,7 @@ Tests : `pytest tests/` (également en [CI GitHub Actions](https://github.com/ke
 
 Vous avez une saison Point Fixe devant vous ? **ChiroTool est fait pour ça.**
 
-1. **[Téléchargez la v0.8](https://github.com/kevin-guille/ChiroTool/releases)** (exe ou sources)
+1. **[Téléchargez la v0.8.0](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.0)** (exe ou sources)
 2. Traitez une nuit test de bout en bout
 3. Envoyez un retour — bug, idée, besoin de formation —
    via une [**issue GitHub**](https://github.com/kevin-guille/ChiroTool/issues)
@@ -349,7 +350,7 @@ Distribué sous licence **[MIT](LICENSE)** — usage, modification et redistribu
 
 🦇 **Bon traitement, et bonnes chauves-souris !**
 
-[⬆ Télécharger](https://github.com/kevin-guille/ChiroTool/releases)
+[⬆ Télécharger](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.0)
 ·
 [📖 Tutoriel](docs/ChiroTool-Tutoriel.pdf)
 ·
