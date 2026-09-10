@@ -2,10 +2,10 @@
 
 | | |
 |--|--|
-| **Statut** | **Livré** : v0.6.0 (2026-08-07, vagues A–C) + **v0.7.0** (2026-08-30, Synthèse autonome, Titley, issues #4–#6) + **v0.7.1** (2026-08-31, issue #7 ChiroSurf CSV+WAV) + **v0.7.2** (2026-09-01, D12 nuit bio + barre d'actions) + **v0.8.0** (2026-09-06, P8 MNHN 10 % / 75 % Synthèse ; 2026-09-09 Activité + Titley TE×10) + **v0.8.1-dev** (2026-09-10, scan export Data_k-only + pastille TE après nettoyage). |
-| **Ouvert** | Issues [#4](https://github.com/kevin-guille/ChiroTool/issues/4) et [#7](https://github.com/kevin-guille/ChiroTool/issues/7) close côté v0.8 (confirmation terrain), voir §0.1 et §0.2. Vague D (export compilé, fusion `_Vu` → xlsx) plus tard. |
-| **Date** | 2026-08-04 (conception) · 2026-08-07 (v0.6) · 2026-08-30 (v0.7) · 2026-09-03 (D13) · 2026-09-06 (P8) · 2026-09-08 (exe 0.8.0 : 409 + Win+D) · 2026-09-09 (Titley TE×10, Activité MNHN, pre-release GitHub [v0.8.0](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.0)) · 2026-09-10 (0.8.1-dev : scan export Data_k-only + pastille TE après nettoyage) |
-| **Contexte** | Issue [#3](https://github.com/kevin-guille/ChiroTool/issues/3) (retours terrain) + retours carte / meta + issues [#4](https://github.com/kevin-guille/ChiroTool/issues/4) / [#7](https://github.com/kevin-guille/ChiroTool/issues/7) |
+| **Statut** | **Livré** : v0.6.0 (2026-08-07, vagues A–C) + **v0.7.0** (2026-08-30, Synthèse autonome, Titley, issues #4–#6) + **v0.7.1** (2026-08-31, issue #7 ChiroSurf CSV+WAV) + **v0.7.2** (2026-09-01, D12 nuit bio + barre d'actions) + **v0.8.0** (2026-09-06, P8 MNHN 10 % / 75 % Synthèse ; 2026-09-09 Activité + Titley TE×10) + **v0.8.1-dev** (2026-09-10, scan export Data_k-only + pastille TE + issue #8 participation Titley). |
+| **Ouvert** | Issues [#4](https://github.com/kevin-guille/ChiroTool/issues/4) et [#7](https://github.com/kevin-guille/ChiroTool/issues/7) close côté v0.8 (confirmation terrain), voir §0.1 et §0.2. Issue [#8](https://github.com/kevin-guille/ChiroTool/issues/8) livrée en 0.8.1-dev, voir §0.3. Vague D (export compilé, fusion `_Vu` → xlsx) plus tard. |
+| **Date** | 2026-08-04 (conception) · 2026-08-07 (v0.6) · 2026-08-30 (v0.7) · 2026-09-03 (D13) · 2026-09-06 (P8) · 2026-09-08 (exe 0.8.0 : 409 + Win+D) · 2026-09-09 (Titley TE×10, Activité MNHN, pre-release GitHub [v0.8.0](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.0)) · 2026-09-10 (0.8.1-dev : scan export Data_k-only + pastille TE + issue #8) |
+| **Contexte** | Issue [#3](https://github.com/kevin-guille/ChiroTool/issues/3) (retours terrain) + retours carte / meta + issues [#4](https://github.com/kevin-guille/ChiroTool/issues/4) / [#7](https://github.com/kevin-guille/ChiroTool/issues/7) / [#8](https://github.com/kevin-guille/ChiroTool/issues/8) |
 | **Principe** | Pragmatisme — une vérité disque, peu de fichiers, parcours unifiés, libellés humains d’abord |
 
 Ce document **prime** sur l’improvisation au codage. En cas de doute : revenir ici, ou amender le §8 avant de coder autre chose.
@@ -48,6 +48,20 @@ graphe Nyclei). Statut à la **v0.8** (rebuild 2026-09-09) :
 
 « Identifications validées seulement » = lignes écoutées. Ce n'est pas la
 méthode MNHN.
+
+### 0.3 Issue #8 vs 0.8.1-dev (participation Titley)
+
+Le body du 10 septembre 2026 (série / type / micro / horaires / T° du log
+Titley absents de la participation Vigie-Chiro) est **à traiter ici**, pas
+comme un reliquat du 1er message #4.
+
+| # | Demande | 0.8.1-dev |
+|---|---------|-----------|
+| 1 | N° de série, type, micro dans la participation | **Livré** : `detecteur_enregistreur_serie` toujours envoyé ; type / micro depuis Mes matériels ; type lu dans le log si le parc est vide. Pas de micro inventé. `Anabat Ranger` dans la liste. |
+| 2 | Heure début / fin d'enregistrement | **Livré** : `Recording start` / `Recording stop` du `log_*.csv` (sinon Summary / WAV). |
+| 3 | T° du log Titley | **Livré** (fenêtre d'enregistrement, pas les 38 °C de journée). T° saisies à la main, si différentes, ne sont plus écrasées. POST à la création, PATCH si la participation existe déjà. |
+
+Le CSV log doit être **dans le dossier de session** (ou `Data/`), comme un Summary SM4.
 
 ---
 

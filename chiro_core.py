@@ -9,10 +9,11 @@ Zéro dépendance hors stdlib (on utilisera openpyxl ailleurs uniquement pour le
 
 from __future__ import annotations
 
+import csv
 import re
 import wave
 from dataclasses import dataclass, field, asdict
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 
@@ -204,6 +205,310 @@ class SummaryInfo:
         if self.temp_start is not None and self.temp_end is not None:
             return f"{self.temp_start:.0f}-{self.temp_end:.0f}"
         return ""
+
+
+@dataclass
+class TitleyLogInfo:
+    path: Path
+    device_model: str | None = None
+    device_id: str | None = None
+    rec_start: datetime | None = None
+    rec_stop: datetime | None = None
+    night_start_hm: str | None = None
+    night_end_hm: str | None = None
+    temp_start: float | None = None
+    temp_end: float | None = None
+    n_files: int = 0
+    samples: list[tuple[datetime, float | None]] = field(default_factory=list)
+
+    @property
+    def start_dt(self) -> datetime | None:
+        return self.rec_start
+
+    @property
+    def end_dt(self) -> datetime | None:
+        return self.rec_stop
+
+
+def parse_titley_log(path: Path) -> TitleyLogInfo | None:
+    """Lit un log Titley Insight (heures locales, dernière fenêtre d'enregistrement)."""
+    path = Path(path)
+    try:
+        with path.open(encoding="utf-8-sig", errors="replace", newline="") as stream:
+            rows = list(csv.reader(stream))
+    except OSError:
+        return None
+    info = TitleyLogInfo(path)
+    day = None
+    # Le firmware peut émettre Recording start juste avant la première DATE.
+    for row in rows:
+        if len(row) >= 3 and row[1].strip() == "DATE":
+            try:
+                day = datetime.strptime(row[2].strip(), "%Y-%m-%d").date()
+                break
+            except ValueError:
+                pass
+    previous = None
+    power_on = None
+    schedule = None
+    active = None
+    pairs = []
+    schedules = []
+    temperatures = []
+    files = []
+    totals = []
+    recognized = False
+    for row in rows:
+        if len(row) < 3:
+            continue
+        clock, event, value = (part.strip() for part in row[:3])
+        if event == "DATE":
+            try:
+                day = datetime.strptime(value, "%Y-%m-%d").date()
+                previous = None
+            except ValueError:
+                continue
+        if event == "TIME":
+            clock = value.split()[0] if value else clock
+        try:
+            time = datetime.strptime(clock, "%H:%M:%S").time()
+        except ValueError:
+            time = None
+        dt = None
+        if day is not None and time is not None:
+            seconds = time.hour * 3600 + time.minute * 60 + time.second
+            if previous is not None and previous - seconds > 12 * 3600:
+                day += timedelta(days=1)
+            previous = seconds
+            dt = datetime.combine(day, time)
+        if event == "POWER" and value == "on":
+            power_on = dt
+            schedule = None
+        if event == "INFO":
+            if value in ("Anabat Swift", "Anabat Ranger", "Anabat Scout"):
+                info.device_model = value
+                recognized = True
+            if value.startswith("Device ID "):
+                info.device_id = value[len("Device ID "):].strip()
+            match = re.fullmatch(r"night mode start (\d{1,2}:\d{2}) end (\d{1,2}:\d{2})", value)
+            if match and dt is not None:
+                try:
+                    start_time, end_time = [datetime.strptime(hm, "%H:%M").time() for hm in match.groups()]
+                except ValueError:
+                    continue
+                start = datetime.combine(dt.date(), start_time)
+                end = datetime.combine(dt.date(), end_time)
+                if end <= start:
+                    end += timedelta(days=1)
+                    if dt.time() < end_time:
+                        start -= timedelta(days=1)
+                        end -= timedelta(days=1)
+                candidate = (start, end, match.groups(), power_on)
+                # Un night mode lu au stop décrit la nuit suivante, pas celle-ci.
+                if schedule is None:
+                    schedule = candidate
+                    schedules.append(candidate)
+                recognized = True
+            if value == "Recording start" and dt is not None:
+                active = (dt, schedule, power_on)
+                recognized = True
+            elif value == "Recording stop" and dt is not None and active:
+                if dt >= active[0]:
+                    pairs.append((active[0], dt, active[1], active[2]))
+                active = None
+        if event == "TEMP" and dt is not None:
+            try:
+                temperatures.append((dt, float(value)))
+            except ValueError:
+                pass
+        if event == "FILE" and dt is not None:
+            files.append(dt)
+        if event == "SUMM" and dt is not None:
+            match = re.fullmatch(r"Recorded (\d+) files", value)
+            if match:
+                totals.append((dt, int(match[1])))
+    if not recognized:
+        return None
+    chosen_schedule = None
+    if pairs:
+        info.rec_start, info.rec_stop, chosen_schedule, power_on = pairs[-1]
+    elif schedules:
+        useful = [s for s in schedules if any(s[0] <= dt <= s[1] for dt in files)]
+        chosen_schedule = max(useful, key=lambda s: s[1] - s[0]) if useful else schedules[-1]
+        info.rec_start, info.rec_stop, _, power_on = chosen_schedule
+    if chosen_schedule:
+        info.night_start_hm, info.night_end_hm = chosen_schedule[2]
+    if info.rec_start is not None and info.rec_stop is not None:
+        lower = info.rec_start
+        if power_on is not None and power_on.replace(second=0, microsecond=0) == lower.replace(second=0, microsecond=0):
+            lower = power_on
+        info.samples = [(dt, t) for dt, t in temperatures if lower <= dt <= info.rec_stop]
+        if info.samples:
+            info.temp_start = info.samples[0][1]
+            info.temp_end = info.samples[-1][1]
+        info.n_files = sum(info.rec_start <= dt <= info.rec_stop for dt in files)
+        for dt, total in totals:
+            if dt == info.rec_stop:
+                info.n_files = total
+    return info
+
+
+def find_titley_log(folder: Path) -> Path | None:
+    """Trouve un log Titley validé à la racine de session ou dans Data/."""
+    folder = Path(folder)
+    roots = [folder, folder / "Data"]
+    if folder.name.lower().startswith("data"):
+        roots.extend([folder.parent, folder.parent / "Data"])
+    for root in dict.fromkeys(roots):
+        if not root.is_dir():
+            continue
+        for path in sorted(root.iterdir()):
+            if path.is_file() and path.name.lower().startswith("log") and path.suffix.lower() == ".csv":
+                if parse_titley_log(path) is not None:
+                    return path
+    return None
+
+
+def build_participation_configuration(detecteur, n_serie=None, mic0=None,
+                                      mic0_h=None, mic1=None, mic1_h=None) -> dict:
+    """Champs configuration API, sans importer la GUI."""
+    configuration = {"detecteur_enregistreur_type": detecteur}
+    if n_serie:
+        configuration["detecteur_enregistreur_serie"] = n_serie
+    for index, model, height in ((0, mic0, mic0_h), (1, mic1, mic1_h)):
+        if model:
+            configuration[f"micro{index}_modele"] = model
+        if height is not None:
+            configuration[f"micro{index}_hauteur"] = str(height)
+    return configuration
+
+
+def temperatures_are_user_set(auto_debut, auto_fin, user_debut, user_fin) -> bool:
+    """True si les T° saisies s'écartent du préremplissage auto (Summary / log)."""
+    return user_debut != auto_debut or user_fin != auto_fin
+
+
+def _as_int_temp(value):
+    if value is None or value is False:
+        return None
+    try:
+        return int(round(float(value)))
+    except (TypeError, ValueError):
+        return None
+
+
+def _as_dt(value):
+    if value is None or isinstance(value, datetime):
+        return value
+    if isinstance(value, str):
+        try:
+            return datetime.fromisoformat(value)
+        except ValueError:
+            return None
+    return None
+
+
+def overlay_participation_cache(
+    pre: dict,
+    cached: dict | None,
+    *,
+    wav_day: str | None = None,
+) -> dict:
+    """Applique le cache wizard. Les T° forcées par l'utilisateur gagnent.
+
+    Les horaires Titley / WAV restent prioritaires sur d'anciennes dates
+    de cache (sauf T° marquées ``temperature_user_set``).
+    """
+    if not isinstance(cached, dict):
+        return pre
+    for k, v in cached.items():
+        if k in ("_auto_temperature_debut", "_auto_temperature_fin"):
+            continue
+        if k in ("temperature_debut", "temperature_fin"):
+            if cached.get("temperature_user_set"):
+                if v is None:
+                    pre.pop(k, None)
+                else:
+                    parsed = _as_int_temp(v)
+                    if parsed is not None:
+                        pre[k] = parsed
+            continue
+        if k == "temperature_user_set":
+            pre[k] = bool(v)
+            continue
+        if v is None:
+            continue
+        if pre.get("_dates_from_titley") and k in ("date_debut", "date_fin"):
+            continue
+        if k in ("date_debut", "date_fin") and isinstance(v, str):
+            parsed_dt = _as_dt(v)
+            if parsed_dt is None:
+                continue
+            v = parsed_dt
+        if k in ("date_debut", "date_fin") and wav_day:
+            try:
+                cached_day = v.date().isoformat() if hasattr(v, "date") else str(v)[:10]
+            except Exception:
+                cached_day = None
+            if cached_day and cached_day != wav_day:
+                continue
+        pre[k] = v
+    return pre
+
+
+def coerce_participation_payload(raw: dict | None) -> dict:
+    """Normalise wizard imbriqué ou cache manifest plat vers le contrat API.
+
+    Sortie : ``date_debut`` / ``date_fin`` en datetime, ``meteo`` et
+    ``configuration`` imbriqués (ou None).
+    """
+    if not isinstance(raw, dict) or not raw:
+        return {}
+    out = dict(raw)
+    for k in ("date_debut", "date_fin"):
+        out[k] = _as_dt(out.get(k))
+    meteo = out.get("meteo")
+    if not isinstance(meteo, dict):
+        meteo = {}
+        for k in ("temperature_debut", "temperature_fin"):
+            t = _as_int_temp(out.get(k))
+            if t is not None:
+                meteo[k] = t
+        for k in ("vent", "couverture"):
+            if out.get(k):
+                meteo[k] = out[k]
+        out["meteo"] = meteo or None
+    else:
+        clean = dict(meteo)
+        for k in ("temperature_debut", "temperature_fin"):
+            if k not in clean:
+                continue
+            t = _as_int_temp(clean.get(k))
+            if t is None:
+                clean.pop(k, None)
+            else:
+                clean[k] = t
+        out["meteo"] = clean or None
+    config = out.get("configuration")
+    if not isinstance(config, dict):
+        det = out.get("detecteur_enregistreur_type")
+        if det:
+            out["configuration"] = build_participation_configuration(
+                det,
+                out.get("detecteur_enregistreur_serie"),
+                out.get("micro0_modele") or None,
+                out.get("micro0_hauteur"),
+                out.get("micro1_modele") or None,
+                out.get("micro1_hauteur"),
+            )
+        else:
+            out["configuration"] = None
+    elif out.get("detecteur_enregistreur_serie") and not config.get(
+            "detecteur_enregistreur_serie"):
+        config = dict(config)
+        config["detecteur_enregistreur_serie"] = out["detecteur_enregistreur_serie"]
+        out["configuration"] = config
+    return out
 
 
 def _parse_summary_dt(date_s: str, time_s: str) -> datetime | None:

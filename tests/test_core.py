@@ -4229,6 +4229,207 @@ class TestSynthesisMinProba:
         assert res["total_contacts"] == 2
 
 
+class TestTitleyLog:
+    def test_real_log(self):
+        from chiro_core import parse_titley_log
+        path = Path(__file__).resolve().parents[1] / "samples/issue4_mickael/log_2026-08-21.csv"
+        info = parse_titley_log(path)
+        assert info.device_model == "Anabat Swift"
+        assert info.device_id == "669178"
+        assert info.start_dt == datetime(2026, 8, 21, 20, 39, 5)
+        assert info.end_dt == datetime(2026, 8, 22, 7, 41, 32)
+        assert (info.temp_start, info.temp_end) == (19.0, 12.5)
+        assert (info.night_start_hm, info.night_end_hm) == ("20:39", "7:41")
+        assert info.n_files == 238
+
+    def test_midnight_and_last_pair(self, tmp_path):
+        from chiro_core import parse_titley_log
+        path = tmp_path / "log.csv"
+        path.write_text(
+            ",INFO,Power on reset\n"
+            "18:00:00,DATE,2026-08-21\n"
+            "18:00:00,TIME,18:00:00 +2:00\n"
+            "18:00:00,INFO,Anabat Ranger\n"
+            "18:00:00,INFO,Recording start\n"
+            "18:01:00,INFO,Recording stop\n"
+            "20:00:00,TEMP,39\n"
+            "23:59:00,POWER,on\n"
+            "23:59:00,TEMP,19\n"
+            "23:59:05,INFO,Recording start\n"
+            "0:01:00,TEMP,12.5\n"
+            "0:02:00,INFO,Recording stop\n"
+            "11:00:00,TEMP,38\n", encoding="utf-8")
+        info = parse_titley_log(path)
+        assert info.start_dt == datetime(2026, 8, 21, 23, 59, 5)
+        assert info.end_dt == datetime(2026, 8, 22, 0, 2)
+        assert (info.temp_start, info.temp_end) == (19, 12.5)
+
+    def test_schedule_fallback_and_discovery(self, tmp_path):
+        from chiro_core import parse_titley_log, find_titley_log
+        fake = tmp_path / "log_observations.csv"
+        fake.write_text("time,EVENT,value\n12:00:00,TEMP,38\n", encoding="utf-8")
+        assert parse_titley_log(fake) is None
+        assert find_titley_log(tmp_path) is None
+        data = tmp_path / "Data"
+        data.mkdir()
+        path = data / "log_2026-08-21.CSV"
+        path.write_text(
+            "20:39:00,DATE,2026-08-21\n"
+            "20:39:00,POWER,on\n"
+            "20:39:00,INFO,Anabat Scout\n"
+            "20:39:00,INFO,night mode start 20:39 end 7:41\n"
+            "20:39:00,TEMP,19\n"
+            "23:00:00,FILE,test.wav\n"
+            "7:40:00,TEMP,12.5\n"
+            "11:41:00,POWER,on\n"
+            "11:41:00,TEMP,38\n"
+            "11:41:00,INFO,night mode start 20:37 end 7:43\n", encoding="utf-8")
+        info = parse_titley_log(path)
+        assert info.start_dt == datetime(2026, 8, 21, 20, 39)
+        assert info.end_dt == datetime(2026, 8, 22, 7, 41)
+        assert (info.temp_start, info.temp_end) == (19, 12.5)
+        assert find_titley_log(tmp_path) == path
+        processed = tmp_path / "Data_k"
+        processed.mkdir()
+        assert find_titley_log(processed) == path
+
+    def test_configuration_serial_without_gui(self):
+        from chiro_core import build_participation_configuration
+        result = build_participation_configuration("Anabat Swift", "669153")
+        assert result == {"detecteur_enregistreur_type": "Anabat Swift",
+                          "detecteur_enregistreur_serie": "669153"}
+        assert "detecteur_enregistreur_serie" not in build_participation_configuration("Anabat Ranger")
+        result = build_participation_configuration("Anabat Swift", "669153", "Autre", 0, "Autre", 2)
+        assert result["micro0_hauteur"] == "0"
+        assert result["micro1_modele"] == "Autre"
+        assert result["micro1_hauteur"] == "2"
+
+    def test_user_temps_not_overwritten_by_summary(self):
+        from chiro_core import (
+            overlay_participation_cache, temperatures_are_user_set,
+            coerce_participation_payload,
+        )
+        assert temperatures_are_user_set(19, 12, 16, 10) is True
+        assert temperatures_are_user_set(19, 12, 19, 12) is False
+        assert temperatures_are_user_set(19, 12, None, 12) is True
+        pre = {
+            "_dates_from_titley": True,
+            "date_debut": datetime(2026, 8, 21, 20, 39, 5),
+            "date_fin": datetime(2026, 8, 22, 7, 41, 32),
+            "temperature_debut": 19,
+            "temperature_fin": 12,
+        }
+        overlay_participation_cache(pre, {
+            "date_debut": "2026-08-20T19:00:00",
+            "temperature_debut": 16,
+            "temperature_fin": 10,
+            "temperature_user_set": True,
+        })
+        assert pre["temperature_debut"] == 16
+        assert pre["temperature_fin"] == 10
+        assert pre["date_debut"] == datetime(2026, 8, 21, 20, 39, 5)
+        pre2 = {"temperature_debut": 19, "temperature_fin": 12,
+                "_dates_from_titley": True}
+        overlay_participation_cache(pre2, {
+            "temperature_fin": 38, "temperature_user_set": False,
+        })
+        assert pre2["temperature_fin"] == 12
+        payload = coerce_participation_payload({
+            "date_debut": "2026-08-21T20:39:05",
+            "date_fin": "2026-08-22T07:41:32",
+            "temperature_debut": 16,
+            "temperature_fin": 10,
+            "detecteur_enregistreur_type": "Anabat Swift",
+            "detecteur_enregistreur_serie": "669153",
+            "micro0_modele": "Anabat",
+            "micro0_hauteur": "2",
+        })
+        assert payload["meteo"] == {"temperature_debut": 16, "temperature_fin": 10}
+        assert payload["configuration"]["detecteur_enregistreur_serie"] == "669153"
+        assert payload["configuration"]["micro0_modele"] == "Anabat"
+        nested = coerce_participation_payload({
+            "date_debut": datetime(2026, 8, 21, 20, 39, 5),
+            "meteo": {"temperature_debut": 16, "temperature_fin": 10},
+            "configuration": {"detecteur_enregistreur_type": "Anabat Swift",
+                              "detecteur_enregistreur_serie": "669153"},
+        })
+        assert nested["meteo"]["temperature_debut"] == 16
+        assert nested["configuration"]["detecteur_enregistreur_serie"] == "669153"
+
+    def test_resolve_upload_payload_uses_manifest(self):
+        from pipeline import _resolve_upload_payload
+        pp = _resolve_upload_payload(None, {
+            "participation_payload": {
+                "temperature_debut": 16,
+                "temperature_fin": 10,
+                "detecteur_enregistreur_type": "Anabat Swift",
+                "detecteur_enregistreur_serie": "669153",
+            }
+        })
+        assert pp["meteo"]["temperature_debut"] == 16
+        assert pp["configuration"]["detecteur_enregistreur_serie"] == "669153"
+        live = _resolve_upload_payload({
+            "meteo": {"temperature_debut": 18, "temperature_fin": 11},
+            "configuration": {"detecteur_enregistreur_type": "Anabat Ranger"},
+            "date_debut": datetime(2026, 8, 21, 20, 0),
+        }, {"participation_payload": {"temperature_debut": 1}})
+        assert live["meteo"]["temperature_debut"] == 18
+
+    def test_prefill_titley_over_summary_and_cached_dates(self, tmp_path):
+        import ast
+        import shutil
+        import types
+        from unittest.mock import patch
+        import chiro_core
+        source = Path(__file__).resolve().parents[1]
+        shutil.copyfile(source / "samples/issue4_mickael/log_2026-08-21.csv",
+                        tmp_path / "log_2026-08-21.csv")
+        assert chiro_core.find_titley_log(tmp_path) == tmp_path / "log_2026-08-21.csv"
+        # Execute only the prefill method, without importing customtkinter.
+        tree = ast.parse((source / "gui_participation_wizard.py").read_text(encoding="utf-8"))
+        wizard = next(n for n in tree.body if isinstance(n, ast.ClassDef) and n.name == "ParticipationWizard")
+        method = next(n for n in wizard.body if isinstance(n, ast.FunctionDef) and n.name == "_collect_prefill")
+        from vigiechiro_enums import DETECTEUR_ENREGISTREUR_TYPES
+        namespace = {name: getattr(chiro_core, name) for name in (
+            "find_titley_log", "parse_titley_log", "should_prefer_wav_dates",
+            "summary_temps_in_window", "overlay_participation_cache")}
+        namespace.update(
+            find_summary_file=lambda folder: folder / "Summary.txt",
+            parse_summary_txt=lambda path: chiro_core.SummaryInfo(
+                path, start_dt=datetime(2026, 8, 20, 19), end_dt=datetime(2026, 8, 21, 7),
+                temp_start=38, temp_end=37),
+            wav_timestamp_range=lambda names: (datetime(2026, 8, 21, 21), datetime(2026, 8, 22, 7)),
+            DETECTEUR_ENREGISTREUR_TYPES=DETECTEUR_ENREGISTREUR_TYPES,
+            Manifest=types.SimpleNamespace(load=lambda path: types.SimpleNamespace(meta={
+                "participation_payload": {
+                    "date_debut": "2026-08-20T19:00:00",
+                    "temperature_fin": 16,
+                    "temperature_user_set": True,
+                }})))
+        exec(compile(ast.Module(body=[method], type_ignores=[]), "prefill", "exec"), namespace)
+        obj = types.SimpleNamespace(session_path=tmp_path,
+                                    meta=types.SimpleNamespace(n_enregistreur=1),
+                                    _session_wav_names=lambda: [])
+        material = types.SimpleNamespace(is_empty=lambda: False, modele="", micro_modele="",
+                                         hauteur_m=None, stereo=False)
+        stub = types.ModuleType("materiels")
+        stub.load_materiels = lambda: []
+        stub.find_by_id = lambda *args: material
+        with patch.dict("sys.modules", {"materiels": stub}):
+            pre = namespace["_collect_prefill"](obj)
+            assert pre["date_debut"] == datetime(2026, 8, 21, 20, 39, 5)
+            assert pre["date_fin"] == datetime(2026, 8, 22, 7, 41, 32)
+            assert pre["temperature_fin"] == 16
+            assert pre["detecteur_enregistreur_type"] == "Anabat Swift"
+            assert "micro0_modele" not in pre
+            assert not pre.get("_dates_from_wav")
+            material.modele = "SM4BAT FS"
+            material.micro_modele = "SM4 BAT FS"
+            pre = namespace["_collect_prefill"](obj)
+            assert pre["detecteur_enregistreur_type"] == "SM4BAT FS"
+            assert pre["micro0_modele"] == "SM4 BAT FS"
+
+
 if __name__ == "__main__":
     # Permet de lancer directement : python tests/test_core.py
     import sys

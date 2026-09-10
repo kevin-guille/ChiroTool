@@ -64,6 +64,7 @@ DETECTEUR_ENREGISTREUR_TYPES = [
     "Batlogger M",
     "Batlogger C",
     "Anabat Swift",
+    "Anabat Ranger",
     "Anabat Scout",
     "Peersonic RPA3",
     "Autre",

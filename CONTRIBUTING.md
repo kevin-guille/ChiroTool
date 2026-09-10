@@ -25,9 +25,11 @@ décrivant :
 
 **Ne pas** traiter le 1er message des issues
 [#4](https://github.com/kevin-guille/ChiroTool/issues/4) (SPEC
-[`§0.1`](docs/SPEC_v06_parcours.md)) et
+[`§0.1`](docs/SPEC_v06_parcours.md)),
 [#7](https://github.com/kevin-guille/ChiroTool/issues/7) (SPEC
-[`§0.2`](docs/SPEC_v06_parcours.md)) comme une todo.
+[`§0.2`](docs/SPEC_v06_parcours.md)) et
+[#8](https://github.com/kevin-guille/ChiroTool/issues/8) (SPEC
+[`§0.3`](docs/SPEC_v06_parcours.md), livrée 0.8.1-dev) comme une todo.
 En particulier : **pas plusieurs exe** (mode Batch, D14) ; **Valider puis
 Nettoyer** déjà en 0.7 ; **MNHN 10 % / 75 %** dans la **Synthèse et Activité**
 (v0.8, P8) ; ChiroSurf / `_Vu` déjà en 0.7.1.

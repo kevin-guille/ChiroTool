@@ -115,6 +115,31 @@ def _to_rfc1123(dt: datetime) -> str:
     )
 
 
+def _validated_meteo(meteo: dict) -> dict:
+    """Enums vent/couverture + T° entières, avant POST/PATCH participation."""
+    try:
+        from vigiechiro_enums import vent_options, couverture_options
+        vent_ok = set(vent_options())
+        cov_ok = set(couverture_options())
+    except Exception:
+        vent_ok, cov_ok = set(), set()
+    if "vent" in meteo and vent_ok and meteo["vent"] not in vent_ok:
+        raise ValueError(
+            f"meteo.vent invalide : {meteo['vent']!r}. "
+            f"Attendu : {sorted(vent_ok)}")
+    if "couverture" in meteo and cov_ok and meteo["couverture"] not in cov_ok:
+        raise ValueError(
+            f"meteo.couverture invalide : {meteo['couverture']!r}. "
+            f"Attendu : {sorted(cov_ok)}")
+    for k in ("temperature_debut", "temperature_fin"):
+        if k in meteo and meteo[k] is not None:
+            if not isinstance(meteo[k], int):
+                raise TypeError(
+                    f"meteo.{k} doit être un entier (reçu "
+                    f"{type(meteo[k]).__name__} : {meteo[k]!r})")
+    return meteo
+
+
 class NotFoundError(ApiError):
     """Ressource introuvable (HTTP 404)."""
 
@@ -1408,34 +1433,42 @@ class VigieChiroClient:
             "point": point,
         }
         if meteo:
-            # Validation côté client des enums stricts (évite 422 obscurs
-            # de l'API Eve si le wizard GUI envoie une valeur minuscule, etc.)
-            try:
-                from vigiechiro_enums import vent_options, couverture_options
-                vent_ok = set(vent_options())
-                cov_ok = set(couverture_options())
-            except Exception:
-                vent_ok, cov_ok = set(), set()
-            if "vent" in meteo and vent_ok and meteo["vent"] not in vent_ok:
-                raise ValueError(
-                    f"meteo.vent invalide : {meteo['vent']!r}. "
-                    f"Attendu : {sorted(vent_ok)}")
-            if "couverture" in meteo and cov_ok and meteo["couverture"] not in cov_ok:
-                raise ValueError(
-                    f"meteo.couverture invalide : {meteo['couverture']!r}. "
-                    f"Attendu : {sorted(cov_ok)}")
-            for k in ("temperature_debut", "temperature_fin"):
-                if k in meteo and meteo[k] is not None:
-                    if not isinstance(meteo[k], int):
-                        raise TypeError(
-                            f"meteo.{k} doit être un entier (reçu "
-                            f"{type(meteo[k]).__name__} : {meteo[k]!r})")
-            payload["meteo"] = meteo
+            payload["meteo"] = _validated_meteo(meteo)
         if configuration:
             payload["configuration"] = configuration
         if commentaire:
             payload["commentaire"] = commentaire
         return self._request("POST", f"/sites/{site_id}/participations", json=payload)
+
+    def edit_participation(
+        self,
+        participation_id: str,
+        *,
+        date_debut: datetime | None = None,
+        date_fin: datetime | None = None,
+        point: str | None = None,
+        meteo: dict | None = None,
+        configuration: dict | None = None,
+        commentaire: str | None = None,
+    ) -> dict:
+        """PATCH /participations/<id> : meteo, matériel, dates déjà saisis."""
+        payload: dict[str, Any] = {}
+        if date_debut is not None:
+            payload["date_debut"] = _to_rfc1123(date_debut)
+        if date_fin is not None:
+            payload["date_fin"] = _to_rfc1123(date_fin)
+        if point:
+            payload["point"] = point
+        if meteo:
+            payload["meteo"] = _validated_meteo(meteo)
+        if configuration:
+            payload["configuration"] = configuration
+        if commentaire is not None:
+            payload["commentaire"] = commentaire
+        if not payload:
+            return {}
+        return self._request(
+            "PATCH", f"/participations/{participation_id}", json=payload)
 
     def upload_wav(
         self,

@@ -11,9 +11,10 @@ Ouvert avant l'upload API pour collecter :
   - commentaire libre
 
 Pré-remplissage :
-  1. Summary.txt (T°) ; dates WAV si le Summary couvre plusieurs jours (Jeanne)
-  2. Ligne du Suivi correspondante (modèle enregistreur / micro via Feuil2)
-  3. Manifest existant (si l'utilisateur avait déjà saisi ; dates périmées ignorées)
+  1. Log Titley (horaires Recording start/stop, T°) s'il est dans la session
+  2. sinon Summary.txt (T°) ; dates WAV si le Summary couvre plusieurs jours
+  3. Parc matériel / Feuil2 (modèle enregistreur / micro)
+  4. Manifest existant (dates périmées ignorées)
 
 Retour : ``payload`` compatible ``VigieChiroClient.create_participation``.
 """
@@ -26,11 +27,17 @@ from pathlib import Path
 import customtkinter as ctk
 
 from chiro_core import (
+    _find_raw_wav_subdir,
+    build_participation_configuration,
     find_summary_file,
+    find_titley_log,
     list_session_wav_names,
+    overlay_participation_cache,
     parse_summary_txt,
+    parse_titley_log,
     should_prefer_wav_dates,
     summary_temps_in_window,
+    temperatures_are_user_set,
 )
 from manifest import Manifest
 from naming import SessionMeta, wav_timestamp_range
@@ -82,7 +89,7 @@ class ParticipationWizard(ctk.CTkToplevel):
         return list_session_wav_names(self.session_path)
 
     def _collect_prefill(self) -> dict:
-        """Agrège les valeurs pré-remplies depuis Summary.txt + Suivi + manifest."""
+        """Agrège les valeurs pré-remplies depuis log Titley, Summary, parc, manifest."""
         pre: dict = {}
 
         # 1. Summary.txt → températures ; dates WAV si le Summary n'est pas
@@ -120,6 +127,23 @@ class ParticipationWizard(ctk.CTkToplevel):
             else:
                 pre.pop("temperature_fin", None)
 
+        log_path = find_titley_log(self.session_path)
+        if log_path is None:
+            sub = _find_raw_wav_subdir(self.session_path)
+            if sub is not None:
+                log_path = find_titley_log(sub)
+        titley = parse_titley_log(log_path) if log_path else None
+        if titley and titley.start_dt and titley.end_dt:
+            pre["date_debut"] = titley.start_dt
+            pre["date_fin"] = titley.end_dt
+            pre.pop("_dates_from_wav", None)
+            pre["_dates_from_titley"] = True
+            for key, value in (("temperature_debut", titley.temp_start),
+                               ("temperature_fin", titley.temp_end)):
+                pre.pop(key, None)
+                if value is not None:
+                    pre[key] = int(round(value))
+
         # 2. Parc matériel local (Préférences → Mes matériels) PRIORITAIRE.
         # C'est la source canonique : modèle + micro à jour, pas dépendant
         # d'un Suivi Excel qui peut être obsolète ou inaccessible.
@@ -142,6 +166,10 @@ class ParticipationWizard(ctk.CTkToplevel):
         except Exception:
             pass
 
+        if (titley and titley.device_model in DETECTEUR_ENREGISTREUR_TYPES
+                and not pre.get("detecteur_enregistreur_type")):
+            pre["detecteur_enregistreur_type"] = titley.device_model
+
         # 2bis. Fallback Feuil2 Suivi Excel si pas trouvé dans Mes matériels.
         if not used_materiels:
             try:
@@ -152,7 +180,7 @@ class ParticipationWizard(ctk.CTkToplevel):
                     suivi = Suivi(path)
                     e = suivi.enregistreur(self.meta.n_enregistreur)
                     if e:
-                        if e.modele:
+                        if e.modele and not pre.get("detecteur_enregistreur_type"):
                             pre["detecteur_enregistreur_type"] = e.modele
                         # Heuristique : modèle micro depuis le numéro série micro
                         if e.serie_micro:
@@ -162,35 +190,22 @@ class ParticipationWizard(ctk.CTkToplevel):
             except Exception:
                 pass
 
+        # T° auto (Summary / Titley) mémorisées AVANT le cache, pour détecter
+        # une saisie manuelle différente et ne plus l'écraser à la réouverture.
+        pre["_auto_temperature_debut"] = pre.get("temperature_debut")
+        pre["_auto_temperature_fin"] = pre.get("temperature_fin")
+
         # 3. Manifest existant (si l'utilisateur avait déjà saisi).
         # IMPORTANT : le manifest stocke `date_debut`/`date_fin` en strings
-        # ISO (JSON ne supporte pas datetime). On les reparse en datetime ici
-        # sinon `_fill_defaults` tombe en AttributeError silencieux quand il
-        # fait `dt.hour` → wizard apparaît vide (bug rapporté par testeur).
+        # ISO (JSON ne supporte pas datetime). overlay_participation_cache
+        # les reparse, sinon `_fill_defaults` tombe en AttributeError.
         m = Manifest.load(self.session_path)
         if m and m.meta:
             part_cached = m.meta.get("participation_payload") or {}
-            if isinstance(part_cached, dict):
-                from datetime import datetime as _dt
-                wav_day = None
-                if pre.get("_dates_from_wav") and wav_min is not None:
-                    wav_day = wav_min.date().isoformat()
-                for k, v in part_cached.items():
-                    if v is None:
-                        continue
-                    if k in ("date_debut", "date_fin") and isinstance(v, str):
-                        try:
-                            v = _dt.fromisoformat(v)
-                        except ValueError:
-                            continue
-                    if k in ("date_debut", "date_fin") and wav_day:
-                        try:
-                            cached_day = v.date().isoformat() if hasattr(v, "date") else str(v)[:10]
-                        except Exception:
-                            cached_day = None
-                        if cached_day and cached_day != wav_day:
-                            continue  # dates Summary périmées, on garde les WAV
-                    pre[k] = v
+            wav_day = None
+            if pre.get("_dates_from_wav") and wav_min is not None:
+                wav_day = wav_min.date().isoformat()
+            overlay_participation_cache(pre, part_cached, wav_day=wav_day)
 
         return pre
 
@@ -273,9 +288,9 @@ class ParticipationWizard(ctk.CTkToplevel):
         row = self._section(form, row, "Conditions météo (optionnel)")
         ctk.CTkLabel(
             form,
-            text=("T° préremplies depuis le Summary.txt si présent. "
+            text=("T° / horaires lus dans le log Titley si présent, sinon dans le Summary.txt. "
                   "Vent / couverture = observation terrain, non mesurées "
-                  "par le boîtier — complétables plus tard sur le portail."),
+                  "par le boîtier, complétables plus tard sur le portail."),
             font=ctk.CTkFont(size=11),
             text_color=("gray40", "gray65"),
             anchor="w",
@@ -286,7 +301,7 @@ class ParticipationWizard(ctk.CTkToplevel):
         row += 1
 
         self._label(form, row, "T° début de nuit (°C)",
-                      help="Summary · entier optionnel")
+                      help="Log Titley ou Summary · entier optionnel")
         self.temp_deb_var = ctk.StringVar()
         ctk.CTkEntry(form, textvariable=self.temp_deb_var, width=120,
                        placeholder_text="ex: 22",
@@ -294,7 +309,7 @@ class ParticipationWizard(ctk.CTkToplevel):
         row += 1
 
         self._label(form, row, "T° fin de nuit (°C)",
-                      help="Summary · entier optionnel")
+                      help="Log Titley ou Summary · entier optionnel")
         self.temp_fin_var = ctk.StringVar()
         ctk.CTkEntry(form, textvariable=self.temp_fin_var, width=120,
                        placeholder_text="ex: 15",
@@ -569,18 +584,22 @@ class ParticipationWizard(ctk.CTkToplevel):
             return v
 
         # Dates : pre puis fallback meta.date_debut (toujours datetime ou None)
+        date_format = "%Y-%m-%d %H:%M:%S" if pre.get("_dates_from_titley") else "%Y-%m-%d %H:%M"
         dt_deb = _ensure_dt(pre.get("date_debut")) or self.meta.date_debut
         if dt_deb is not None:
             # Par convention : début = 19h, fin = 7h du lendemain (si rien d'autre)
-            if dt_deb.hour == 0 and dt_deb.minute == 0:
+            if dt_deb.hour == 0 and dt_deb.minute == 0 and not pre.get("_dates_from_titley"):
                 dt_deb = dt_deb.replace(hour=19, minute=0)
-            self.date_debut_var.set(dt_deb.strftime("%Y-%m-%d %H:%M"))
+            self.date_debut_var.set(dt_deb.strftime(date_format))
 
         dt_fin = _ensure_dt(pre.get("date_fin"))
         if dt_fin is None and dt_deb:
             dt_fin = (dt_deb + timedelta(hours=11)).replace(minute=0)
         if dt_fin:
-            self.date_fin_var.set(dt_fin.strftime("%Y-%m-%d %H:%M"))
+            self.date_fin_var.set(dt_fin.strftime(date_format))
+
+        if pre.get("_dates_from_titley"):
+            self._dates_hint.configure(text="T° / horaires lus dans le log Titley")
 
         if pre.get("_dates_from_wav"):
             try:
@@ -689,16 +708,23 @@ class ParticipationWizard(ctk.CTkToplevel):
         self.err_lbl.configure(text="")
         errs: list[str] = []
 
+        # Le log Titley porte les secondes ; le reste du wizard reste à la minute.
+        def _parse_date(raw):
+            for fmt in ("%Y-%m-%d %H:%M", "%Y-%m-%d %H:%M:%S"):
+                try:
+                    return datetime.strptime(raw.strip(), fmt)
+                except ValueError:
+                    pass
+            raise ValueError("date locale invalide")
+
         # Dates
         try:
-            date_debut = datetime.strptime(
-                self.date_debut_var.get().strip(), "%Y-%m-%d %H:%M")
+            date_debut = _parse_date(self.date_debut_var.get())
         except ValueError:
             errs.append("date début invalide (format YYYY-MM-DD HH:MM)")
             date_debut = None
         try:
-            date_fin = datetime.strptime(
-                self.date_fin_var.get().strip(), "%Y-%m-%d %H:%M")
+            date_fin = _parse_date(self.date_fin_var.get())
         except ValueError:
             errs.append("date fin invalide")
             date_fin = None
@@ -724,6 +750,11 @@ class ParticipationWizard(ctk.CTkToplevel):
 
         temp_deb = _parse_temp_optional(self.temp_deb_var.get(), "température début")
         temp_fin = _parse_temp_optional(self.temp_fin_var.get(), "température fin")
+        temps_user_set = temperatures_are_user_set(
+            self._prefill.get("_auto_temperature_debut"),
+            self._prefill.get("_auto_temperature_fin"),
+            temp_deb, temp_fin,
+        )
 
         # Vent / couverture : optionnels. La sentinelle « — à renseigner — »
         # n'est PAS convertie en valeur inventée (from_label → None) et n'est
@@ -812,17 +843,8 @@ class ParticipationWizard(ctk.CTkToplevel):
         if couverture is not None:
             meteo["couverture"] = couverture
 
-        configuration = {
-            "detecteur_enregistreur_type": detecteur,
-        }
-        if mic0:
-            configuration["micro0_modele"] = mic0
-        if mic0_h is not None:
-            configuration["micro0_hauteur"] = str(mic0_h)
-        if mic1:
-            configuration["micro1_modele"] = mic1
-        if mic1_h is not None:
-            configuration["micro1_hauteur"] = str(mic1_h)
+        configuration = build_participation_configuration(
+            detecteur, self.meta.n_serie, mic0, mic0_h, mic1, mic1_h)
 
         self.result = {
             "date_debut": date_debut,
@@ -841,9 +863,11 @@ class ParticipationWizard(ctk.CTkToplevel):
                 "date_fin": date_fin.isoformat() if date_fin else None,
                 "temperature_debut": temp_deb,
                 "temperature_fin": temp_fin,
+                "temperature_user_set": temps_user_set,
                 "vent": vent,
                 "couverture": couverture,
                 "detecteur_enregistreur_type": detecteur,
+                "detecteur_enregistreur_serie": self.meta.n_serie or None,
                 "micro0_modele": mic0,
                 "micro0_hauteur": str(mic0_h) if mic0_h is not None else None,
                 "micro1_modele": mic1,

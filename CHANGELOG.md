@@ -8,7 +8,17 @@ Les versions publiées suivent le SemVer du fichier `version.py` / tags GitHub.
 ## [0.8.1-dev] - 2026-09-10
 
 Build interne (pas de tag GitHub). Correctifs de réintégration d'un export
-USB Data_k-only sur un autre poste.
+USB Data_k-only, puis participation Vigie-Chiro Titley (issue
+[#8](https://github.com/kevin-guille/ChiroTool/issues/8)).
+
+### Ajouté
+
+- **Participation Titley / issue #8** : le wizard envoie le n° de série
+  (`detecteur_enregistreur_serie`), le type et le micro à Vigie-Chiro.
+  Un `log_*.csv` Titley dans la session préremplit les horaires
+  (`Recording start` / `stop`) et les T° de la fenêtre d'enregistrement.
+  `Anabat Ranger` est dans la liste des détecteurs. Le micro n'est pas
+  inventé depuis le log (parc matériel, ou saisie).
 
 ### Corrigé
 
@@ -24,6 +34,10 @@ USB Data_k-only sur un autre poste.
   reculait TE×10. La pastille restait jaune et **Préparer** ressortait,
   alors que Vérifier / Réparer disait « aucune action ». Le contrôle ne
   s'applique plus une fois `_stats_before_cleanup.json` présent.
+- **T° saisies à la main** : si elles diffèrent du Summary / log Titley,
+  elles sont conservées à la réouverture du wizard et envoyées (POST, ou
+  PATCH si la participation existe déjà). Le cache plat du manifest est
+  normalisé avant l'API (batch / reprise).
 
 ## [0.8.0] — 2026-09-06
 

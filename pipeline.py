@@ -180,6 +180,34 @@ def _participation_window(date_debut, date_fin=None):
     return date_debut, date_fin
 
 
+def _resolve_upload_payload(participation_payload, manifest_meta) -> dict:
+    """Wizard imbriqué, sinon cache manifest plat, toujours normalisé API."""
+    from chiro_core import coerce_participation_payload
+    raw = participation_payload if isinstance(participation_payload, dict) else {}
+    if not raw and isinstance(manifest_meta, dict):
+        raw = manifest_meta.get("participation_payload") or {}
+    return coerce_participation_payload(raw)
+
+
+def _sync_participation_fields(client, participation_id, pp: dict) -> None:
+    """PATCH meteo / matériel / dates si on a un payload (reprise, batch)."""
+    if not participation_id or not pp:
+        return
+    meteo = pp.get("meteo")
+    configuration = pp.get("configuration")
+    if not meteo and not configuration and not pp.get("date_debut"):
+        return
+    client.edit_participation(
+        participation_id,
+        date_debut=pp.get("date_debut"),
+        date_fin=pp.get("date_fin"),
+        point=pp.get("point"),
+        meteo=meteo,
+        configuration=configuration,
+        commentaire=pp.get("commentaire"),
+    )
+
+
 def resolve_meta(
     session: Path,
     cli_args: argparse.Namespace,
@@ -482,7 +510,7 @@ def run_phase_upload(session: Path, meta: SessionMeta, dry_run: bool,
 
     # create_participation
     part_id = m.meta.get("vigiechiro_participation_id")
-    pp = participation_payload or {}
+    pp = _resolve_upload_payload(participation_payload, m.meta)
     desired_debut = pp.get("date_debut") or meta.date_debut
     if part_id and _participation_id_is_stale(m.meta, desired_debut):
         out["steps"].append({
@@ -555,6 +583,14 @@ def run_phase_upload(session: Path, meta: SessionMeta, dry_run: bool,
             out["steps"].append({"step": "create_participation",
                                  "reused": True,
                                  "participation_id": part_id})
+            try:
+                _sync_participation_fields(client, part_id, pp)
+                out["steps"].append({"step": "sync_participation_fields"})
+            except Exception as e:
+                print(f"  (sync métadonnées participation : {e})", flush=True)
+                out["steps"].append({
+                    "step": "sync_participation_fields", "warning": str(e),
+                })
         else:
             part = client.create_participation(
                 site_id,
@@ -575,6 +611,18 @@ def run_phase_upload(session: Path, meta: SessionMeta, dry_run: bool,
             m.save(session)
             out["steps"].append({"step": "create_participation",
                                  "participation_id": part_id})
+    elif part_id and not dry_run and (pp.get("meteo") or pp.get("configuration")):
+        # Reprise / batch : la participation existe, on pousse quand même
+        # les T° et le matériel saisis dans ChiroTool.
+        try:
+            client = VigieChiroClient(token)
+            _sync_participation_fields(client, part_id, pp)
+            out["steps"].append({"step": "sync_participation_fields"})
+        except Exception as e:
+            print(f"  (sync métadonnées participation : {e})", flush=True)
+            out["steps"].append({
+                "step": "sync_participation_fields", "warning": str(e),
+            })
 
     # upload des WAVs de Data_k/
     data_k = session / "Data_k"
