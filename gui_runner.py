@@ -556,6 +556,9 @@ def run_repair_apply(
     allow_trigger: bool = False,
     confirm_trigger: bool = False,
     allow_fetch: bool = True,
+    allow_sync_meta: bool = True,
+    allow_set_uploaded: bool = True,
+    allowed_meta_changes: list | None = None,
     registry=None,
     registry_session_id: str | None = None,
 ):
@@ -569,6 +572,8 @@ def run_repair_apply(
         log(f"  allow_trigger   = {allow_trigger}")
         log(f"  confirm_trigger = {confirm_trigger}")
         log(f"  allow_fetch     = {allow_fetch}")
+        log(f"  allow_sync_meta = {allow_sync_meta}")
+        log(f"  allow_set_uploaded = {allow_set_uploaded}")
         log("")
         report = diagnose_and_repair_session(
             session_path,
@@ -577,6 +582,9 @@ def run_repair_apply(
             allow_trigger=allow_trigger,
             confirm_trigger=confirm_trigger,
             allow_fetch=allow_fetch,
+            allow_sync_meta=allow_sync_meta,
+            allow_set_uploaded=allow_set_uploaded,
+            allowed_meta_changes=allowed_meta_changes,
             registry=registry,
             registry_session_id=registry_session_id,
             progress=progress,

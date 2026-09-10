@@ -1970,7 +1970,34 @@ class ChiroToolApp(ctk.CTk):
         allow_trigger = False
         confirm_trigger = False
         allow_fetch = False
+        allow_sync_meta = False
+        allow_set_uploaded = False
+        allowed_meta_changes: list[str] = []
         want_apply = False
+
+        if "sync_participation_meta" in suggested:
+            from repair import meta_confirm_groups
+            groups = meta_confirm_groups(diag.get("meta_changes") or [])
+            if not groups:
+                groups = [(
+                    "Métadonnées Vigie-Chiro",
+                    list(diag.get("meta_changes") or ["série, type, micro, horaires, T°"]),
+                    "Champs absents ou plus à jour côté ChiroTool.",
+                )]
+            for title, labels, hint in groups:
+                listed = ", ".join(labels)
+                if messagebox.askyesno(
+                    title + " ?",
+                    "ChiroTool propose d'envoyer sur le portail :\n"
+                    f"  • {listed}\n\n"
+                    f"{hint}\n\n"
+                    "Tadarida n'est pas relancée. Les WAV ne sont pas renvoyés.\n"
+                    "Non = laisser ce groupe tel quel sur Vigie-Chiro.",
+                    default=messagebox.YES,
+                ):
+                    allowed_meta_changes.extend(labels)
+                    want_apply = True
+            allow_sync_meta = bool(allowed_meta_changes)
 
         if "set_uploaded_true" in suggested:
             if messagebox.askyesno(
@@ -1980,14 +2007,10 @@ class ChiroToolApp(ctk.CTk):
                 "Mettre à jour le flag (et le registre) pour cette nuit ?",
                 default=messagebox.YES,
             ):
+                allow_set_uploaded = True
                 want_apply = True
             else:
-                # L'utilisateur refuse set_uploaded : on peut quand même
-                # fetch/trigger s'il accepte plus bas. Le core applique
-                # set_uploaded dès qu'il est suggéré en apply=True…
-                # → on ne lance apply que pour les actions acceptées.
-                # Si seul set_uploaded était suggéré et refusé → stop.
-                pass
+                allow_set_uploaded = False
 
         if "resume_upload_missing" in suggested:
             messagebox.showinfo(
@@ -2060,7 +2083,8 @@ class ChiroToolApp(ctk.CTk):
             # resume_upload : message d'orientation déjà affiché, pas d'erreur
             if "resume_upload_missing" not in suggested or any(
                 a in suggested for a in ("set_uploaded_true", "fetch_xlsx",
-                                         "trigger_compute")
+                                         "trigger_compute",
+                                         "sync_participation_meta")
             ):
                 messagebox.showinfo(
                     "Réparation annulée",
@@ -2082,6 +2106,9 @@ class ChiroToolApp(ctk.CTk):
             allow_trigger=allow_trigger,
             confirm_trigger=confirm_trigger,
             allow_fetch=allow_fetch,
+            allow_sync_meta=allow_sync_meta,
+            allow_set_uploaded=allow_set_uploaded,
+            allowed_meta_changes=allowed_meta_changes or None,
             registry=registry,
             registry_session_id=s.name,
         )

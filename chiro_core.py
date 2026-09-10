@@ -511,6 +511,216 @@ def coerce_participation_payload(raw: dict | None) -> dict:
     return out
 
 
+def _field_blank(value) -> bool:
+    return value is None or value == "" or value == {} or value == []
+
+
+def _dt_key(value):
+    dt = _as_dt(value)
+    if dt is None and isinstance(value, str):
+        for fmt in ("%a, %d %b %Y %H:%M:%S GMT", "%Y-%m-%dT%H:%M:%S",
+                    "%Y-%m-%d %H:%M:%S"):
+            try:
+                dt = datetime.strptime(value, fmt)
+                break
+            except ValueError:
+                continue
+    if dt is None:
+        return None
+    return (dt.year, dt.month, dt.day, dt.hour, dt.minute)
+
+
+def _parse_participation_dt(value):
+    if value is None or isinstance(value, datetime):
+        return value
+    if not isinstance(value, str):
+        return None
+    parsed = _as_dt(value.replace("Z", "+00:00") if "Z" in value else value)
+    if parsed is not None:
+        return parsed
+    for fmt in ("%a, %d %b %Y %H:%M:%S GMT", "%Y-%m-%dT%H:%M:%S",
+                "%Y-%m-%d %H:%M:%S"):
+        try:
+            return datetime.strptime(value, fmt)
+        except ValueError:
+            continue
+    return None
+
+
+def server_fields_from_participation(raw: dict | None) -> dict:
+    """Extrait dates / meteo / configuration d'une participation API brute."""
+    raw = raw if isinstance(raw, dict) else {}
+    meteo = raw.get("meteo") if isinstance(raw.get("meteo"), dict) else {}
+    config = raw.get("configuration") if isinstance(raw.get("configuration"), dict) else {}
+    return {
+        "date_debut": _parse_participation_dt(raw.get("date_debut")),
+        "date_fin": _parse_participation_dt(raw.get("date_fin")),
+        "meteo": dict(meteo),
+        "configuration": dict(config),
+    }
+
+
+def collect_local_participation_fields(session: Path) -> dict:
+    """Assemble le payload local (cache wizard, log Titley, série, parc)."""
+    session = Path(session)
+    try:
+        from manifest import Manifest
+        m = Manifest.load(session)
+    except Exception:
+        m = None
+    meta = (m.meta if m else {}) or {}
+    cached = meta.get("participation_payload")
+    cached = cached if isinstance(cached, dict) else {}
+    user_set = bool(cached.get("temperature_user_set"))
+    pp = coerce_participation_payload(cached)
+    pp["_temperature_user_set"] = user_set
+
+    cfg = dict(pp.get("configuration") or {})
+    serie = cfg.get("detecteur_enregistreur_serie") or meta.get("n_serie")
+    if serie:
+        cfg["detecteur_enregistreur_serie"] = str(serie)
+        pp["configuration"] = cfg
+
+    log_path = find_titley_log(session)
+    titley = parse_titley_log(log_path) if log_path else None
+    if titley:
+        if titley.rec_start:
+            pp["date_debut"] = titley.rec_start
+            pp["date_fin"] = titley.rec_stop
+            pp["_from_titley_dates"] = True
+        if not user_set:
+            meteo = dict(pp.get("meteo") or {})
+            if titley.temp_start is not None:
+                meteo["temperature_debut"] = int(round(titley.temp_start))
+            if titley.temp_end is not None:
+                meteo["temperature_fin"] = int(round(titley.temp_end))
+            pp["meteo"] = meteo or None
+            pp["_from_titley_temps"] = True
+        model = (titley.device_model or "").strip()
+        if model and not cfg.get("detecteur_enregistreur_type"):
+            try:
+                from vigiechiro_enums import DETECTEUR_ENREGISTREUR_TYPES
+                allowed = model in DETECTEUR_ENREGISTREUR_TYPES
+            except Exception:
+                allowed = True
+            if allowed:
+                cfg["detecteur_enregistreur_type"] = model
+                pp["configuration"] = cfg
+
+    n_enr = meta.get("n_enregistreur")
+    if n_enr is not None:
+        try:
+            from materiels import find_by_id, load_materiels
+            mat = find_by_id(load_materiels(), int(n_enr))
+        except Exception:
+            mat = None
+        if mat is not None and not mat.is_empty():
+            cfg = dict(pp.get("configuration") or {})
+            if mat.modele and not cfg.get("detecteur_enregistreur_type"):
+                cfg["detecteur_enregistreur_type"] = mat.modele
+            if mat.micro_modele and not cfg.get("micro0_modele"):
+                cfg["micro0_modele"] = mat.micro_modele
+            if mat.hauteur_m is not None and cfg.get("micro0_hauteur") in (None, ""):
+                cfg["micro0_hauteur"] = str(mat.hauteur_m)
+            if mat.serie_enr and not cfg.get("detecteur_enregistreur_serie"):
+                cfg["detecteur_enregistreur_serie"] = mat.serie_enr
+            pp["configuration"] = cfg or None
+    return pp
+
+
+def diff_participation_update(
+    server: dict | None,
+    local: dict | None,
+    *,
+    only_changes: list[str] | None = None,
+) -> dict:
+    """Champs à PATCH : absents serveur, T° forcées, dates Titley, série.
+
+    Ne remplace pas une T° / un type déjà saisis sur le portail, sauf T°
+    marquées ``_temperature_user_set``. Les dates Titley (Recording start/stop)
+    corrigent un 1er WAV si elles diffèrent. Nested meteo/configuration
+    fusionnés avec le serveur (Eve remplace le sous-document entier).
+    """
+    server = server if isinstance(server, dict) else {}
+    local = local if isinstance(local, dict) else {}
+    changes: list[str] = []
+    out: dict = {}
+    user_set = bool(local.get("_temperature_user_set"))
+    from_titley = bool(local.get("_from_titley_dates"))
+    allowed = set(only_changes) if only_changes is not None else None
+
+    ld = local.get("date_debut")
+    lf = local.get("date_fin")
+    sd = server.get("date_debut")
+    sf = server.get("date_fin")
+    if ld and (
+        _field_blank(sd)
+        or (from_titley and (_dt_key(ld) != _dt_key(sd) or _dt_key(lf) != _dt_key(sf)))
+    ) and (allowed is None or "horaires d'enregistrement" in allowed):
+        out["date_debut"] = ld
+        if lf:
+            out["date_fin"] = lf
+        changes.append("horaires d'enregistrement")
+
+    sm = server.get("meteo") if isinstance(server.get("meteo"), dict) else {}
+    lm = local.get("meteo") if isinstance(local.get("meteo"), dict) else {}
+    meteo_overlay: dict = {}
+    labels = {
+        "temperature_debut": "T° début",
+        "temperature_fin": "T° fin",
+        "vent": "vent",
+        "couverture": "couverture",
+    }
+    for k in ("temperature_debut", "temperature_fin", "vent", "couverture"):
+        lv, sv = lm.get(k), sm.get(k)
+        if _field_blank(lv):
+            continue
+        if allowed is not None and labels[k] not in allowed:
+            continue
+        if k.startswith("temperature_"):
+            lv = _as_int_temp(lv)
+            sv = _as_int_temp(sv) if not _field_blank(sv) else None
+        if _field_blank(sv) or (k.startswith("temperature_") and user_set and lv != sv):
+            meteo_overlay[k] = lv
+            changes.append(labels[k])
+    if meteo_overlay:
+        merged = dict(sm)
+        merged.update(meteo_overlay)
+        out["meteo"] = merged
+
+    sc = server.get("configuration") if isinstance(server.get("configuration"), dict) else {}
+    lc = local.get("configuration") if isinstance(local.get("configuration"), dict) else {}
+    cfg_overlay: dict = {}
+    cfg_labels = {
+        "detecteur_enregistreur_type": "type d'enregistreur",
+        "detecteur_enregistreur_serie": "n° de série",
+        "micro0_modele": "micro",
+        "micro0_hauteur": "hauteur micro",
+        "micro1_modele": "micro droit",
+        "micro1_hauteur": "hauteur micro droit",
+    }
+    for k, label in cfg_labels.items():
+        lv, sv = lc.get(k), sc.get(k)
+        if _field_blank(lv):
+            continue
+        if allowed is not None and label not in allowed:
+            continue
+        lv_s, sv_s = str(lv).strip(), ("" if _field_blank(sv) else str(sv).strip())
+        missing = _field_blank(sv)
+        serial_diff = k == "detecteur_enregistreur_serie" and sv_s and lv_s != sv_s
+        if missing or serial_diff:
+            cfg_overlay[k] = lv
+            changes.append(label)
+    if cfg_overlay:
+        merged_c = dict(sc)
+        merged_c.update(cfg_overlay)
+        out["configuration"] = merged_c
+
+    if changes:
+        out["changes"] = changes
+    return out
+
+
 def _parse_summary_dt(date_s: str, time_s: str) -> datetime | None:
     # Format "2025-Sep-03", "19:46:00"
     for fmt in ("%Y-%b-%d %H:%M:%S", "%Y-%m-%d %H:%M:%S"):

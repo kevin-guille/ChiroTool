@@ -2988,6 +2988,24 @@ class TestRepairCoveragePure:
         )
         assert acts == [ACTION_NOOP]
 
+    def test_suggest_sync_meta_on_finished_night(self):
+        from repair import (
+            suggest_actions, ACTION_SYNC_META, ACTION_TRIGGER, ACTION_NOOP,
+        )
+        acts = suggest_actions(
+            coverage_ok=True,
+            listing_ok=True,
+            missing_on_server=[],
+            traitement_etat="TERMINE",
+            has_xlsx=True,
+            flag_uploaded=True,
+            has_participation_id=True,
+            meta_needs_sync=True,
+        )
+        assert ACTION_SYNC_META in acts
+        assert ACTION_TRIGGER not in acts
+        assert ACTION_NOOP not in acts
+
     def test_suggest_no_participation(self):
         from repair import suggest_actions, ACTION_NOOP
         acts = suggest_actions(
@@ -3131,7 +3149,7 @@ class _FakeRepairClient:
 
     def __init__(self, *, etat="TERMINE", files=None, fail_list=False,
                  fail_status=False, fail_trigger=False, fail_fetch=False,
-                 probe_result=None):
+                 probe_result=None, part_raw=None):
         self.etat = etat
         self.files = list(files if files is not None else [])
         self.fail_list = fail_list
@@ -3139,9 +3157,11 @@ class _FakeRepairClient:
         self.fail_trigger = fail_trigger
         self.fail_fetch = fail_fetch
         self.probe_result = probe_result
+        self.part_raw = dict(part_raw or {})
         self.probe_calls = []
         self.trigger_calls = 0
         self.fetch_calls = 0
+        self.edit_calls = []
 
     def participation_status(self, participation_id: str) -> dict:
         if self.fail_status:
@@ -3163,6 +3183,28 @@ class _FakeRepairClient:
         self.trigger_calls += 1
         if self.fail_trigger:
             raise RuntimeError("trigger boom")
+        return {"ok": True}
+
+    def get_participation(self, participation_id: str):
+        import types
+        raw = dict(self.part_raw)
+        raw.setdefault("_id", participation_id)
+        return types.SimpleNamespace(id=participation_id, raw=raw)
+
+    def edit_participation(self, participation_id: str, **kwargs) -> dict:
+        self.edit_calls.append({"id": participation_id, **kwargs})
+        cfg = dict(self.part_raw.get("configuration") or {})
+        if kwargs.get("configuration"):
+            cfg.update(kwargs["configuration"])
+            self.part_raw["configuration"] = cfg
+        if kwargs.get("meteo"):
+            meteo = dict(self.part_raw.get("meteo") or {})
+            meteo.update(kwargs["meteo"])
+            self.part_raw["meteo"] = meteo
+        if kwargs.get("date_debut") is not None:
+            self.part_raw["date_debut"] = kwargs["date_debut"]
+        if kwargs.get("date_fin") is not None:
+            self.part_raw["date_fin"] = kwargs["date_fin"]
         return {"ok": True}
 
     def download_observations_as_xlsx(self, participation_id, dst, on_progress=None):
@@ -3430,6 +3472,133 @@ class TestDiagnoseAndRepairSession:
         assert client.trigger_calls == 1
         assert "trigger_compute" in report["applied_actions"]
         assert "set_uploaded_true" not in report["applied_actions"]
+
+    def test_finished_night_syncs_missing_serial_without_trigger(self, tmp_path):
+        from repair import diagnose_and_repair_session, ACTION_SYNC_META, ACTION_TRIGGER
+        from manifest import Manifest
+        session = _session_with_manifest(
+            tmp_path, wavs=["a.wav"], flags={"uploaded": True}, xlsx=True,
+        )
+        m = Manifest.load(session)
+        m.set_meta(n_serie="669153")
+        m.save(session)
+        client = _FakeRepairClient(
+            etat="TERMINE", files=["a.wav"],
+            part_raw={"configuration": {}, "meteo": {}},
+        )
+        report = diagnose_and_repair_session(
+            session, apply=True, client=client, allow_sync_meta=True,
+        )
+        assert ACTION_SYNC_META in report["suggested_actions"]
+        assert ACTION_TRIGGER not in report["suggested_actions"]
+        assert ACTION_SYNC_META in report["applied_actions"]
+        assert client.trigger_calls == 0
+        assert client.edit_calls
+        assert client.part_raw["configuration"]["detecteur_enregistreur_serie"] == "669153"
+
+    def test_refuse_set_uploaded_still_applies_sync(self, tmp_path):
+        from repair import diagnose_and_repair_session
+        from manifest import Manifest
+        session = _session_with_manifest(
+            tmp_path, wavs=["a.wav"], flags={"uploaded": False}, xlsx=True,
+        )
+        m = Manifest.load(session)
+        m.set_meta(n_serie="669153")
+        m.save(session)
+        client = _FakeRepairClient(etat="TERMINE", files=["a.wav"], part_raw={})
+        report = diagnose_and_repair_session(
+            session, apply=True, client=client,
+            allow_set_uploaded=False, allow_sync_meta=True,
+        )
+        assert "set_uploaded_true" not in report["applied_actions"]
+        assert "sync_participation_meta" in report["applied_actions"]
+        m2 = Manifest.load(session)
+        assert m2.flags.get("uploaded") is False
+
+
+class TestParticipationMetaDiff:
+    def test_fill_missing_serial_and_keep_server_temps(self):
+        from chiro_core import diff_participation_update
+        patch = diff_participation_update(
+            {
+                "date_debut": datetime(2026, 8, 21, 20, 45),
+                "meteo": {"temperature_debut": 20, "temperature_fin": 10},
+                "configuration": {"detecteur_enregistreur_type": "Anabat Swift"},
+            },
+            {
+                "date_debut": datetime(2026, 8, 21, 20, 39, 5),
+                "date_fin": datetime(2026, 8, 22, 7, 41, 32),
+                "_from_titley_dates": True,
+                "meteo": {"temperature_debut": 19, "temperature_fin": 12},
+                "configuration": {
+                    "detecteur_enregistreur_type": "Anabat Swift",
+                    "detecteur_enregistreur_serie": "669153",
+                },
+            },
+        )
+        assert "n° de série" in patch["changes"]
+        assert "horaires d'enregistrement" in patch["changes"]
+        assert patch["configuration"]["detecteur_enregistreur_serie"] == "669153"
+        assert "meteo" not in patch
+
+    def test_only_changes_keeps_serial_drops_dates(self):
+        from chiro_core import diff_participation_update
+        patch = diff_participation_update(
+            {"configuration": {}, "meteo": {}},
+            {
+                "_from_titley_dates": True,
+                "date_debut": datetime(2026, 8, 21, 20, 39, 5),
+                "date_fin": datetime(2026, 8, 22, 7, 41, 32),
+                "configuration": {"detecteur_enregistreur_serie": "669153"},
+            },
+            only_changes=["n° de série"],
+        )
+        assert patch["changes"] == ["n° de série"]
+        assert "date_debut" not in patch
+        assert patch["configuration"]["detecteur_enregistreur_serie"] == "669153"
+
+    def test_meta_confirm_groups(self):
+        from repair import meta_confirm_groups
+        groups = meta_confirm_groups(
+            ["horaires d'enregistrement", "n° de série", "T° début"]
+        )
+        titles = [g[0] for g in groups]
+        assert "Horaires d'enregistrement" in titles
+        assert "Températures" in titles
+        assert "Matériel" in titles
+        assert "Vent et couverture" not in titles
+
+    def test_user_temps_overwrite_server(self):
+        from chiro_core import diff_participation_update
+        patch = diff_participation_update(
+            {"meteo": {"temperature_debut": 19, "temperature_fin": 12}},
+            {
+                "_temperature_user_set": True,
+                "meteo": {"temperature_debut": 16, "temperature_fin": 10},
+            },
+        )
+        assert patch["meteo"]["temperature_debut"] == 16
+        assert "T° début" in patch["changes"]
+
+    def test_collect_titley_log(self, tmp_path):
+        from shutil import copyfile
+        from chiro_core import collect_local_participation_fields
+        from manifest import Manifest
+        src = Path(__file__).resolve().parents[1] / "samples/issue4_mickael/log_2026-08-21.csv"
+        if not src.is_file():
+            pytest.skip("log Titley sample absent")
+        session = tmp_path / "sess"
+        session.mkdir()
+        copyfile(src, session / "log_2026-08-21.csv")
+        m = Manifest.load_or_create(session)
+        m.set_meta(n_serie="669178")
+        m.save(session)
+        local = collect_local_participation_fields(session)
+        assert local["_from_titley_dates"] is True
+        assert local["date_debut"] == datetime(2026, 8, 21, 20, 39, 5)
+        assert local["meteo"]["temperature_debut"] == 19
+        assert local["configuration"]["detecteur_enregistreur_serie"] == "669178"
+        assert local["configuration"]["detecteur_enregistreur_type"] == "Anabat Swift"
 
 
 class TestUploadAlreadyDone:

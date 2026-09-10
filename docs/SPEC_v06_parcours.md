@@ -60,6 +60,7 @@ comme un reliquat du 1er message #4.
 | 1 | N° de série, type, micro dans la participation | **Livré** : `detecteur_enregistreur_serie` toujours envoyé ; type / micro depuis Mes matériels ; type lu dans le log si le parc est vide. Pas de micro inventé. `Anabat Ranger` dans la liste. |
 | 2 | Heure début / fin d'enregistrement | **Livré** : `Recording start` / `Recording stop` du `log_*.csv` (sinon Summary / WAV). |
 | 3 | T° du log Titley | **Livré** (fenêtre d'enregistrement, pas les 38 °C de journée). T° saisies à la main, si différentes, ne sont plus écrasées. POST à la création, PATCH si la participation existe déjà. |
+| 4 | Nuits déjà analysées | **Livré** : Vérifier / Réparer compare et PATCHe les champs manquants (série, type, micro, horaires Titley, T°). Pas de `trigger_compute`. |
 
 Le CSV log doit être **dans le dossier de session** (ou `Data/`), comme un Summary SM4.
 

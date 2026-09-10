@@ -38,6 +38,9 @@ USB Data_k-only, puis participation Vigie-Chiro Titley (issue
   elles sont conservées à la réouverture du wizard et envoyées (POST, ou
   PATCH si la participation existe déjà). Le cache plat du manifest est
   normalisé avant l'API (batch / reprise).
+- **Vérifier / Réparer** : si la participation est déjà analysée, compare
+  série / type / micro / horaires / T° au portail. Champs absents (ou T°
+  forcées, ou horaires Titley) : PATCH sans relancer Tadarida.
 
 ## [0.8.0] — 2026-09-06
 

@@ -46,7 +46,12 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Protocol
 
-from chiro_core import resolve_session_root
+from chiro_core import (
+    collect_local_participation_fields,
+    diff_participation_update,
+    resolve_session_root,
+    server_fields_from_participation,
+)
 from manifest import Manifest
 
 try:
@@ -70,6 +75,7 @@ ACTION_SET_UPLOADED = "set_uploaded_true"
 ACTION_RESUME_UPLOAD = "resume_upload_missing"
 ACTION_TRIGGER = "trigger_compute"
 ACTION_FETCH = "fetch_xlsx"
+ACTION_SYNC_META = "sync_participation_meta"
 ACTION_NOOP = "noop"
 
 SUGGESTED_ACTIONS = (
@@ -77,6 +83,7 @@ SUGGESTED_ACTIONS = (
     ACTION_RESUME_UPLOAD,
     ACTION_TRIGGER,
     ACTION_FETCH,
+    ACTION_SYNC_META,
     ACTION_NOOP,
 )
 
@@ -91,6 +98,8 @@ class RepairClient(Protocol):
     def participation_status(self, participation_id: str) -> dict: ...
     def list_participation_files(self, participation_id: str) -> list[str]: ...
     def trigger_compute(self, participation_id: str) -> dict: ...
+    def get_participation(self, participation_id: str) -> Any: ...
+    def edit_participation(self, participation_id: str, **kwargs) -> dict: ...
     def download_observations_as_xlsx(
         self, participation_id: str, dst: Path, on_progress=None,
     ) -> dict: ...
@@ -264,6 +273,7 @@ def suggest_actions(
     flag_uploaded: bool,
     has_participation_id: bool,
     files_registered: bool = False,
+    meta_needs_sync: bool = False,
 ) -> list[str]:
     """Détermine les actions logiques (pure). Ne regarde pas allow_*.
 
@@ -279,6 +289,8 @@ def suggest_actions(
         return [ACTION_NOOP]
 
     actions: list[str] = []
+    if meta_needs_sync:
+        actions.append(ACTION_SYNC_META)
     etat = (traitement_etat or "").strip().upper()
 
     # 1. Fichiers manquants → reprise upload, jamais trigger / set_uploaded
@@ -347,6 +359,7 @@ class RepairReport:
     xlsx_path: str | None = None
     local_flags: dict[str, bool] = field(default_factory=dict)
     suggested_actions: list[str] = field(default_factory=list)
+    meta_changes: list[str] = field(default_factory=list)
     applied_actions: list[str] = field(default_factory=list)
     skipped_actions: list[dict[str, str]] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
@@ -363,8 +376,51 @@ ACTION_LABELS = {
     ACTION_RESUME_UPLOAD: "Reprendre l'upload des WAV manquants (via bouton Upload)",
     ACTION_TRIGGER: "Relancer l'analyse Tadarida",
     ACTION_FETCH: "Télécharger le tableur d'observations (xlsx)",
+    ACTION_SYNC_META: "Mettre à jour les métadonnées sur Vigie-Chiro (sans relancer Tadarida)",
     ACTION_NOOP: "Aucune action nécessaire",
 }
+
+# Groupes de confirmation (un Oui/Non par groupe, pas un PATCH unique aveugle).
+META_CONFIRM_GROUPS = (
+    (
+        "Horaires d'enregistrement",
+        ("horaires d'enregistrement",),
+        "Début / fin lus dans le log Titley (Recording start / stop).",
+    ),
+    (
+        "Températures",
+        ("T° début", "T° fin"),
+        "T° de début et de fin de nuit.",
+    ),
+    (
+        "Vent et couverture",
+        ("vent", "couverture"),
+        "Vent et couverture nuageuse.",
+    ),
+    (
+        "Matériel",
+        (
+            "n° de série",
+            "type d'enregistreur",
+            "micro",
+            "hauteur micro",
+            "micro droit",
+            "hauteur micro droit",
+        ),
+        "N° de série, type d'enregistreur, micro, hauteur.",
+    ),
+)
+
+
+def meta_confirm_groups(changes: list[str] | None) -> list[tuple[str, list[str], str]]:
+    """Groupes dont au moins un libellé est dans ``changes``."""
+    found = list(changes or [])
+    out: list[tuple[str, list[str], str]] = []
+    for title, labels, hint in META_CONFIRM_GROUPS:
+        hit = [lab for lab in labels if lab in found]
+        if hit:
+            out.append((title, hit, hint))
+    return out
 
 
 def action_label(action: str) -> str:
@@ -458,6 +514,17 @@ def format_repair_report(report: dict[str, Any] | RepairReport) -> str:
         flag_bits.append(f"{k}={'✓' if flags.get(k) else '·'}")
     lines.append(f"  flags manifest    : {'  '.join(flag_bits)}")
 
+    meta_changes = r.get("meta_changes") or []
+    if meta_changes:
+        lines.append("")
+        lines.append("── Métadonnées participation ──")
+        lines.append(
+            "  Écart local / serveur : " + ", ".join(meta_changes)
+        )
+        lines.append(
+            "  (PATCH uniquement, Tadarida n'est pas relancée)"
+        )
+
     lines.append("")
     lines.append("── Actions proposées ──")
     suggested = r.get("suggested_actions") or [ACTION_NOOP]
@@ -510,6 +577,9 @@ def diagnose_and_repair_session(
     allow_trigger: bool = False,
     confirm_trigger: bool = False,
     allow_fetch: bool = True,
+    allow_sync_meta: bool = True,
+    allow_set_uploaded: bool = True,
+    allowed_meta_changes: list[str] | None = None,
     client: RepairClient | None = None,
     registry: RegistryLike | None = None,
     registry_session_id: str | None = None,
@@ -769,6 +839,31 @@ def diagnose_and_repair_session(
             "Relance le diagnostic ; si ça persiste, vérifie l'API."
         )
 
+    # -- Métadonnées participation (série, type, T°, horaires) -------------
+    meta_needs_sync = False
+    try:
+        local_fields = collect_local_participation_fields(session)
+        raw_part: dict = {}
+        getter = getattr(api, "get_participation", None)
+        if callable(getter):
+            pobj = getter(report.participation_id)
+            raw_cand = getattr(pobj, "raw", None)
+            if isinstance(raw_cand, dict):
+                raw_part = raw_cand
+            elif isinstance(pobj, dict):
+                raw_part = pobj
+        server_fields = server_fields_from_participation(raw_part)
+        meta_patch = diff_participation_update(server_fields, local_fields)
+        report.meta_changes = list(meta_patch.get("changes") or [])
+        meta_needs_sync = bool(report.meta_changes)
+        if report.meta_changes:
+            report.notes.append(
+                "Métadonnées à pousser (sans relancer Tadarida) : "
+                + ", ".join(report.meta_changes)
+            )
+    except Exception as e:
+        report.notes.append(f"comparaison métadonnées : {e}")
+
     # -- Suggestions -------------------------------------------------------
     report.suggested_actions = suggest_actions(
         coverage_ok=report.coverage_ok,
@@ -779,6 +874,7 @@ def diagnose_and_repair_session(
         flag_uploaded=report.local_flags["uploaded"],
         has_participation_id=True,
         files_registered=report.files_registered,
+        meta_needs_sync=meta_needs_sync,
     )
 
     if not apply:
@@ -796,7 +892,9 @@ def diagnose_and_repair_session(
 
     # --- set_uploaded_true ------------------------------------------------
     if ACTION_SET_UPLOADED in actions_planned:
-        if not report.coverage_ok:
+        if not allow_set_uploaded:
+            _skip(ACTION_SET_UPLOADED, "allow_set_uploaded=False")
+        elif not report.coverage_ok:
             _skip(ACTION_SET_UPLOADED, "couverture < 100 %")
         elif not report.listing_ok:
             _skip(ACTION_SET_UPLOADED, "listing serveur non fiable")
@@ -824,6 +922,77 @@ def diagnose_and_repair_session(
                 report.local_flags["uploaded"] = True
             except Exception as e:
                 report.errors.append(f"set_uploaded_true : {e}")
+
+    # --- sync_participation_meta : PATCH sans trigger_compute -------------
+    if ACTION_SYNC_META in actions_planned:
+        if not allow_sync_meta:
+            _skip(ACTION_SYNC_META, "allow_sync_meta=False")
+        else:
+            editor = getattr(api, "edit_participation", None)
+            if not callable(editor):
+                _skip(ACTION_SYNC_META, "client sans edit_participation")
+            else:
+                try:
+                    local_fields = collect_local_participation_fields(session)
+                    raw_part = {}
+                    getter = getattr(api, "get_participation", None)
+                    if callable(getter):
+                        pobj = getter(report.participation_id)
+                        raw_cand = getattr(pobj, "raw", None)
+                        if isinstance(raw_cand, dict):
+                            raw_part = raw_cand
+                        elif isinstance(pobj, dict):
+                            raw_part = pobj
+                    patch = diff_participation_update(
+                        server_fields_from_participation(raw_part),
+                        local_fields,
+                        only_changes=allowed_meta_changes,
+                    )
+                    changes = list(patch.pop("changes", []) or [])
+                    if not changes or not patch:
+                        _skip(ACTION_SYNC_META, "plus d'écart à l'application")
+                    else:
+                        editor(report.participation_id, **patch)
+                        cached = dict((m.meta or {}).get("participation_payload") or {})
+                        if patch.get("date_debut") is not None:
+                            dd = patch["date_debut"]
+                            cached["date_debut"] = (
+                                dd.isoformat() if hasattr(dd, "isoformat") else str(dd)
+                            )
+                        if patch.get("date_fin") is not None:
+                            df = patch["date_fin"]
+                            cached["date_fin"] = (
+                                df.isoformat() if hasattr(df, "isoformat") else str(df)
+                            )
+                        if isinstance(patch.get("meteo"), dict):
+                            for k in ("temperature_debut", "temperature_fin",
+                                      "vent", "couverture"):
+                                if patch["meteo"].get(k) is not None:
+                                    cached[k] = patch["meteo"][k]
+                        if isinstance(patch.get("configuration"), dict):
+                            for k, v in patch["configuration"].items():
+                                if v is not None and v != "":
+                                    cached[k] = v
+                        m.set_meta(participation_payload=cached)
+                        m.record_action(
+                            "repair",
+                            status="ok",
+                            params={
+                                "kind": "sync_participation_meta",
+                                "participation_id": report.participation_id,
+                            },
+                            stats={"changes": changes},
+                            notes="PATCH métadonnées, Tadarida non relancée",
+                            tool_version=TOOL_VERSION,
+                        )
+                        manifest_dirty = True
+                        report.applied_actions.append(ACTION_SYNC_META)
+                        report.notes.append(
+                            "Métadonnées mises à jour sur Vigie-Chiro : "
+                            + ", ".join(changes)
+                        )
+                except Exception as e:
+                    report.errors.append(f"sync_participation_meta : {e}")
 
     # --- resume_upload_missing : suggestion seule -------------------------
     if ACTION_RESUME_UPLOAD in actions_planned:
