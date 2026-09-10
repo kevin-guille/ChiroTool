@@ -63,6 +63,11 @@ Après un `_Vu`, « Identifications validées seulement » = contacts **écouté
 « Méthode MNHN 10 % / 75 % » reconstitue l'interprétation (bandes de
 confiance Tadarida), dans la Synthèse **et** l'onglet Activité.
 
+**0.8.1-dev** (2026-09-10, pas de tag GitHub) : un export USB Data_k-only
+rouvert sur un autre PC retrouve la session (plus le dossier `Data_k/`
+comme nuit). Après nettoyage, un `Data_k` plus petit que les bruts ne
+fait plus reculer TE×10 (pastille verte).
+
 Note : [`docs/RELEASE_v0.8.0.md`](docs/RELEASE_v0.8.0.md). Bilan des issues
 [#4](https://github.com/kevin-guille/ChiroTool/issues/4) et
 [#7](https://github.com/kevin-guille/ChiroTool/issues/7) : SPEC
@@ -142,7 +147,7 @@ Vérifier / Réparer, export USB, pick + FOCUS carte, ChiroSurf multi-nuits
 - **ChiroSurf nuits** (optionnel) : scission lazy `chirosurf/Nuit{n}_…csv` ; ▶ brut / 📈 `_Vu`
 - **Graphes d’activité** (chiros seulement, taxons observateur, `_Vu`, méthode MNHN 10 % / 75 %)
 - **Registre de campagne** multi-sites (SQLite, export CSV / xlsx)
-- **Export portable de sessions** (clé USB / partage : Data_k ± Data + métadonnées + `chirosurf/` si présent)
+- **Export portable de sessions** (clé USB / partage : Data_k ± Data + métadonnées + `chirosurf/` si présent). Sur l'autre poste : ouvrir `ChiroTool_export_…` puis Scanner (pas un sous-dossier `Data_k/`)
 - **Carte OSM** : pick depuis les meta (5 km), FOCUS session, carrés STOC, create/reuse (y compris autre observateur)
 
 ### Robustesse

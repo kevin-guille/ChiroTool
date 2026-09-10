@@ -10,6 +10,7 @@ Couverture :
   - registry     : upsert, thread-safety, batch commit, migration
   - repair       : coverage pure, suggestions, dry-run/apply, garde-fous
   - export_sessions : plan/run, options Data/Data_k, dry-run, structure
+  - walk_sessions : Data_k n'est pas une session (réintégration export USB)
 
 Ces modules sont les plus "à risque" : une régression y corrompt des
 données (renommage incohérent, cleanup trop aggressif, etc.). Tests
@@ -477,6 +478,169 @@ class TestExportSessions:
         lbl = _session_label(groups["Alpha"][0])
         assert "Z1" in lbl and "Pass1" in lbl
         assert "MB" in _fmt_bytes(2_000_000) or "KB" in _fmt_bytes(2_000_000)
+
+
+# =========================================================================
+# walk_sessions / export USB Data_k-only (réintégration autre PC)
+# =========================================================================
+
+class TestWalkSessionsDataK:
+    """Export Data_k-only : le scan ne doit pas prendre Data_k pour la session."""
+
+    def _wav(self, path: Path, sr: int = 38400, frames: int = 50):
+        import wave
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with wave.open(str(path), "wb") as w:
+            w.setnchannels(1)
+            w.setsampwidth(2)
+            w.setframerate(sr)
+            w.writeframes(b"\x01\x02" * frames)
+
+    def _site(self, camp: Path, name: str, *, part_id="piddeadbeef", n_wav=2):
+        session = camp / name
+        session.mkdir(parents=True)
+        dk = session / "Data_k"
+        dk.mkdir()
+        for i in range(n_wav):
+            self._wav(
+                dk / f"Car430176-2026-Pass2-Z1-SMU9_20260803_21000{i}_000.wav"
+            )
+        (session / "SM4_Summary.txt").write_text(
+            "DATE,TIME,LAT,LON,TEMP\n", encoding="utf-8")
+        (session / f"participation-{part_id}-observations.xlsx").write_bytes(
+            b"PK\x03\x04xlsx")
+        (session / "_session_manifest.json").write_text(
+            '{"schema_version": 1, "meta": {'
+            f'"vigiechiro_participation_id": "{part_id}"'
+            '}, "flags": {"renamed": true, "te10_done": true, '
+            '"uploaded": true, "analyzed": true}}',
+            encoding="utf-8",
+        )
+        return session
+
+    def test_walk_does_not_treat_data_k_as_session(self, tmp_path):
+        from chiro_core import walk_sessions
+        camp = tmp_path / "RN88"
+        sess = self._site(camp, "20260803_site430176_Z1_Pass2_enr10")
+        found = walk_sessions(tmp_path)
+        assert found == [sess.resolve()]
+        assert all(p.name != "Data_k" for p in found)
+
+    def test_analyze_finds_xlsx_and_counts_data_k_wavs(self, tmp_path):
+        from chiro_core import analyze_session
+        camp = tmp_path / "RN88"
+        sess = self._site(camp, "20260803_site430176_Z1_Pass2_enr10")
+        s = analyze_session(sess)
+        assert s.path == sess.resolve()
+        assert s.name == sess.name
+        assert s.campaign == "RN88"
+        assert s.n_wav == 2
+        assert s.n_wav_vigiechiro == 2
+        assert s.has_observations_xlsx
+        assert s.has_summary_txt
+        assert s.flag_analyzed
+        assert s.flag_renamed
+        assert s.flag_te10_done
+        assert s.has_data_k_mirror
+
+    def test_analyze_data_k_path_remaps_to_parent(self, tmp_path):
+        from chiro_core import analyze_session
+        camp = tmp_path / "RN88"
+        sess = self._site(camp, "20260803_site430176_Z1_Pass2_enr10")
+        s = analyze_session(sess / "Data_k")
+        assert s.path == sess.resolve()
+        assert s.name == sess.name
+        assert s.has_observations_xlsx
+        assert s.flag_analyzed
+
+    def test_export_roundtrip_scan_sees_xlsx(self, tmp_path):
+        from chiro_core import analyze_session, walk_sessions
+        from export_sessions import ExportSessionSpec, plan_export, run_export
+        camp = tmp_path / "src" / "RN88"
+        sess = self._site(camp, "20260803_site430176_Z1_Pass2_enr10")
+        dest = tmp_path / "usb"
+        dest.mkdir()
+        plan = plan_export(
+            [ExportSessionSpec(session_path=sess, include_data=False,
+                               include_data_k=True)],
+            dest, stamp="reint",
+        )
+        res = run_export(plan, dry_run=False)
+        assert res["n_errors"] == 0
+        export_root = Path(plan.dest_root)
+        found = walk_sessions(export_root)
+        assert len(found) == 1
+        assert found[0].name == sess.name
+        assert found[0].name != "Data_k"
+        s = analyze_session(found[0])
+        assert s.flag_analyzed
+        assert s.has_observations_xlsx
+        assert s.n_wav == 2
+
+    def test_sibling_data_k_not_promoted_to_campaign(self, tmp_path):
+        """campagne/Data_k/<session>/ ne doit pas faire de la campagne une session."""
+        from chiro_core import walk_sessions
+        camp = tmp_path / "MonContrat"
+        sess = camp / "nuit1"
+        sess.mkdir(parents=True)
+        (sess / "Data").mkdir()
+        self._wav(sess / "Data" / "raw.wav", sr=384000)
+        sib = camp / "Data_k" / "nuit1"
+        sib.mkdir(parents=True)
+        self._wav(sib / "seg_000.wav")
+        found = walk_sessions(tmp_path)
+        assert found == [sess.resolve()]
+        assert all(p.name != "Data_k" for p in found)
+
+    def test_cleaned_session_found_via_manifest(self, tmp_path):
+        """Plus aucun WAV (nettoyage) : le manifest suffit à retrouver la nuit."""
+        from chiro_core import walk_sessions, analyze_session
+        sess = tmp_path / "camp" / "nuit_clean"
+        sess.mkdir(parents=True)
+        (sess / "_session_manifest.json").write_text(
+            '{"schema_version": 1, "flags": {"cleaned": true, "analyzed": true}}',
+            encoding="utf-8",
+        )
+        (sess / "participation-abc-observations.xlsx").write_bytes(b"PK")
+        found = walk_sessions(tmp_path)
+        assert found == [sess.resolve()]
+        s = analyze_session(sess)
+        assert s.flag_analyzed
+        assert s.n_wav == 0
+
+    def test_repair_on_data_k_path_finds_participation_id(self, tmp_path):
+        from repair import diagnose_and_repair_session
+        camp = tmp_path / "RN88"
+        sess = self._site(camp, "20260803_site430176_Z1_Pass2_enr10",
+                          part_id="abc123pid")
+        report = diagnose_and_repair_session(
+            sess / "Data_k", token=None, apply=False, client=None,
+        )
+        assert report["participation_id"] == "abc123pid"
+        assert report["has_xlsx"] is True
+        assert Path(report["session"]) == sess.resolve()
+        assert report["local_wav_count"] == 2
+
+    def test_repair_recovers_id_from_xlsx_filename(self, tmp_path):
+        from repair import (
+            diagnose_and_repair_session,
+            participation_id_from_observations_name,
+        )
+        assert participation_id_from_observations_name(
+            "participation-deadbeef-observations.xlsx"
+        ) == "deadbeef"
+        sess = tmp_path / "nuit"
+        sess.mkdir()
+        (sess / "Data_k").mkdir()
+        self._wav(sess / "Data_k" / "a.wav")
+        (sess / "participation-fromfileid-observations.xlsx").write_bytes(b"PK")
+        (sess / "_session_manifest.json").write_text(
+            '{"schema_version": 1, "meta": {}, "flags": {}}', encoding="utf-8")
+        report = diagnose_and_repair_session(
+            sess, token=None, apply=False, client=None,
+        )
+        assert report["participation_id"] == "fromfileid"
+        assert any("relu depuis" in n for n in (report.get("notes") or []))
 
 
 class TestFinishUploadWithTrigger:
@@ -1840,6 +2004,26 @@ class TestTitleyNaming:
         state = analyze_session(tmp_path)
         assert state.has_data_k_mirror
         assert state.flag_te10_done is True
+
+    def test_te10_coverage_not_required_after_cleanup(self, tmp_path):
+        """Après nettoyage, Data_k plus petit que les bruts n'invalide pas TE×10."""
+        from chiro_core import analyze_session
+        from te10 import plan_file, write_segment
+        raw = tmp_path / "Data"
+        raw.mkdir()
+        dst = tmp_path / "Data_k"
+        dst.mkdir()
+        wav = raw / "Car220505-2026-Pass2-Z2-669153_20260830_202905.wav"
+        self._wav(wav, frames=12 * 8000, sr=8000)
+        plans = plan_file(wav, dst, 10, 5.0)
+        write_segment(plans[0])  # 1/3 : incomplet, mais déjà nettoyé
+        (tmp_path / "_stats_before_cleanup.json").write_text("{}", encoding="utf-8")
+        (tmp_path / "participation-abc-observations.xlsx").write_bytes(b"PK")
+        s = analyze_session(tmp_path)
+        assert s.flag_cleaned
+        assert s.flag_analyzed
+        assert s.has_data_k_mirror
+        assert s.flag_te10_done is True
 
     def test_session_te10_checks_at_most_three_sources(self, tmp_path, monkeypatch):
         from te10 import plan_file

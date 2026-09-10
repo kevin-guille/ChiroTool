@@ -864,7 +864,9 @@ et les métadonnées sur une clé ou un disque, en laissant les **bruts Data/**
    (clé USB…), confirmez.
 5. Un journal de copie s'affiche. À la fin, un dossier
    `ChiroTool_export_AAAAMMJJ_HHMMSS/` contient une arborescence **relative**
-   rejouable : un scan ChiroTool sur l'autre poste retrouve les pastilles d'état.
+   rejouable. Sur l'autre poste : **Parcourir…** vers ce dossier (ou vers le
+   dossier de campagne qu'il contient), puis **Scanner**. N'ouvrez pas un
+   sous-dossier `Data_k/` : c'est le miroir TE, pas la session.
 
 > 💡 Pour un partage « léger » : Data_k **oui**, Data **non**. Pour une archive
 > complète de la nuit, cochez les deux. Pour une relecture pure synthèse /
@@ -1044,6 +1046,19 @@ le cache API. Si rien n’est connu : message orange (plus de zoom France
 trompeur). Solution : une fois **🗺️ Choisir sur la carte…** ou create/reuse.
 Pour revoir **tous** les sites après un FOCUS : **🔄 Recharger sites**.
 
+**« Après un export USB, rien ne s'affiche (Excel présents) et Vérifier / Réparer dit *pas d'ID participation*. »**
+Le scan prenait `Data_k/` pour la session : le tableur, le Summary et le
+manifest sont dans le dossier **parent**. Mettez à jour ChiroTool (**0.8.1**
+ou plus), ouvrez `ChiroTool_export_…` (pas `Data_k`), puis **Scanner**.
+Ce n'est pas la peine de relancer l'analyse : les fichiers y sont déjà.
+
+**« Après un export ou un nettoyage, la pastille reste jaune et Préparer ressort, alors que Vérifier / Réparer dit que tout est bon. »**
+Les WAV bruts (souvent 384 kHz) sont encore dans le dossier, et `Data_k/`
+a été purgé. L'ancien contrôle Titley prenait ce sous-ensemble pour un
+TE×10 incomplet. À partir de **0.8.1**, si `_stats_before_cleanup.json`
+est là, TE×10 reste coché et la pastille passe au vert. **Scanner**
+suffit, sans relancer Préparer.
+
 **« Vérifier / Réparer propose de tout re-uploader. »**
 Vérifiez d'abord le **token** (401 = expiré → Préférences → API). Avec un bon
 token, le rapport distingue : couverture 100 % des locaux restants, fichiers
@@ -1161,6 +1176,8 @@ ChiroTool couvre la grande majorité des cas, mais pas (encore) tout :
 | **Titley** | Swift / Ranger : noms usine lus ; un WAV > 5 s est découpé **en entier** (plus seulement les 5 premières secondes, issue #4) |
 | **Démarrage** | Plus de scan auto du dernier dossier (issue #5) |
 | **Upload / Réparer** | Coupure réseau : code 409 = déjà enregistré, Tadarida peut partir. **Vérifier / Réparer** lance l'analyse si le listing portail échoue ; 0 contact → renvoyer Data_k |
+| **Export USB** | **v0.8.1** : un scan d'un paquet Data_k-only retrouve la session (plus le dossier `Data_k/` lui-même). Excel, Summary et ID participation réapparaissent. Ouvrir `ChiroTool_export_…`, pas `Data_k` |
+| **Pastille / TE×10** | **v0.8.1** : après nettoyage, Data_k plus petit que les bruts ne recule plus TE×10 (pastille verte, plus de Préparer en faux « next ») |
 | **Fenêtres** | Après **Afficher le bureau** (Win+D), recliquer ChiroTool ramène la progression. Plus besoin de tuer le process |
 | **Dates** | WAV font foi si Summary cumulé |
 | **SM2** | `.wac` / `.w4v` : conversion Kaleidoscope Lite en amont (issue #6) |

@@ -5,6 +5,26 @@ Les versions publiées suivent le SemVer du fichier `version.py` / tags GitHub.
 
 ## [Unreleased]
 
+## [0.8.1-dev] - 2026-09-10
+
+Build interne (pas de tag GitHub). Correctifs de réintégration d'un export
+USB Data_k-only sur un autre poste.
+
+### Corrigé
+
+- **Export USB / réintégration** : un scan d'un paquet Data_k-only (ou d'une
+  nuit dont les bruts Data/ ont été nettoyés) prenait le dossier `Data_k/`
+  pour la session. Les Excel, le Summary et le manifest restaient invisibles,
+  les pastilles restaient jaunes, et **Vérifier / Réparer** affichait
+  « pas d'ID participation dans le manifest ». Le parent est maintenant la
+  session ; l'ID peut aussi être relu depuis
+  `participation-<id>-observations.xlsx`.
+- **Pastille jaune après nettoyage** : si les bruts sont encore là, le
+  contrôle Titley comparait Data_k (déjà purgé) aux WAV 384 kHz et
+  reculait TE×10. La pastille restait jaune et **Préparer** ressortait,
+  alors que Vérifier / Réparer disait « aucune action ». Le contrôle ne
+  s'applique plus une fois `_stats_before_cleanup.json` présent.
+
 ## [0.8.0] — 2026-09-06
 
 Issue [#7](https://github.com/kevin-guille/ChiroTool/issues/7) : interprétation

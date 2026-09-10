@@ -469,6 +469,26 @@ RAW_WAV_SUBDIR_NAMES = {"data", "wavs", "wave", "records", "recordings"}
 MIRROR_PARENT_NAMES = {"data_k", "1-k", "1k", "data_te", "te10"}
 
 
+def resolve_session_root(folder: Path | str) -> Path:
+    """Si ``folder`` est un miroir TE×10 (Data_k, 1-K, …), remonte au parent.
+
+    Cas typique : export USB Data_k-only, ou Data/ déjà nettoyé. Les WAV
+    vivent dans ``<session>/Data_k/`` ; le scan ne doit pas prendre Data_k
+    pour la session (sinon xlsx / Summary / manifest restent invisibles).
+    """
+    folder = Path(folder)
+    try:
+        folder = folder.resolve()
+    except OSError:
+        pass
+    if folder.name.lower() not in MIRROR_PARENT_NAMES:
+        return folder
+    parent = folder.parent
+    if parent == folder:
+        return folder
+    return parent
+
+
 def _dir_has_wavs(p: Path) -> bool:
     try:
         for child in p.iterdir():
@@ -489,6 +509,35 @@ def _find_raw_wav_subdir(session_root: Path) -> Path | None:
     except (OSError, PermissionError):
         pass
     return None
+
+
+def _find_data_k_subdir(session_root: Path) -> Path | None:
+    """Sous-dossier miroir TE×10 local (Data_k/, 1-K/, …) s'il contient des WAV."""
+    try:
+        for child in session_root.iterdir():
+            if child.is_dir() and child.name.lower() in MIRROR_PARENT_NAMES:
+                if _dir_has_wavs(child):
+                    return child
+    except (OSError, PermissionError):
+        pass
+    return None
+
+
+def _has_session_markers(folder: Path) -> bool:
+    """True si le dossier porte un manifest ou un tableur d'observations."""
+    try:
+        for child in folder.iterdir():
+            if not child.is_file():
+                continue
+            if child.name == "_session_manifest.json":
+                return True
+            low = child.name.lower()
+            if low.startswith("participation-") and "observations" in low:
+                if low.endswith((".xlsx", ".csv")):
+                    return True
+    except (OSError, PermissionError):
+        pass
+    return False
 
 
 def find_summary_file(folder: Path) -> Path | None:
@@ -610,25 +659,34 @@ def analyze_session(folder: Path, sample_wav_for_sr: int = 3) -> SessionState:
     """
     Inspecte un dossier de session et renvoie son état.
 
-    Gère 2 dispositions :
+    Gère 3 dispositions :
       (A) WAV directement dans le dossier session
       (B) WAV dans un sous-dossier 'Data/'  (ex. enregistreurs SM4BAT)
+      (C) WAV uniquement dans Data_k/ (export USB Data_k-only, Data/ nettoyé)
 
-    Dans les 2 cas, les annexes (Summary.txt, observations.xlsx) sont cherchées
-    à la fois à la racine de la session ET dans le sous-dossier WAV.
+    Si ``folder`` est lui-même un miroir Data_k/, on remonte au parent
+    (xlsx / Summary / manifest vivent à la racine de session).
+
+    Les annexes (Summary.txt, observations.xlsx) sont cherchées à la racine
+    de la session ET dans le sous-dossier WAV.
 
     Un miroir TE×10 peut exister dans `<campagne>/Data_k/<nom-session>/` ou
     dans `<session>/Data_k/`.
     """
-    folder = folder.resolve()
+    folder = resolve_session_root(folder)
     s = SessionState(
         path=folder,
         name=folder.name,
         campaign=folder.parent.name,
     )
 
-    # Déterminer où vivent les WAV
+    # Déterminer où vivent les WAV. Data_k n'est le wav_dir que s'il n'y a
+    # plus de bruts (sinon on garderait Data/ comme source pour le contrôle
+    # de couverture TE×10).
     wav_dir = folder if _dir_has_wavs(folder) else _find_raw_wav_subdir(folder)
+    data_k_local = _find_data_k_subdir(folder)
+    if wav_dir is None and data_k_local is not None:
+        wav_dir = data_k_local
     if wav_dir is not None:
         _scan_wavs(wav_dir, s, sample_wav_for_sr=sample_wav_for_sr)
 
@@ -655,12 +713,18 @@ def analyze_session(folder: Path, sample_wav_for_sr: int = 3) -> SessionState:
     # Drapeaux haut niveau
     s.flag_renamed = s.n_wav > 0 and s.n_wav_vigiechiro >= s.n_wav_raw and s.n_wav_vigiechiro > 0
     s.flag_te10_done = s.looks_time_expanded is True or s.has_data_k_mirror or s.n_wav_with_000_suffix > 0
-    if (wav_dir is not None and te10_mirror is not None
-            and _te10_mirror_incomplete(wav_dir, te10_mirror)):
-        s.flag_te10_done = False
     s.flag_analyzed = s.has_observations_xlsx
     s.flag_cleaned = s.has_stats_snapshot
     s.flag_uploaded_hint = s.flag_analyzed
+    # Contrôle Titley (Data_k incomplet vs bruts) : seulement tant que le
+    # nettoyage n'a pas eu lieu. Après cleanup, Data_k est un sous-ensemble
+    # volontaire (contacts sous seuil purgés) : 783 k vs 895 bruts n'est
+    # PAS un TE×10 raté, sinon la pastille reste jaune et Préparer ressort.
+    if (not s.flag_cleaned
+            and wav_dir is not None and te10_mirror is not None
+            and wav_dir.resolve() != te10_mirror.resolve()
+            and _te10_mirror_incomplete(wav_dir, te10_mirror)):
+        s.flag_te10_done = False
 
     # Détection "participation créée côté serveur mais xlsx local absent" :
     # le manifest a un vigiechiro_participation_id mais on n'a pas trouvé
@@ -686,31 +750,54 @@ def walk_sessions(root: Path, max_depth: int = 4) -> list[Path]:
 
     Règles :
       - Un dossier est une session s'il contient directement des WAV,
-        ou s'il contient un sous-dossier 'Data/' avec des WAV.
-      - On ignore les dossiers sous un parent Data_k/ (miroirs TE×10).
+        un sous-dossier Data/ avec des WAV, un Data_k/ local avec des WAV,
+        un ``_session_manifest.json``, ou un tableur participation-*-observations.
+      - Data_k/ (et 1-K, …) n'est JAMAIS une session : c'est le miroir TE×10.
+        S'il contient des WAV, le parent est la session (export USB Data_k-only).
+      - On ignore les dossiers sous un parent Data_k/ (layout sibling campagne).
       - On ignore les dossiers techniques (commencent par . ou _).
       - On ne descend pas dans un dossier déjà identifié comme session.
     """
     root = root.resolve()
     out: list[Path] = []
+    seen: set[Path] = set()
+
+    def _add(p: Path) -> None:
+        try:
+            p = p.resolve()
+        except OSError:
+            pass
+        if p in seen:
+            return
+        seen.add(p)
+        out.append(p)
 
     def _rec(d: Path, depth: int):
         if depth > max_depth:
             return
         if d.name.startswith(".") or d.name.startswith("_"):
             return
-        # Miroir : on saute tout le sous-arbre
+        # Enfants d'un miroir sibling (campagne/Data_k/<session>/) : pas une session
         if d.parent.name.lower() in MIRROR_PARENT_NAMES:
             return
 
-        # (A) WAV directement ici ?
-        if _dir_has_wavs(d):
-            out.append(d)
+        # Le miroir lui-même n'est jamais une session. Le parent l'est.
+        if d.name.lower() in MIRROR_PARENT_NAMES:
+            if _dir_has_wavs(d):
+                parent = d.parent
+                try:
+                    parent.resolve().relative_to(root)
+                    _add(parent)
+                except ValueError:
+                    # Workspace = Data_k ouvert tel quel (dernier recours)
+                    _add(d)
             return
 
-        # (B) WAV dans un sous-dossier 'Data/' ?
-        if _find_raw_wav_subdir(d) is not None:
-            out.append(d)
+        if (_dir_has_wavs(d)
+                or _find_raw_wav_subdir(d) is not None
+                or _find_data_k_subdir(d) is not None
+                or _has_session_markers(d)):
+            _add(d)
             return
 
         try:

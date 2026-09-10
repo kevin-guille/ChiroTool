@@ -46,6 +46,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Protocol
 
+from chiro_core import resolve_session_root
 from manifest import Manifest
 
 try:
@@ -106,6 +107,20 @@ class RegistryLike(Protocol):
 # ---------------------------------------------------------------------------
 # Helpers purs (testables sans I/O réseau)
 # ---------------------------------------------------------------------------
+
+def participation_id_from_observations_name(name: str) -> str | None:
+    """Extrait l'ID depuis ``participation-<id>-observations*.xlsx/csv``."""
+    n = (name or "").strip()
+    low = n.lower()
+    if not low.startswith("participation-"):
+        return None
+    key = "-observations"
+    idx = low.find(key)
+    if idx <= len("participation-"):
+        return None
+    pid = n[len("participation-"):idx].strip()
+    return pid or None
+
 
 def list_local_data_k_wavs(session: Path) -> list[str]:
     """Noms des WAV dans ``session/Data_k/`` (triés). Liste vide si absent."""
@@ -541,7 +556,7 @@ def diagnose_and_repair_session(
     - ``resume_upload_missing`` est **suggéré** mais non exécuté ici
       (relancer ``run_phase_upload`` / bouton Upload côté UI).
     """
-    session = Path(session)
+    session = resolve_session_root(Path(session))
     report = RepairReport(
         session=str(session),
         apply=bool(apply),
@@ -563,8 +578,6 @@ def diagnose_and_repair_session(
         "analyzed": bool(flags.get("analyzed")),
         "cleaned": bool(flags.get("cleaned")),
     }
-    part_id = (m.meta or {}).get("vigiechiro_participation_id")
-    report.participation_id = str(part_id) if part_id else None
 
     # -- Disque local ------------------------------------------------------
     local_wavs = list_local_data_k_wavs(session)
@@ -572,6 +585,22 @@ def diagnose_and_repair_session(
     xlsx = find_local_observations_xlsx(session)
     report.has_xlsx = xlsx is not None
     report.xlsx_path = str(xlsx) if xlsx else None
+
+    part_id = (m.meta or {}).get("vigiechiro_participation_id")
+    recovered_pid_from_xlsx = False
+    if not part_id and xlsx is not None:
+        part_id = participation_id_from_observations_name(xlsx.name)
+        if part_id:
+            recovered_pid_from_xlsx = True
+            report.notes.append(
+                f"ID participation relu depuis {xlsx.name}"
+            )
+    report.participation_id = str(part_id) if part_id else None
+    if recovered_pid_from_xlsx and apply and part_id:
+        try:
+            m.set_meta(vigiechiro_participation_id=part_id)
+        except Exception:
+            pass
 
     if not report.participation_id:
         report.errors.append(
@@ -587,9 +616,16 @@ def diagnose_and_repair_session(
             flag_uploaded=report.local_flags["uploaded"],
             has_participation_id=False,
         )
-        report.notes.append(
-            "Créer/reprendre une participation via Upload avant réparation."
-        )
+        if report.has_xlsx:
+            report.notes.append(
+                "Un tableur d'observations est présent, mais sans ID "
+                "participation. Relancer Scanner, ou Upload pour recréer "
+                "la liaison portail."
+            )
+        else:
+            report.notes.append(
+                "Créer/reprendre une participation via Upload avant réparation."
+            )
         return report.to_dict()
 
     # -- Client API --------------------------------------------------------
@@ -753,7 +789,7 @@ def diagnose_and_repair_session(
     # APPLY
     # =====================================================================
     actions_planned = list(report.suggested_actions)
-    manifest_dirty = False
+    manifest_dirty = bool(recovered_pid_from_xlsx)
 
     def _skip(action: str, reason: str) -> None:
         report.skipped_actions.append({"action": action, "reason": reason})

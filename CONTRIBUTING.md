@@ -40,6 +40,9 @@ Nettoyer** déjà en 0.7 ; **MNHN 10 % / 75 %** dans la **Synthèse et Activité
   Exe du 2026-09-08 : upload 409, Afficher le bureau. Correctif Titley TE×10
   (2026-09-09) : WAV > 5 s découpé en entier. **Publiée** GitHub le 2026-09-09
   en pre-release ([v0.8.0](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.0)).
+- **v0.8.1-dev** (2026-09-10) : scan d'un export Data_k-only (session = parent,
+  pas `Data_k/`) ; TE×10 conservé après nettoyage (pastille verte). Pas de
+  tag GitHub.
 
 | Document | Rôle |
 |----------|------|
