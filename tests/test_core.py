@@ -3568,6 +3568,33 @@ class TestParticipationMetaDiff:
         assert "Matériel" in titles
         assert "Vent et couverture" not in titles
 
+    def test_upload_sync_merges_server_meteo(self):
+        from types import SimpleNamespace
+        from pipeline import _sync_participation_fields
+
+        class _Client:
+            def __init__(self):
+                self.edited = None
+
+            def get_participation(self, pid):
+                return SimpleNamespace(raw={
+                    "meteo": {"temperature_debut": 20, "vent": "FAIBLE"},
+                    "configuration": {"detecteur_enregistreur_type": "Anabat Swift"},
+                })
+
+            def edit_participation(self, pid, **kwargs):
+                self.edited = kwargs
+
+        client = _Client()
+        _sync_participation_fields(client, "pid", {
+            "meteo": {"temperature_debut": 16, "temperature_fin": 10},
+            "configuration": {"detecteur_enregistreur_serie": "669153"},
+        })
+        assert client.edited["meteo"]["vent"] == "FAIBLE"
+        assert client.edited["meteo"]["temperature_debut"] == 16
+        assert client.edited["configuration"]["detecteur_enregistreur_type"] == "Anabat Swift"
+        assert client.edited["configuration"]["detecteur_enregistreur_serie"] == "669153"
+
     def test_user_temps_overwrite_server(self):
         from chiro_core import diff_participation_update
         patch = diff_participation_update(

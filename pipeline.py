@@ -190,20 +190,54 @@ def _resolve_upload_payload(participation_payload, manifest_meta) -> dict:
 
 
 def _sync_participation_fields(client, participation_id, pp: dict) -> None:
-    """PATCH meteo / matériel / dates si on a un payload (reprise, batch)."""
+    """PATCH meteo / matériel / dates. Fusionne avec le serveur (Eve remplace le nested)."""
     if not participation_id or not pp:
         return
-    meteo = pp.get("meteo")
-    configuration = pp.get("configuration")
-    if not meteo and not configuration and not pp.get("date_debut"):
+    from chiro_core import coerce_participation_payload, server_fields_from_participation
+
+    local = coerce_participation_payload(pp)
+    meteo = local.get("meteo") if isinstance(local.get("meteo"), dict) else pp.get("meteo")
+    configuration = (
+        local.get("configuration")
+        if isinstance(local.get("configuration"), dict)
+        else pp.get("configuration")
+    )
+    date_debut = local.get("date_debut") or pp.get("date_debut")
+    date_fin = local.get("date_fin") or pp.get("date_fin")
+    if not meteo and not configuration and not date_debut:
         return
+
+    server: dict = {}
+    getter = getattr(client, "get_participation", None)
+    if callable(getter):
+        try:
+            pobj = getter(participation_id)
+            raw = getattr(pobj, "raw", None)
+            if isinstance(raw, dict):
+                server = server_fields_from_participation(raw)
+            elif isinstance(pobj, dict):
+                server = server_fields_from_participation(pobj)
+        except Exception:
+            server = {}
+
+    merged_meteo = None
+    if isinstance(meteo, dict) and meteo:
+        merged_meteo = dict(server.get("meteo") or {})
+        merged_meteo.update({k: v for k, v in meteo.items() if v is not None})
+    merged_cfg = None
+    if isinstance(configuration, dict) and configuration:
+        merged_cfg = dict(server.get("configuration") or {})
+        merged_cfg.update(
+            {k: v for k, v in configuration.items() if v not in (None, "")}
+        )
+
     client.edit_participation(
         participation_id,
-        date_debut=pp.get("date_debut"),
-        date_fin=pp.get("date_fin"),
-        point=pp.get("point"),
-        meteo=meteo,
-        configuration=configuration,
+        date_debut=date_debut,
+        date_fin=date_fin,
+        point=pp.get("point") or local.get("point"),
+        meteo=merged_meteo or None,
+        configuration=merged_cfg or None,
         commentaire=pp.get("commentaire"),
     )
 
