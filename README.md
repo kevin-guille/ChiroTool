@@ -63,12 +63,18 @@ Après un `_Vu`, « Identifications validées seulement » = contacts **écouté
 « Méthode MNHN 10 % / 75 % » reconstitue l'interprétation (bandes de
 confiance Tadarida), dans la Synthèse **et** l'onglet Activité.
 
-**0.8.1-dev** (2026-09-10, pas de tag GitHub) : un export USB Data_k-only
-rouvert sur un autre PC retrouve la session (plus le dossier `Data_k/`
-comme nuit). Après nettoyage, un `Data_k` plus petit que les bruts ne
-fait plus reculer TE×10 (pastille verte).
+**v0.8.1** (2026-09-16, ce commit) : participation Titley (série, log, T°,
+issue [#8](https://github.com/kevin-guille/ChiroTool/issues/8)) ; wizard
+d'upload qui s'affiche tout de suite (issue
+[#9](https://github.com/kevin-guille/ChiroTool/issues/9)) ; Activité en
+cache mémoire, `_Vu` hors chirosurf/, filtres MNHN qui gardent tous les
+carrés (issue [#10](https://github.com/kevin-guille/ChiroTool/issues/10)) ;
+export USB Data_k-only et pastille TE après nettoyage. L'exe GitHub reste
+la [v0.8.0](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.0)
+tant que le tag `v0.8.1` n'est pas publié. Note :
+[`docs/RELEASE_v0.8.1.md`](docs/RELEASE_v0.8.1.md).
 
-Note : [`docs/RELEASE_v0.8.0.md`](docs/RELEASE_v0.8.0.md). Bilan des issues
+Note 0.8.0 : [`docs/RELEASE_v0.8.0.md`](docs/RELEASE_v0.8.0.md). Bilan des issues
 [#4](https://github.com/kevin-guille/ChiroTool/issues/4) et
 [#7](https://github.com/kevin-guille/ChiroTool/issues/7) : SPEC
 [`§0.1`](docs/SPEC_v06_parcours.md) et [`§0.2`](docs/SPEC_v06_parcours.md)

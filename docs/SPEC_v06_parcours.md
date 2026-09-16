@@ -2,10 +2,10 @@
 
 | | |
 |--|--|
-| **Statut** | **Livré** : v0.6.0 (2026-08-07, vagues A–C) + **v0.7.0** (2026-08-30, Synthèse autonome, Titley, issues #4–#6) + **v0.7.1** (2026-08-31, issue #7 ChiroSurf CSV+WAV) + **v0.7.2** (2026-09-01, D12 nuit bio + barre d'actions) + **v0.8.0** (2026-09-06, P8 MNHN 10 % / 75 % Synthèse ; 2026-09-09 Activité + Titley TE×10) + **v0.8.1-dev** (2026-09-10, scan export Data_k-only + pastille TE + issue #8 participation Titley). |
-| **Ouvert** | Issues [#4](https://github.com/kevin-guille/ChiroTool/issues/4) et [#7](https://github.com/kevin-guille/ChiroTool/issues/7) close côté v0.8 (confirmation terrain), voir §0.1 et §0.2. Issue [#8](https://github.com/kevin-guille/ChiroTool/issues/8) livrée en 0.8.1-dev, voir §0.3. Vague D (export compilé, fusion `_Vu` → xlsx) plus tard. |
-| **Date** | 2026-08-04 (conception) · 2026-08-07 (v0.6) · 2026-08-30 (v0.7) · 2026-09-03 (D13) · 2026-09-06 (P8) · 2026-09-08 (exe 0.8.0 : 409 + Win+D) · 2026-09-09 (Titley TE×10, Activité MNHN, pre-release GitHub [v0.8.0](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.0)) · 2026-09-10 (0.8.1-dev : scan export Data_k-only + pastille TE + issue #8) |
-| **Contexte** | Issue [#3](https://github.com/kevin-guille/ChiroTool/issues/3) (retours terrain) + retours carte / meta + issues [#4](https://github.com/kevin-guille/ChiroTool/issues/4) / [#7](https://github.com/kevin-guille/ChiroTool/issues/7) / [#8](https://github.com/kevin-guille/ChiroTool/issues/8) |
+| **Statut** | **Livré** : v0.6.0 (2026-08-07, vagues A–C) + **v0.7.0** (2026-08-30, Synthèse autonome, Titley, issues #4–#6) + **v0.7.1** (2026-08-31, issue #7 ChiroSurf CSV+WAV) + **v0.7.2** (2026-09-01, D12 nuit bio + barre d'actions) + **v0.8.0** (2026-09-06, P8 MNHN 10 % / 75 % Synthèse ; 2026-09-09 Activité + Titley TE×10, pre-release GitHub) + **v0.8.1** (2026-09-16, #8 participation Titley, #9 wizard upload, #10 Activité cache ; pas de tag). |
+| **Ouvert** | Issues [#4](https://github.com/kevin-guille/ChiroTool/issues/4) et [#7](https://github.com/kevin-guille/ChiroTool/issues/7) close côté v0.8 (confirmation terrain), voir §0.1 et §0.2. Issues [#8](https://github.com/kevin-guille/ChiroTool/issues/8), [#9](https://github.com/kevin-guille/ChiroTool/issues/9), [#10](https://github.com/kevin-guille/ChiroTool/issues/10) livrées en 0.8.1, voir §0.3 et §0.4. Vague D (export compilé, fusion `_Vu` → xlsx) plus tard. |
+| **Date** | 2026-08-04 (conception) · 2026-08-07 (v0.6) · 2026-08-30 (v0.7) · 2026-09-03 (D13) · 2026-09-06 (P8) · 2026-09-08 (exe 0.8.0 : 409 + Win+D) · 2026-09-09 (Titley TE×10, Activité MNHN, pre-release GitHub [v0.8.0](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.0)) · 2026-09-10 (0.8.1 : scan export + pastille TE + #8) · 2026-09-16 (0.8.1 : #9 wizard, #10 Activité) |
+| **Contexte** | Issue [#3](https://github.com/kevin-guille/ChiroTool/issues/3) (retours terrain) + retours carte / meta + issues [#4](https://github.com/kevin-guille/ChiroTool/issues/4) / [#7](https://github.com/kevin-guille/ChiroTool/issues/7) / [#8](https://github.com/kevin-guille/ChiroTool/issues/8) / [#9](https://github.com/kevin-guille/ChiroTool/issues/9) / [#10](https://github.com/kevin-guille/ChiroTool/issues/10) |
 | **Principe** | Pragmatisme — une vérité disque, peu de fichiers, parcours unifiés, libellés humains d’abord |
 
 Ce document **prime** sur l’improvisation au codage. En cas de doute : revenir ici, ou amender le §8 avant de coder autre chose.
@@ -49,13 +49,13 @@ graphe Nyclei). Statut à la **v0.8** (rebuild 2026-09-09) :
 « Identifications validées seulement » = lignes écoutées. Ce n'est pas la
 méthode MNHN.
 
-### 0.3 Issue #8 vs 0.8.1-dev (participation Titley)
+### 0.3 Issue #8 vs 0.8.1 (participation Titley)
 
 Le body du 10 septembre 2026 (série / type / micro / horaires / T° du log
-Titley absents de la participation Vigie-Chiro) est **à traiter ici**, pas
+Titley absents de la participation Vigie-Chiro) est **livré ici**, pas
 comme un reliquat du 1er message #4.
 
-| # | Demande | 0.8.1-dev |
+| # | Demande | 0.8.1 |
 |---|---------|-----------|
 | 1 | N° de série, type, micro dans la participation | **Livré** : `detecteur_enregistreur_serie` toujours envoyé ; type / micro depuis Mes matériels ; type lu dans le log si le parc est vide. Pas de micro inventé. `Anabat Ranger` dans la liste. |
 | 2 | Heure début / fin d'enregistrement | **Livré** : `Recording start` / `Recording stop` du `log_*.csv` (sinon Summary / WAV). |
@@ -63,6 +63,16 @@ comme un reliquat du 1er message #4.
 | 4 | Nuits déjà analysées | **Livré** : Vérifier / Réparer compare et PATCHe les champs manquants (série, type, micro, horaires Titley, T°). Pas de `trigger_compute`. |
 
 Le CSV log doit être **dans le dossier de session** (ou `Data/`), comme un Summary SM4.
+
+### 0.4 Issues #9 et #10 vs 0.8.1 (16 septembre 2026)
+
+| # | Demande | 0.8.1 |
+|---|---------|-----------|
+| #9 | Upload unitaire : wizard vide, participation non créée (batch OK) | **Livré** : formulaire dessiné d'abord, prefill en thread. Log Titley présent : pas de listing Data_k avant le wizard ni pour les dates. |
+| #10 | Activité lente (rescan xlsx à chaque case), filtres morts, MNHN = taxons écoutés seulement, un seul carré | **Livré** : cache RAM ; cases = recalcul mémoire ; `_Vu` racine de session et `Data_k/` ; listes de filtres depuis l'univers (les autres carrés restent) ; 1er scan sans descendre dans les WAV. |
+| (annoncé #7) | Rouvrir le suivi d'upload après fermeture de la fenêtre | **Livré** : fermer = arrière-plan ; recliquer Upload rouvre. |
+
+L'exe **publié** reste [v0.8.0](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.0) tant qu'il n'y a pas de tag `v0.8.1`.
 
 ---
 
@@ -526,7 +536,8 @@ Le tutoriel **ne décrit pas** les features non livrées comme déjà disponible
 | 2026-09-09 | P8 Activité | Case MNHN 10 % / 75 % dans l'onglet Activité (`iter_mnhn_contacts`, même règle que la Synthèse). |
 | 2026-09-09 | issue #7 | §0.2 : bilan #7 vs v0.8 (ne plus relire le 1er message). MNHN Synthèse + Activité. |
 | 2026-09-09 | v0.8.0 | Pre-release GitHub publiée (tag v0.8.0, SHA exe vérifié). Latest GitHub reste 0.7.2 tant que la case pre-release est cochée. |
-| 2026-09-10 | v0.8.1-dev | Scan : `Data_k/` n'est plus une session (export USB Data_k-only, xlsx/manifest au parent). Repair remonte au parent et relit l'ID depuis le nom du xlsx. Après cleanup, le contrôle Titley ne recule plus TE×10. |
+| 2026-09-10 | v0.8.1 | Scan : `Data_k/` n'est plus une session (export USB Data_k-only, xlsx/manifest au parent). Repair remonte au parent et relit l'ID depuis le nom du xlsx. Après cleanup, le contrôle Titley ne recule plus TE×10. |
+| 2026-09-16 | v0.8.1 | §0.4 : issue #9 wizard upload (paint d'abord, Titley sans listing WAV) ; issue #10 Activité cache + `_Vu` racine/Data_k + filtres MNHN stables. Suivi upload rouvert. Tag GitHub après rebuild exe. |
 
 ---
 
@@ -535,6 +546,8 @@ Le tutoriel **ne décrit pas** les features non livrées comme déjà disponible
 - Issue #3 : méthode validation MNHN, multi-nuits, pièces CSV Benjamin.
 - Issue [#4](https://github.com/kevin-guille/ChiroTool/issues/4) : retours Thomas / Mickaël. Bilan v0.8 en §0.1. Ne pas traiter le 1er message comme une todo.
 - Issue [#7](https://github.com/kevin-guille/ChiroTool/issues/7) : liaison ChiroSurf (v0.7.1 / 0.7.2) ; interprétation 10 % / 75 % Synthèse et Activité (P8). Bilan v0.8 en §0.2. Ne pas traiter le 1er message comme une todo.
+- Issue [#8](https://github.com/kevin-guille/ChiroTool/issues/8) : participation Titley. Bilan 0.8.1 en §0.3.
+- Issues [#9](https://github.com/kevin-guille/ChiroTool/issues/9) / [#10](https://github.com/kevin-guille/ChiroTool/issues/10) : wizard upload et Activité. Bilan 0.8.1 en §0.4.
 - Échantillons : `samples/issue3_benjamin/` (multi + Nuit_1/2 + `_Vu`).
 - Forum Vigie-Chiro :
   - [t483 — analyser plusieurs nuits consécutives](https://vigie-chiro.forumactif.com/t483-chiro-surf-analyser-plusieurs-nuits-consecutives) (Yann T., Yves Bas, LouSauvajon)

@@ -1255,6 +1255,18 @@ class TestActivityAggregate:
     def _fname(self, hms="210000"):
         return f"Car212097-2026-Pass1-Z1-SMU03126_20260821_{hms}.wav"
 
+    def test_empty_mnhn_vu_still_overrides_xlsx_night(self):
+        from activity_graph import aggregate_loaded_tables
+        headers = ["nom du fichier", "tadarida_taxon",
+                   "tadarida_probabilite", "observateur_taxon"]
+        fname = self._fname()
+        loaded = [
+            (Path("night_Vu.csv"), headers, [[fname, "Pippip", .95, ""]]),
+            (Path("participation-a-observations.xlsx"), headers,
+             [[fname, "Pippip", .95, "Pippip"]]),
+        ]
+        assert aggregate_loaded_tables(loaded, use_mnhn=True) == {}
+
     def test_observer_taxon_groups_under_observer_code(self):
         from activity_graph import aggregate_rows
         rows = [
@@ -1356,6 +1368,84 @@ class TestActivityAggregate:
         res = compute_night_synthesis(headers, rows, chiros_only=True)
         assert [s["taxon"] for s in res["species"]] == ["Pippip"]
         assert res["total_contacts"] == 1
+
+    def test_discover_vu_at_session_root(self, tmp_path):
+        """Un _Vu à la racine de session (pas dans chirosurf/) doit être vu."""
+        import csv
+        import openpyxl
+        from activity_graph import (
+            discover_activity_sources, aggregate_loaded_tables,
+            load_observation_table, list_sites,
+        )
+        s1 = tmp_path / "20250916_site381079_Z1"
+        s2 = tmp_path / "20250916_site381078_Z2"
+        s1.mkdir()
+        s2.mkdir()
+        n1 = "Car381079-2026-Pass1-Z1-SMU03126_20260821_210000.wav"
+        n2 = "Car381078-2026-Pass1-Z2-SMU03126_20260821_210000.wav"
+        vu = s1 / "Nuit_1-observations_Vu.csv"
+        with vu.open("w", encoding="utf-8", newline="") as f:
+            w = csv.writer(f, delimiter=";")
+            w.writerow(self.HEADERS)
+            w.writerow([n1, "Pippip", "Pippip", None])
+        xlsx = s2 / "participation-xyz-observations.xlsx"
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.append(self.HEADERS)
+        ws.append([n2, "Barbar", "Barbar", ""])
+        wb.save(xlsx)
+        found = discover_activity_sources(tmp_path)
+        names = {p.name.lower() for p in found}
+        assert "nuit_1-observations_vu.csv" in names
+        assert "participation-xyz-observations.xlsx" in names
+        loaded = []
+        for p in found:
+            pair = load_observation_table(p)
+            assert pair is not None
+            loaded.append((p, pair[0], pair[1]))
+        agg = aggregate_loaded_tables(loaded)
+        assert set(list_sites(agg)) == {"381079", "381078"}
+
+    def test_discover_vu_in_data_k_without_walking_wavs(self, tmp_path):
+        """Un _Vu dans Data_k/ est trouvé ; les WAV n'empêchent pas le scan."""
+        import csv
+        from activity_graph import discover_activity_sources
+        dk = tmp_path / "sess" / "Data_k"
+        dk.mkdir(parents=True)
+        for i in range(20):
+            (dk / f"dummy_{i}.wav").write_bytes(b"RIFF")
+        vu = dk / "Nuit_1-observations_Vu.csv"
+        with vu.open("w", encoding="utf-8", newline="") as f:
+            w = csv.writer(f, delimiter=";")
+            w.writerow(self.HEADERS)
+            w.writerow([self._fname(), "Pippip", "Pippip", None])
+        found = discover_activity_sources(tmp_path)
+        assert any(p.name.lower().endswith("_vu.csv") for p in found)
+
+    def test_table_cache_rereads_only_when_mtime_changes(self, tmp_path):
+        import csv
+        from activity_graph import ObservationTableCache, load_observation_table
+        p = tmp_path / "Nuit_1-foo_Vu.csv"
+        with p.open("w", encoding="utf-8", newline="") as f:
+            w = csv.writer(f, delimiter=";")
+            w.writerow(self.HEADERS)
+            w.writerow([self._fname(), "Pippip", "Pippip", None])
+        cache = ObservationTableCache()
+        first = cache.load(p)
+        assert first is not None
+        key = str(p)
+        snap = cache._data[key]
+        second = cache.load(p)
+        assert cache._data[key] is snap
+        assert second[0] == first[0]
+        with p.open("a", encoding="utf-8", newline="") as f:
+            csv.writer(f, delimiter=";").writerow(
+                [self._fname("211000"), "Barbar", "Barbar", None])
+        third = cache.load(p)
+        assert cache._data[key] is not snap
+        assert len(third[1]) == 2
+        disk = load_observation_table(p)
+        assert len(disk[1]) == 2
 
 
 # =========================================================================
@@ -3595,6 +3685,24 @@ class TestParticipationMetaDiff:
         assert client.edited["configuration"]["detecteur_enregistreur_type"] == "Anabat Swift"
         assert client.edited["configuration"]["detecteur_enregistreur_serie"] == "669153"
 
+    @pytest.mark.parametrize("response", ["error", None])
+    def test_upload_sync_does_not_patch_when_server_unreadable(self, response):
+        from pipeline import _sync_participation_fields
+
+        class Client:
+            def get_participation(self, pid):
+                if response == "error":
+                    raise OSError("offline")
+                return response
+
+            def edit_participation(self, *args, **kwargs):
+                raise AssertionError("PATCH must not run without server fields")
+
+        with pytest.raises(RuntimeError, match="PATCH annulé"):
+            _sync_participation_fields(Client(), "pid", {
+                "configuration": {"detecteur_enregistreur_serie": "669153"},
+            })
+
     def test_user_temps_overwrite_server(self):
         from chiro_core import diff_participation_update
         patch = diff_participation_update(
@@ -4572,58 +4680,56 @@ class TestTitleyLog:
         assert live["meteo"]["temperature_debut"] == 18
 
     def test_prefill_titley_over_summary_and_cached_dates(self, tmp_path):
-        import ast
+        import json
         import shutil
-        import types
-        from unittest.mock import patch
-        import chiro_core
+        from chiro_core import collect_wizard_prefill
         source = Path(__file__).resolve().parents[1]
         shutil.copyfile(source / "samples/issue4_mickael/log_2026-08-21.csv",
                         tmp_path / "log_2026-08-21.csv")
-        assert chiro_core.find_titley_log(tmp_path) == tmp_path / "log_2026-08-21.csv"
-        # Execute only the prefill method, without importing customtkinter.
-        tree = ast.parse((source / "gui_participation_wizard.py").read_text(encoding="utf-8"))
-        wizard = next(n for n in tree.body if isinstance(n, ast.ClassDef) and n.name == "ParticipationWizard")
-        method = next(n for n in wizard.body if isinstance(n, ast.FunctionDef) and n.name == "_collect_prefill")
-        from vigiechiro_enums import DETECTEUR_ENREGISTREUR_TYPES
-        namespace = {name: getattr(chiro_core, name) for name in (
-            "find_titley_log", "parse_titley_log", "should_prefer_wav_dates",
-            "summary_temps_in_window", "overlay_participation_cache")}
-        namespace.update(
-            find_summary_file=lambda folder: folder / "Summary.txt",
-            parse_summary_txt=lambda path: chiro_core.SummaryInfo(
-                path, start_dt=datetime(2026, 8, 20, 19), end_dt=datetime(2026, 8, 21, 7),
-                temp_start=38, temp_end=37),
-            wav_timestamp_range=lambda names: (datetime(2026, 8, 21, 21), datetime(2026, 8, 22, 7)),
-            DETECTEUR_ENREGISTREUR_TYPES=DETECTEUR_ENREGISTREUR_TYPES,
-            Manifest=types.SimpleNamespace(load=lambda path: types.SimpleNamespace(meta={
+        (tmp_path / "_session_manifest.json").write_text(json.dumps({
+            "schema_version": 1,
+            "meta": {
                 "participation_payload": {
                     "date_debut": "2026-08-20T19:00:00",
                     "temperature_fin": 16,
                     "temperature_user_set": True,
-                }})))
-        exec(compile(ast.Module(body=[method], type_ignores=[]), "prefill", "exec"), namespace)
-        obj = types.SimpleNamespace(session_path=tmp_path,
-                                    meta=types.SimpleNamespace(n_enregistreur=1),
-                                    _session_wav_names=lambda: [])
-        material = types.SimpleNamespace(is_empty=lambda: False, modele="", micro_modele="",
-                                         hauteur_m=None, stereo=False)
-        stub = types.ModuleType("materiels")
-        stub.load_materiels = lambda: []
-        stub.find_by_id = lambda *args: material
-        with patch.dict("sys.modules", {"materiels": stub}):
-            pre = namespace["_collect_prefill"](obj)
-            assert pre["date_debut"] == datetime(2026, 8, 21, 20, 39, 5)
-            assert pre["date_fin"] == datetime(2026, 8, 22, 7, 41, 32)
-            assert pre["temperature_fin"] == 16
-            assert pre["detecteur_enregistreur_type"] == "Anabat Swift"
-            assert "micro0_modele" not in pre
-            assert not pre.get("_dates_from_wav")
-            material.modele = "SM4BAT FS"
-            material.micro_modele = "SM4 BAT FS"
-            pre = namespace["_collect_prefill"](obj)
-            assert pre["detecteur_enregistreur_type"] == "SM4BAT FS"
-            assert pre["micro0_modele"] == "SM4 BAT FS"
+                }
+            },
+            "actions": [],
+            "flags": {},
+        }), encoding="utf-8")
+        dk = tmp_path / "Data_k"
+        dk.mkdir()
+        for i in range(30):
+            (dk / f"dummy_{i}.wav").write_bytes(b"")
+
+        pre = collect_wizard_prefill(tmp_path)
+        assert pre["date_debut"] == datetime(2026, 8, 21, 20, 39, 5)
+        assert pre["date_fin"] == datetime(2026, 8, 22, 7, 41, 32)
+        assert pre["temperature_fin"] == 16
+        assert pre["detecteur_enregistreur_type"] == "Anabat Swift"
+        assert "micro0_modele" not in pre
+        assert pre.get("_wav_listed") is False
+        assert not pre.get("_dates_from_wav")
+
+    def test_prefill_titley_does_not_list_wavs(self, tmp_path, monkeypatch):
+        import shutil
+        import chiro_core
+        from chiro_core import collect_wizard_prefill
+        source = Path(__file__).resolve().parents[1]
+        shutil.copyfile(source / "samples/issue4_mickael/log_2026-08-21.csv",
+                        tmp_path / "log_2026-08-21.csv")
+        called = {"n": 0}
+
+        def boom(session):
+            called["n"] += 1
+            raise AssertionError("ne doit pas lister Data_k si le log Titley suffit")
+
+        monkeypatch.setattr(chiro_core, "list_session_wav_names", boom)
+        pre = collect_wizard_prefill(tmp_path)
+        assert called["n"] == 0
+        assert pre["_wav_listed"] is False
+        assert pre["_dates_from_titley"] is True
 
 
 if __name__ == "__main__":

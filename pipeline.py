@@ -209,7 +209,9 @@ def _sync_participation_fields(client, participation_id, pp: dict) -> None:
 
     server: dict = {}
     getter = getattr(client, "get_participation", None)
-    if callable(getter):
+    if meteo or configuration:
+        if not callable(getter):
+            raise RuntimeError("PATCH annulé : lecture de la participation indisponible")
         try:
             pobj = getter(participation_id)
             raw = getattr(pobj, "raw", None)
@@ -217,8 +219,12 @@ def _sync_participation_fields(client, participation_id, pp: dict) -> None:
                 server = server_fields_from_participation(raw)
             elif isinstance(pobj, dict):
                 server = server_fields_from_participation(pobj)
-        except Exception:
-            server = {}
+            else:
+                raise ValueError("réponse participation invalide")
+        except Exception as exc:
+            raise RuntimeError(
+                "PATCH annulé : impossible de lire les champs du portail"
+            ) from exc
 
     merged_meteo = None
     if isinstance(meteo, dict) and meteo:

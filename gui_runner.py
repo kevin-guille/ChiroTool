@@ -42,6 +42,7 @@ class RunDialog(ctk.CTkToplevel):
         # Initialisé AVANT tout after() : _on_close_attempt lit self._done, et
         # l'utilisateur peut fermer la fenêtre dans les 100ms avant _launch.
         self._done = False
+        self._backgrounded = False
 
         self._build_ui(title)
         self.protocol("WM_DELETE_WINDOW", self._on_close_attempt)
@@ -108,7 +109,6 @@ class RunDialog(ctk.CTkToplevel):
         )
         # Caché par défaut, affiché par _apply_progress quand label = wait
         self.background_btn.grid(row=0, column=1, sticky="e", padx=(0, 6))
-        self.background_btn.grid_remove()
 
         self.close_btn = ctk.CTkButton(footer, text="Fermer", width=120, height=32,
                                          state="disabled",
@@ -193,22 +193,19 @@ class RunDialog(ctk.CTkToplevel):
                     txt = f"{label}   {txt}"
             self.progress_lbl.configure(text=txt)
 
-            # En phase wait Tadarida, on expose le bouton "Arrière-plan" :
-            # le traitement tourne côté serveur, l'utilisateur peut sortir
-            # sans rien casser et récupérer le xlsx plus tard.
+            # Arrière-plan : upload long ET attente Tadarida. Fermer ne
+            # tue pas le worker ; recliquer Upload rouvre cette fenêtre.
+            try:
+                self.background_btn.grid()
+            except Exception:
+                pass
             if is_wait:
                 try:
-                    self.background_btn.grid()
                     self.status_lbl.configure(
                         text="⏳  Tadarida analyse côté serveur — "
                              "tu peux fermer en arrière-plan.",
                         text_color=("gray35", "gray70"),
                     )
-                except Exception:
-                    pass
-            else:
-                try:
-                    self.background_btn.grid_remove()
                 except Exception:
                     pass
         except Exception:
@@ -237,9 +234,7 @@ class RunDialog(ctk.CTkToplevel):
             parent=self,
         )
         if ok:
-            # Marque _done pour ne pas redéclencher la confirmation classique
-            self._done = True
-            self.destroy()
+            self._withdraw_to_background()
 
     def log(self, line: str):
         """Callback thread-safe pour le worker."""
@@ -327,8 +322,28 @@ class RunDialog(ctk.CTkToplevel):
         except Exception:
             ok = False
         if ok:
-            self._done = True  # évite le re-prompt si re-clic croix
-            self.destroy()
+            self._withdraw_to_background()
+
+    def _withdraw_to_background(self):
+        """Cache la fenêtre, le worker continue. Recliquer Upload la rouvre."""
+        self._backgrounded = True
+        try:
+            self.withdraw()
+        except Exception:
+            try:
+                self.destroy()
+            except Exception:
+                pass
+
+    def reveal(self):
+        """Ramène une fenêtre mise en arrière-plan."""
+        self._backgrounded = False
+        try:
+            self.deiconify()
+            self.lift()
+            self.focus_force()
+        except Exception:
+            pass
 
 
 # ---------------------------------------------------------------------------

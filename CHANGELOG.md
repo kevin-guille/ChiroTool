@@ -5,11 +5,14 @@ Les versions publiées suivent le SemVer du fichier `version.py` / tags GitHub.
 
 ## [Unreleased]
 
-## [0.8.1-dev] - 2026-09-10
+## [0.8.1] - 2026-09-16
 
-Build interne (pas de tag GitHub). Correctifs de réintégration d'un export
-USB Data_k-only, puis participation Vigie-Chiro Titley (issue
-[#8](https://github.com/kevin-guille/ChiroTool/issues/8)).
+`version.py` = `0.8.1`. La pre-release [v0.8.0](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.0)
+reste l'exe GitHub tant que le tag `v0.8.1` n'est pas créé (après rebuild).
+Cumul depuis le 10 septembre : export USB Data_k-only, participation Titley
+([#8](https://github.com/kevin-guille/ChiroTool/issues/8)), retours du 16
+septembre ([#9](https://github.com/kevin-guille/ChiroTool/issues/9),
+[#10](https://github.com/kevin-guille/ChiroTool/issues/10)).
 
 ### Ajouté
 
@@ -22,6 +25,20 @@ USB Data_k-only, puis participation Vigie-Chiro Titley (issue
 
 ### Corrigé
 
+- **Upload unitaire / wizard vide (issue #9)** : la fenêtre « Nouvelle
+  participation » s'affiche tout de suite. Le pré-remplissage (log Titley,
+  Summary) tourne ensuite. Un Data_k de plusieurs milliers de WAV sur
+  disque externe ne laisse plus une fenêtre noire. S'il y a un log Titley,
+  les WAV ne sont plus listés ni avant le wizard (`inspect_summary_vs_wav`
+  sauté) ni pour le pré-remplissage.
+- **Activité (issue #10)** : les tableurs sont lus une fois et gardés en
+  mémoire. Cocher MNHN / chiros / taxons observateur ne relit plus le
+  disque. Un `_Vu` à la racine de session ou dans `Data_k/` est pris en
+  compte. Cocher MNHN ne fait plus disparaître les autres carrés de la
+  liste. Le premier scan ne descend plus dans les milliers de WAV.
+- **Suivi d'upload** : fermer la fenêtre pendant l'envoi la met en
+  arrière-plan. Recliquer Upload la rouvre. Le bouton Arrière-plan est
+  disponible dès le début, pas seulement pendant l'attente Tadarida.
 - **Export USB / réintégration** : un scan d'un paquet Data_k-only (ou d'une
   nuit dont les bruts Data/ ont été nettoyés) prenait le dossier `Data_k/`
   pour la session. Les Excel, le Summary et le manifest restaient invisibles,
@@ -40,7 +57,15 @@ USB Data_k-only, puis participation Vigie-Chiro Titley (issue
   normalisé avant l'API (batch / reprise).
 - **Vérifier / Réparer** : si la participation est déjà analysée, compare
   série / type / micro / horaires / T° au portail. Champs absents (ou T°
-  forcées, ou horaires Titley) : PATCH sans relancer Tadarida.
+  forcées, ou horaires Titley) : PATCH sans relancer Tadarida. Un PATCH
+  météo / matériel est **annulé** si le portail n'est pas lisible (Eve
+  remplacerait tout le sous-document).
+
+### Tests
+
+- Prefill Titley sans lister Data_k. Découverte `_Vu` en racine et dans
+  Data_k. Cache tableurs (pas de relecture si mtime inchangé). `_Vu` MNHN
+  vide n'est pas remplacé par l'xlsx. TE×10 Titley inchangé.
 
 ## [0.8.0] — 2026-09-06
 

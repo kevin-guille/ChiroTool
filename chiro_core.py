@@ -353,6 +353,130 @@ def parse_titley_log(path: Path) -> TitleyLogInfo | None:
     return info
 
 
+def collect_wizard_prefill(session: Path, *,
+                           n_enregistreur=None,
+                           date_debut=None,
+                           wav_names: list[str] | None = None) -> dict:
+    """Pré-remplissage du wizard participation, sans GUI.
+
+    Ordre : log Titley (dates + T°) → Summary → WAV seulement si encore
+    besoin. Une session Titley de 4000 WAV ne doit plus lister Data_k/
+    juste pour ouvrir la fenêtre (issue #9).
+    """
+    session = Path(session)
+    pre: dict = {}
+
+    log_path = find_titley_log(session)
+    if log_path is None:
+        sub = _find_raw_wav_subdir(session)
+        if sub is not None:
+            log_path = find_titley_log(sub)
+    titley = parse_titley_log(log_path) if log_path else None
+    if titley and titley.start_dt and titley.end_dt:
+        pre["date_debut"] = titley.start_dt
+        pre["date_fin"] = titley.end_dt
+        pre["_dates_from_titley"] = True
+        if titley.temp_start is not None:
+            pre["temperature_debut"] = int(round(titley.temp_start))
+        if titley.temp_end is not None:
+            pre["temperature_fin"] = int(round(titley.temp_end))
+        if titley.device_model:
+            try:
+                from vigiechiro_enums import DETECTEUR_ENREGISTREUR_TYPES
+                allowed = titley.device_model in DETECTEUR_ENREGISTREUR_TYPES
+            except Exception:
+                allowed = True
+            if allowed:
+                pre["detecteur_enregistreur_type"] = titley.device_model
+
+    s = None
+    summ = find_summary_file(session)
+    if summ is None:
+        sub = _find_raw_wav_subdir(session)
+        if sub is not None:
+            summ = find_summary_file(sub)
+    if summ is not None:
+        s = parse_summary_txt(summ)
+        if s:
+            if "temperature_debut" not in pre and s.temp_start is not None:
+                pre["temperature_debut"] = int(round(s.temp_start))
+            if "temperature_fin" not in pre and s.temp_end is not None:
+                pre["temperature_fin"] = int(round(s.temp_end))
+            if not pre.get("_dates_from_titley"):
+                if s.start_dt:
+                    pre["date_debut"] = s.start_dt
+                if s.end_dt:
+                    pre["date_fin"] = s.end_dt
+
+    if not pre.get("_dates_from_titley"):
+        names = wav_names
+        if names is None:
+            # Pas de Titley : on liste. Si Titley était là, on ne passe pas ici.
+            names = list_session_wav_names(session)
+        from naming import wav_timestamp_range
+        wav_min, wav_max = wav_timestamp_range(names)
+        if should_prefer_wav_dates(s, wav_min) and wav_min:
+            pre["date_debut"] = wav_min
+            if wav_max:
+                pre["date_fin"] = wav_max
+            pre["_dates_from_wav"] = True
+            t0, t1 = summary_temps_in_window(s, wav_min, wav_max)
+            if t0 is not None:
+                pre["temperature_debut"] = int(round(t0))
+            elif not s:
+                pre.pop("temperature_debut", None)
+            if t1 is not None:
+                pre["temperature_fin"] = int(round(t1))
+            elif not s:
+                pre.pop("temperature_fin", None)
+        pre["_wav_listed"] = True
+    else:
+        pre["_wav_listed"] = False
+
+    used_materiels = False
+    try:
+        from materiels import find_by_id, load_materiels
+        if n_enregistreur is not None:
+            m = find_by_id(load_materiels(), n_enregistreur)
+            if m is not None and not m.is_empty():
+                used_materiels = True
+                if m.modele:
+                    pre["detecteur_enregistreur_type"] = m.modele
+                if m.micro_modele:
+                    pre["micro0_modele"] = m.micro_modele
+                if m.hauteur_m is not None:
+                    pre["micro0_hauteur"] = str(m.hauteur_m)
+                if m.stereo and m.micro2_modele:
+                    pre["stereo"] = True
+                    pre["micro1_modele"] = m.micro2_modele
+    except Exception:
+        pass
+
+    if (titley and titley.device_model
+            and not pre.get("detecteur_enregistreur_type")):
+        pre["detecteur_enregistreur_type"] = titley.device_model
+
+    pre["_used_materiels"] = used_materiels
+    pre["_auto_temperature_debut"] = pre.get("temperature_debut")
+    pre["_auto_temperature_fin"] = pre.get("temperature_fin")
+
+    try:
+        from manifest import Manifest
+        mfest = Manifest.load(session)
+    except Exception:
+        mfest = None
+    if mfest and mfest.meta:
+        part_cached = mfest.meta.get("participation_payload") or {}
+        wav_day = None
+        if pre.get("_dates_from_wav") and pre.get("date_debut") is not None:
+            try:
+                wav_day = pre["date_debut"].date().isoformat()
+            except Exception:
+                wav_day = None
+        overlay_participation_cache(pre, part_cached, wav_day=wav_day)
+    return pre
+
+
 def find_titley_log(folder: Path) -> Path | None:
     """Trouve un log Titley validé à la racine de session ou dans Data/."""
     folder = Path(folder)

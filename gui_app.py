@@ -328,6 +328,8 @@ class ChiroToolApp(ctk.CTk):
         self.sessions: list[SessionState] = []
         self.session_cards: list[SessionCard] = []
         self.selected_card: SessionCard | None = None
+        # Fenêtres de phase encore vivantes (upload en arrière-plan, issue #7).
+        self._run_dialogs: dict[str, object] = {}
         # Cache (path → mtime, size, dict) du bilan X/Y validés, lecture xlsx async
         self._obs_progress_cache: dict[str, tuple] = {}
         self._obs_progress_token = 0
@@ -2119,7 +2121,33 @@ class ChiroToolApp(ctk.CTk):
             on_done=self._after_phase_done,
         )
 
+    def _reveal_run_dialog(self, key: str) -> bool:
+        """True si une fenêtre de suivi existe encore (même en arrière-plan)."""
+        dlg = self._run_dialogs.get(key)
+        if dlg is None:
+            return False
+        try:
+            if dlg.winfo_exists():
+                if not getattr(dlg, "_done", False):
+                    if hasattr(dlg, "reveal"):
+                        dlg.reveal()
+                    else:
+                        dlg.deiconify()
+                        dlg.lift()
+                    return True
+                try:
+                    dlg.destroy()
+                except Exception:
+                    pass
+        except Exception:
+            pass
+        self._run_dialogs.pop(key, None)
+        return False
+
     def _run_upload(self, s: SessionState):
+        key = str(s.path)
+        if self._reveal_run_dialog(key):
+            return
         token = load_token()
         if not token:
             if messagebox.askyesno(
@@ -2140,12 +2168,21 @@ class ChiroToolApp(ctk.CTk):
         existing_participation_id = (m.meta or {}).get("vigiechiro_participation_id") if m else None
         skip_wizard = bool(existing_participation_id)
         try:
-            from rename import inspect_summary_vs_wav
+            from chiro_core import find_titley_log, parse_titley_log
             from pipeline import _participation_id_is_stale
-            info = inspect_summary_vs_wav(s.path)
-            desired = info.get("wav_min") or meta.date_debut
-            if info.get("warning"):
-                skip_wizard = False
+            desired = meta.date_debut
+            log_path = find_titley_log(s.path)
+            titley = parse_titley_log(log_path) if log_path else None
+            if titley and titley.start_dt:
+                # Log Titley = horaires boîtier. Pas besoin de lister Data_k
+                # (issue #9 : 4000 WAV sur disque externe avant le wizard).
+                desired = titley.start_dt
+            else:
+                from rename import inspect_summary_vs_wav
+                info = inspect_summary_vs_wav(s.path)
+                desired = info.get("wav_min") or meta.date_debut
+                if info.get("warning"):
+                    skip_wizard = False
             if (existing_participation_id and m
                     and _participation_id_is_stale(m.meta or {}, desired)):
                 skip_wizard = False
@@ -2173,8 +2210,9 @@ class ChiroToolApp(ctk.CTk):
             return
         worker = run_upload_flow(s.path, meta, token, dry_run=False,
                                    participation_payload=participation_payload)
-        RunDialog(self, title=f"Upload + Tadarida — {s.name}",
-                  worker=worker, on_done=self._after_phase_done)
+        dlg = RunDialog(self, title=f"Upload + Tadarida — {s.name}",
+                        worker=worker, on_done=self._after_phase_done)
+        self._run_dialogs[key] = dlg
 
     def _run_cleanup(self, s: SessionState):
         meta = self._resolve_meta_interactive(s)

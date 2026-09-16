@@ -19,6 +19,7 @@ Le rendu visuel se fait dans ``gui_activity.py``.
 
 from __future__ import annotations
 
+import os
 import re
 from collections import defaultdict
 from dataclasses import dataclass
@@ -315,39 +316,189 @@ def aggregate_rows(headers, rows, *,
     return result
 
 
-def _iter_table_file(path: Path):
-    """Yield (headers, rows) depuis un xlsx ou un CSV ChiroSurf."""
+def is_observations_xlsx_name(name: str) -> bool:
+    """True pour un tableur Vigie-Chiro d'observations (pas un backup)."""
+    low = str(name or "").lower()
+    if not low.endswith(".xlsx"):
+        return False
+    if "_cleanup" in low or "_backup" in low:
+        return False
+    return "observations" in low and "participation-" in low
+
+
+def is_vu_csv_name(name: str) -> bool:
+    """True pour un sidecar ChiroSurf ``*_Vu.csv``."""
+    low = str(name or "").lower()
+    if "_cleanup" in low or "_backup" in low:
+        return False
+    return low.endswith("_vu.csv")
+
+
+_SKIP_DIR_NAMES = {".git", "__pycache__", "build", "dist"}
+# Dossiers d'audio : on lit les fichiers du niveau (xlsx / _Vu), on ne
+# descend pas dans des milliers de WAV (issue #10, lenteur du 1er scan).
+_LEAF_DIR_NAMES = {"data", "data_k"}
+
+
+def discover_activity_sources(workspace: Path, *, max_depth: int = 6
+                              ) -> list[Path]:
+    """xlsx ``participation-*-observations`` + CSV ``_Vu`` sous le workspace.
+
+    Un ``_Vu`` est accepté où ChiroSurf / l'utilisateur le pose (chirosurf/,
+    Data_k/, Data/, racine de session). Pas seulement dans trois dossiers
+    magiques : sinon un ``_Vu`` collé à côté de l'xlsx disparaît du graphe
+    alors que la Synthèse (par session) le voit encore.
+    """
+    workspace = Path(workspace)
+    if not workspace.is_dir():
+        return []
+    xlsx: list[Path] = []
+    vu_csvs: list[Path] = []
+    try:
+        for dirpath, dirnames, filenames in os.walk(workspace):
+            try:
+                rel = Path(dirpath).relative_to(workspace)
+                parts = () if rel.as_posix() == "." else rel.parts
+            except ValueError:
+                dirnames[:] = []
+                continue
+            depth = len(parts)
+            base = Path(dirpath).name.lower()
+            keep: list[str] = []
+            if depth < max_depth and base not in _LEAF_DIR_NAMES:
+                for d in dirnames:
+                    if d.startswith(".") or d.lower() in _SKIP_DIR_NAMES:
+                        continue
+                    keep.append(d)
+            dirnames[:] = keep
+            for name in filenames:
+                p = Path(dirpath) / name
+                if is_vu_csv_name(name):
+                    vu_csvs.append(p)
+                elif is_observations_xlsx_name(name):
+                    xlsx.append(p)
+    except OSError:
+        return []
+    vu_csvs.sort(key=lambda q: (
+        0 if q.parent.name.lower() in ("chirosurf", "chirosurf_nuits") else 1,
+        str(q).lower(),
+    ))
+    vu_kept: list[Path] = []
+    seen_vu: set[tuple] = set()
+    try:
+        from chirosurf_nights import parse_chirosurf_csv_name
+    except Exception:
+        parse_chirosurf_csv_name = lambda _n: None  # noqa: E731
+    for vp in vu_csvs:
+        parsed = parse_chirosurf_csv_name(vp.name)
+        idx = parsed[0] if parsed else None
+        parent = vp.parent
+        session = parent.parent if parent.name.lower() in (
+            "chirosurf", "chirosurf_nuits", "data_k", "data",
+        ) else parent
+        key = (str(session).lower(), idx if idx is not None else vp.name.lower())
+        if key in seen_vu:
+            continue
+        seen_vu.add(key)
+        vu_kept.append(vp)
+    return sorted(xlsx + vu_kept, key=lambda q: str(q).lower())
+
+
+def load_observation_table(path: Path) -> tuple[list, list] | None:
+    """Charge un xlsx / CSV en listes (headers, rows). None si illisible.
+
+    Materialise les lignes : un iterateur openpyxl meurt à la fermeture du
+    classeur, et on veut relire depuis la RAM à chaque filtre.
+    """
     path = Path(path)
-    if path.suffix.lower() == ".csv":
+    try:
+        if not path.is_file():
+            return None
+    except OSError:
+        return None
+    suffix = path.suffix.lower()
+    if suffix == ".csv":
         import csv
-        text = path.read_text(encoding="utf-8", errors="replace")
+        try:
+            text = path.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            return None
         lines = text.splitlines()
         if not lines:
-            return
+            return None
         first = lines[0]
         delim = ";" if first.count(";") >= first.count(",") else ","
         reader = csv.reader(lines, delimiter=delim)
         headers = next(reader, None)
         if not headers:
-            return
+            return None
         rows = [list(r) for r in reader if r and any(str(c).strip() for c in r)]
-        yield headers, rows
-        return
+        return list(headers), rows
+    if suffix != ".xlsx":
+        return None
     import openpyxl
-    wb = openpyxl.load_workbook(path, read_only=True, data_only=True)
+    try:
+        wb = openpyxl.load_workbook(path, read_only=True, data_only=True)
+    except Exception:
+        return None
     try:
         ws = wb.active
         it = ws.iter_rows(values_only=True)
-        try:
-            header = next(it)
-        except StopIteration:
-            return
-        yield header, it
+        header = next(it, None)
+        if not header:
+            return None
+        headers = list(header)
+        rows = []
+        for r in it:
+            if r and any(c is not None and str(c).strip() for c in r):
+                rows.append(list(r))
+        return headers, rows
+    except Exception:
+        return None
     finally:
         try:
             wb.close()
         except Exception:
             pass
+
+
+class ObservationTableCache:
+    """Cache (mtime, taille) → (headers, rows) pour ne plus relire le disque."""
+
+    def __init__(self):
+        self._data: dict[str, tuple[float, int, list, list]] = {}
+
+    def load(self, path: Path) -> tuple[list, list] | None:
+        path = Path(path)
+        try:
+            st = path.stat()
+        except OSError:
+            return None
+        key = str(path)
+        cached = self._data.get(key)
+        if cached and cached[0] == st.st_mtime and cached[1] == st.st_size:
+            return cached[2], cached[3]
+        loaded = load_observation_table(path)
+        if loaded is None:
+            self._data.pop(key, None)
+            return None
+        headers, rows = loaded
+        self._data[key] = (st.st_mtime, st.st_size, headers, rows)
+        return headers, rows
+
+    def drop_missing(self, keep: Iterable[Path]) -> None:
+        keep_keys = {str(Path(p)) for p in keep}
+        for key in list(self._data):
+            if key not in keep_keys:
+                del self._data[key]
+
+
+def _iter_table_file(path: Path):
+    """Yield (headers, rows) depuis un xlsx ou un CSV ChiroSurf."""
+    loaded = load_observation_table(Path(path))
+    if loaded is None:
+        return
+    yield loaded
 
 
 def aggregate_xlsx(xlsx_path: Path, *,
@@ -402,6 +553,41 @@ def _add_activity_partial(out: dict, key: tuple, bins: list[int]) -> None:
             cur.append(n)
 
 
+def aggregate_loaded_tables(loaded: Iterable[tuple[Path, list, list]],
+                            **kwargs
+                            ) -> dict[tuple, list[int]]:
+    """Agrège des tables déjà en mémoire. Un ``_Vu`` prime sur sa nuit."""
+    items = [(Path(p), headers, rows) for p, headers, rows in loaded]
+    csvs = [(p, h, r) for p, h, r in items if p.suffix.lower() == ".csv"]
+    others = [(p, h, r) for p, h, r in items if p.suffix.lower() != ".csv"]
+    out: dict[tuple, list[int]] = {}
+    covered: set[tuple] = set()
+
+    for _p, headers, rows in csvs:
+        try:
+            # La couverture appartient à la source, même si le filtre MNHN
+            # ne retient aucun contact de cette nuit.
+            coverage = aggregate_rows(headers, rows)
+            partial = aggregate_rows(headers, rows, **kwargs)
+        except Exception:
+            continue
+        covered.update(_activity_cover_key(k) for k in coverage)
+        for k, bins in partial.items():
+            _add_activity_partial(out, k, bins)
+            covered.add(_activity_cover_key(k))
+
+    for _p, headers, rows in others:
+        try:
+            partial = aggregate_rows(headers, rows, **kwargs)
+        except Exception:
+            continue
+        for k, bins in partial.items():
+            if _activity_cover_key(k) in covered:
+                continue
+            _add_activity_partial(out, k, bins)
+    return out
+
+
 def aggregate_multi_xlsx(paths: Iterable[Path], **kwargs
                           ) -> dict[tuple[str, str], list[int]]:
     """Agrège plusieurs xlsx / CSV ``_Vu`` en un seul dict cumulé.
@@ -410,31 +596,13 @@ def aggregate_multi_xlsx(paths: Iterable[Path], **kwargs
     passage / date). Les autres nuits de l'xlsx restent. Évite de perdre
     une nuit 2 quand seul un ``_Vu`` nuit 1 existe.
     """
-    paths = [Path(p) for p in paths]
-    csvs = [p for p in paths if p.suffix.lower() == ".csv"]
-    others = [p for p in paths if p.suffix.lower() != ".csv"]
-    out: dict[tuple[str, str], list[int]] = {}
-    covered: set[tuple] = set()
-
-    for p in csvs:
-        try:
-            partial = aggregate_xlsx(p, **kwargs)
-        except Exception:
+    loaded: list[tuple[Path, list, list]] = []
+    for p in paths:
+        pair = load_observation_table(Path(p))
+        if pair is None:
             continue
-        for k, bins in partial.items():
-            _add_activity_partial(out, k, bins)
-            covered.add(_activity_cover_key(k))
-
-    for p in others:
-        try:
-            partial = aggregate_xlsx(p, **kwargs)
-        except Exception:
-            continue
-        for k, bins in partial.items():
-            if _activity_cover_key(k) in covered:
-                continue
-            _add_activity_partial(out, k, bins)
-    return out
+        loaded.append((Path(p), pair[0], pair[1]))
+    return aggregate_loaded_tables(loaded, **kwargs)
 
 
 def list_taxons(aggregated: dict, *, min_total: int = 1

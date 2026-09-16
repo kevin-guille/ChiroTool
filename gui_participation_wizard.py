@@ -21,26 +21,19 @@ Retour : ``payload`` compatible ``VigieChiroClient.create_participation``.
 
 from __future__ import annotations
 
+import threading
 from datetime import datetime, timedelta
 from pathlib import Path
 
 import customtkinter as ctk
 
 from chiro_core import (
-    _find_raw_wav_subdir,
     build_participation_configuration,
-    find_summary_file,
-    find_titley_log,
-    list_session_wav_names,
-    overlay_participation_cache,
-    parse_summary_txt,
-    parse_titley_log,
-    should_prefer_wav_dates,
-    summary_temps_in_window,
+    collect_wizard_prefill,
     temperatures_are_user_set,
 )
 from manifest import Manifest
-from naming import SessionMeta, wav_timestamp_range
+from naming import SessionMeta
 from vigiechiro_enums import (
     COUVERTURE_VALUES, DETECTEUR_ENREGISTREUR_TYPES, MICRO_MODELES, VENT_VALUES,
     couverture_from_label, couverture_labels, vent_from_label, vent_labels,
@@ -69,109 +62,46 @@ class ParticipationWizard(ctk.CTkToplevel):
         self.session_path = Path(session_path)
         self.meta = meta
         self.result: dict | None = None
+        self._prefill: dict = {}
+        self._prefill_ready = False
+        self._validate_btn = None
 
         from gui_windowing import bind_modal
         bind_modal(self, master)
         self.focus()
 
-        # Données pré-remplies (best-effort)
-        self._prefill = self._collect_prefill()
-
+        # Formulaire d'abord (issue #9) : un Data_k de 4000 WAV sur disque
+        # externe ne doit plus laisser une fenêtre noire pendant le scan.
         self._build_ui()
-        self._fill_defaults()
-
+        try:
+            self.update_idletasks()
+        except Exception:
+            pass
+        self._set_prefill_busy(True)
         self.protocol("WM_DELETE_WINDOW", self._on_cancel)
+
+        def _worker():
+            try:
+                pre = self._collect_prefill()
+            except Exception as e:
+                pre = {"_prefill_error": str(e)}
+            try:
+                self.after(0, lambda p=pre: self._apply_prefill(p))
+            except Exception:
+                pass
+
+        threading.Thread(target=_worker, daemon=True).start()
 
     # -- Pré-remplissage ---------------------------------------------------
 
-    def _session_wav_names(self) -> list[str]:
-        """Noms WAV de la session (Data_k après TE×10, sinon Data/ ou racine)."""
-        return list_session_wav_names(self.session_path)
-
     def _collect_prefill(self) -> dict:
         """Agrège les valeurs pré-remplies depuis log Titley, Summary, parc, manifest."""
-        pre: dict = {}
-
-        # 1. Summary.txt → températures ; dates WAV si le Summary n'est pas
-        #    celui de CETTE nuit (pose de plusieurs jours, une nuit extraite).
-        wav_min, wav_max = wav_timestamp_range(self._session_wav_names())
-        s = None
-        summ = find_summary_file(self.session_path)
-        if summ is None:
-            sub = _find_raw_wav_subdir(self.session_path)
-            if sub is not None:
-                summ = find_summary_file(sub)
-        if summ is not None:
-            s = parse_summary_txt(summ)
-            if s:
-                if s.temp_start is not None:
-                    pre["temperature_debut"] = int(round(s.temp_start))
-                if s.temp_end is not None:
-                    pre["temperature_fin"] = int(round(s.temp_end))
-                if s.start_dt:
-                    pre["date_debut"] = s.start_dt
-                if s.end_dt:
-                    pre["date_fin"] = s.end_dt
-        if should_prefer_wav_dates(s, wav_min) and wav_min:
-            pre["date_debut"] = wav_min
-            if wav_max:
-                pre["date_fin"] = wav_max
-            pre["_dates_from_wav"] = True
-            t0, t1 = summary_temps_in_window(s, wav_min, wav_max)
-            if t0 is not None:
-                pre["temperature_debut"] = int(round(t0))
-            else:
-                pre.pop("temperature_debut", None)
-            if t1 is not None:
-                pre["temperature_fin"] = int(round(t1))
-            else:
-                pre.pop("temperature_fin", None)
-
-        log_path = find_titley_log(self.session_path)
-        if log_path is None:
-            sub = _find_raw_wav_subdir(self.session_path)
-            if sub is not None:
-                log_path = find_titley_log(sub)
-        titley = parse_titley_log(log_path) if log_path else None
-        if titley and titley.start_dt and titley.end_dt:
-            pre["date_debut"] = titley.start_dt
-            pre["date_fin"] = titley.end_dt
-            pre.pop("_dates_from_wav", None)
-            pre["_dates_from_titley"] = True
-            for key, value in (("temperature_debut", titley.temp_start),
-                               ("temperature_fin", titley.temp_end)):
-                pre.pop(key, None)
-                if value is not None:
-                    pre[key] = int(round(value))
-
-        # 2. Parc matériel local (Préférences → Mes matériels) PRIORITAIRE.
-        # C'est la source canonique : modèle + micro à jour, pas dépendant
-        # d'un Suivi Excel qui peut être obsolète ou inaccessible.
-        used_materiels = False
-        try:
-            from materiels import find_by_id, load_materiels
-            if self.meta.n_enregistreur is not None:
-                m = find_by_id(load_materiels(), self.meta.n_enregistreur)
-                if m is not None and not m.is_empty():
-                    used_materiels = True
-                    if m.modele:
-                        pre["detecteur_enregistreur_type"] = m.modele
-                    if m.micro_modele:
-                        pre["micro0_modele"] = m.micro_modele
-                    if m.hauteur_m is not None:
-                        pre["micro0_hauteur"] = str(m.hauteur_m)
-                    if m.stereo and m.micro2_modele:
-                        pre["stereo"] = True
-                        pre["micro1_modele"] = m.micro2_modele
-        except Exception:
-            pass
-
-        if (titley and titley.device_model in DETECTEUR_ENREGISTREUR_TYPES
-                and not pre.get("detecteur_enregistreur_type")):
-            pre["detecteur_enregistreur_type"] = titley.device_model
-
-        # 2bis. Fallback Feuil2 Suivi Excel si pas trouvé dans Mes matériels.
-        if not used_materiels:
+        pre = collect_wizard_prefill(
+            self.session_path,
+            n_enregistreur=self.meta.n_enregistreur,
+            date_debut=self.meta.date_debut,
+        )
+        if not pre.get("_used_materiels"):
             try:
                 from suivi import Suivi, _default_path
                 path = _default_path(
@@ -182,32 +112,50 @@ class ParticipationWizard(ctk.CTkToplevel):
                     if e:
                         if e.modele and not pre.get("detecteur_enregistreur_type"):
                             pre["detecteur_enregistreur_type"] = e.modele
-                        # Heuristique : modèle micro depuis le numéro série micro
-                        if e.serie_micro:
+                        if e.serie_micro and not pre.get("micro0_modele"):
                             serie = str(e.serie_micro).strip()
-                            pre["micro0_modele"] = self._guess_micro_model(
-                                e.modele or "", serie)
+                            guessed = self._guess_micro_model(e.modele or "", serie)
+                            if guessed:
+                                pre["micro0_modele"] = guessed
+            except Exception:
+                pass
+        return pre
+
+    def _set_prefill_busy(self, busy: bool) -> None:
+        hint = getattr(self, "_dates_hint", None)
+        if busy and hint is not None:
+            try:
+                hint.configure(
+                    text="Lecture des métadonnées (log Titley / Summary)…")
+            except Exception:
+                pass
+        btn = self._validate_btn
+        if btn is not None:
+            try:
+                btn.configure(state=("disabled" if busy else "normal"))
             except Exception:
                 pass
 
-        # T° auto (Summary / Titley) mémorisées AVANT le cache, pour détecter
-        # une saisie manuelle différente et ne plus l'écraser à la réouverture.
-        pre["_auto_temperature_debut"] = pre.get("temperature_debut")
-        pre["_auto_temperature_fin"] = pre.get("temperature_fin")
-
-        # 3. Manifest existant (si l'utilisateur avait déjà saisi).
-        # IMPORTANT : le manifest stocke `date_debut`/`date_fin` en strings
-        # ISO (JSON ne supporte pas datetime). overlay_participation_cache
-        # les reparse, sinon `_fill_defaults` tombe en AttributeError.
-        m = Manifest.load(self.session_path)
-        if m and m.meta:
-            part_cached = m.meta.get("participation_payload") or {}
-            wav_day = None
-            if pre.get("_dates_from_wav") and wav_min is not None:
-                wav_day = wav_min.date().isoformat()
-            overlay_participation_cache(pre, part_cached, wav_day=wav_day)
-
-        return pre
+    def _apply_prefill(self, pre: dict) -> None:
+        try:
+            if not self.winfo_exists():
+                return
+        except Exception:
+            return
+        err = (pre or {}).pop("_prefill_error", None)
+        self._prefill = pre or {}
+        self._prefill_ready = True
+        self._set_prefill_busy(False)
+        try:
+            self._fill_defaults()
+        except Exception as e:
+            err = err or str(e)
+        if err:
+            try:
+                self.err_lbl.configure(
+                    text=f"Pré-remplissage partiel : {err}")
+            except Exception:
+                pass
 
     def _guess_micro_model(self, detecteur: str, serie_micro: str) -> str:
         """Heuristique simple pour deviner le modèle du micro."""
@@ -455,11 +403,12 @@ class ParticipationWizard(ctk.CTkToplevel):
             command=self._on_cancel,
         ).grid(row=0, column=1, padx=(0, 6))
 
-        ctk.CTkButton(
+        self._validate_btn = ctk.CTkButton(
             footer, text="Valider", width=140, height=34,
             font=ctk.CTkFont(weight="bold"),
             command=self._on_validate,
-        ).grid(row=0, column=2)
+        )
+        self._validate_btn.grid(row=0, column=2)
 
     def _section(self, form, row: int, title: str) -> int:
         ctk.CTkLabel(
@@ -586,7 +535,7 @@ class ParticipationWizard(ctk.CTkToplevel):
         # Dates : pre puis fallback meta.date_debut (toujours datetime ou None)
         date_format = "%Y-%m-%d %H:%M:%S" if pre.get("_dates_from_titley") else "%Y-%m-%d %H:%M"
         dt_deb = _ensure_dt(pre.get("date_debut")) or self.meta.date_debut
-        if dt_deb is not None:
+        if dt_deb is not None and not self.date_debut_var.get().strip():
             # Par convention : début = 19h, fin = 7h du lendemain (si rien d'autre)
             if dt_deb.hour == 0 and dt_deb.minute == 0 and not pre.get("_dates_from_titley"):
                 dt_deb = dt_deb.replace(hour=19, minute=0)
@@ -595,7 +544,7 @@ class ParticipationWizard(ctk.CTkToplevel):
         dt_fin = _ensure_dt(pre.get("date_fin"))
         if dt_fin is None and dt_deb:
             dt_fin = (dt_deb + timedelta(hours=11)).replace(minute=0)
-        if dt_fin:
+        if dt_fin and not self.date_fin_var.get().strip():
             self.date_fin_var.set(dt_fin.strftime(date_format))
 
         if pre.get("_dates_from_titley"):
@@ -613,9 +562,9 @@ class ParticipationWizard(ctk.CTkToplevel):
             except Exception:
                 pass
 
-        if "temperature_debut" in pre:
+        if "temperature_debut" in pre and not self.temp_deb_var.get().strip():
             self.temp_deb_var.set(str(pre["temperature_debut"]))
-        if "temperature_fin" in pre:
+        if "temperature_fin" in pre and not self.temp_fin_var.get().strip():
             self.temp_fin_var.set(str(pre["temperature_fin"]))
 
         # Vent / couverture : appliquer si présents dans le manifest.

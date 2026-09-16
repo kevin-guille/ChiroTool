@@ -8,7 +8,7 @@
 
 ![Icône ChiroTool](captures/icon_256.png)
 
-**Version 0.8.0** · Tutoriel utilisateur
+**Version 0.8.1** · Tutoriel utilisateur. Exe GitHub encore [v0.8.0](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.0) jusqu'au tag `v0.8.1`.
 
 </div>
 
@@ -215,8 +215,9 @@ campagne. Une pastille de couleur indique l'état de chaque nuit :
 - **Historique** : la chronologie des opérations faites sur une nuit
 - **Carte** : vos points sur fond OpenStreetMap / IGN
 - **Dashboard** : statistiques transverses de vos campagnes
-- **Activité** : graphes par tranche horaire ; filtres **Chiros seulement** et
-  **Taxons observateur** (y compris les `_Vu` ChiroSurf)
+- **Activité** : graphes par tranche horaire ; filtres **Chiros seulement**,
+  **Taxons observateur** et **Méthode MNHN 10 % / 75 %** (y compris les `_Vu`
+  ChiroSurf, y compris collés à la racine de la session)
 
 ### La barre d'actions
 
@@ -336,18 +337,20 @@ Une **barre de progression** vous indique l'avancement en temps réel.
 
 Cliquez sur **« ▶ Upload + Tadarida »**.
 
-Un **assistant de participation** s'ouvre. Il pré-remplit ce qu'il **sait
-réellement** : les T° si votre `Summary.txt` les contient, le matériel depuis
-votre parc, les dates du Summary **si c'est une seule nuit**. Si le Summary
-ne correspond pas aux WAV, un **avertissement** le dit : dates (et T° sur
-la fenêtre des fichiers) prises sur les WAV. Vous pouvez encore corriger ;
-une participation déjà créée au mauvais jour n'est pas réutilisée.
+Un **assistant de participation** s'ouvre tout de suite (le formulaire
+n'attend pas le scan des WAV). Il pré-remplit ce qu'il **sait réellement** :
+log Titley (`Recording start` / `stop`, T° de la nuit) s'il est dans la
+session, sinon les T° du `Summary.txt`, le matériel depuis votre parc, les
+dates du Summary **si c'est une seule nuit**. Si le Summary ne correspond
+pas aux WAV, un **avertissement** le dit : dates (et T° sur la fenêtre des
+fichiers) prises sur les WAV. Vous pouvez encore corriger ; une
+participation déjà créée au mauvais jour n'est pas réutilisée.
 
 > 📸 **[Capture 09 — Assistant « Nouvelle participation Vigie-Chiro »]**
 
-- **Conditions météo** (optionnel) : températures (souvent issues du
+- **Conditions météo** (optionnel) : températures (log Titley ou
   `Summary.txt`), vent, couverture nuageuse
-- **Matériel** : détecteur, micro, hauteur
+- **Matériel** : détecteur (et n° de série envoyé à Vigie-Chiro), micro, hauteur
 - Complétez ce qui est utile, puis **« Valider »**.
 
 > 💡 **Météo non bloquante** : vent et couverture ne sont **pas** mesurés par
@@ -365,10 +368,11 @@ une participation déjà créée au mauvais jour n'est pas réutilisée.
 ChiroTool enchaîne alors **trois phases automatiques** :
 
 1. **Upload** — envoi des WAV vers Vigie-Chiro (en parallèle, donc rapide).
-2. **Attente Tadarida** — l'analyse tourne **sur les serveurs Vigie-Chiro**.
+2. **Attente Tadarida** : l'analyse tourne **sur les serveurs Vigie-Chiro**.
    Cela peut prendre de quelques minutes à quelques heures. **Vous pouvez fermer
-   l'application** : cliquez sur **« 🔌 Arrière-plan »**, l'analyse continue
-   côté serveur sans vous.
+   la fenêtre dès l'envoi** : **« 🔌 Arrière-plan »** (ou la croix). Recliquer
+   **Upload** sur la même nuit **rouvre le suivi**. L'analyse continue
+   côté serveur.
 3. **Téléchargement** — dès que c'est prêt, le tableur d'observations est récupéré
    automatiquement.
 
@@ -788,9 +792,11 @@ d'activité horaire** — parfait pour un rapport ou une analyse.
   de confiance Tadarida, `_Vu` nuit par nuit). Distinct de « validés
   humains ». Les deux cases s'excluent. Sans `_Vu`, un rappel s'affiche
   (la méthode suppose l'échantillonnage ChiroSurf).
-- Un `_Vu` dans `chirosurf/` (ou `Data_k/`) **remplace le tableur pour cette
-  nuit seulement**. Les autres nuits de la participation restent lues dans
-  l'xlsx.
+- Un `_Vu` dans `chirosurf/`, `Data_k/` **ou à la racine de la session**
+  **remplace le tableur pour cette nuit seulement**. Les autres nuits de
+  la participation restent lues dans l'xlsx. Cocher MNHN / chiros / taxons
+  observateur ne relit pas le disque (cache mémoire). Les autres carrés
+  restent dans la liste de filtres.
 
 Chaque section se **replie** et affiche son état (`8 / 42`), pour garder le
 panneau lisible même sur une grosse campagne. Les listes longues (nuits, taxons)
@@ -1079,9 +1085,20 @@ chemin ChiroSurf.exe est bien 4.6+ ; (2) `Data_k/` contient encore des
 
 **« J'ai collé un `_Vu` dans chirosurf/ et ChiroTool ne le voit pas. »**
 Les noms `Nuit1_…_Vu.csv` **et** `Nuit_1-…_Vu.csv` (nomenclature manuelle /
-issue #3) sont lus, y compris un `_Vu` laissé dans `Data_k/` après une
-validation ChiroSurf. Fermez et rouvrez **🌊 ChiroSurf nuits** ou
-**📊 Synthèse**. Voir [§8 B](#b--méthode-mnhn--team-chiro-via-chirosurf-10--75-).
+issue #3) sont lus, y compris un `_Vu` laissé dans `Data_k/` ou **à la
+racine de la session**. Fermez et rouvrez **🌊 ChiroSurf nuits**,
+**📊 Synthèse** ou **⟳ Recharger** dans l'onglet Activité. Voir [§8 B](#b--méthode-mnhn--team-chiro-via-chirosurf-10--75-).
+
+**« L'assistant « Nouvelle participation » s'ouvre tout noir, l'upload unitaire ne part pas. »**
+Corrigé en **0.8.1** (issue #9). Le formulaire s'affiche d'abord ; le
+log Titley / Summary se lit ensuite. Le **batch** n'ouvre pas cet assistant
+(d'où l'impression que « seul le batch marche »). Mettez à jour l'exe.
+
+**« L'onglet Activité est très lent, les filtres ne font rien, un seul carré s'affiche. »**
+Corrigé en **0.8.1** (issue #10). Les tableurs sont gardés en mémoire :
+cocher MNHN / chiros ne relit plus le disque. Tous les carrés restent dans
+la liste. **⟳ Recharger** relit les fichiers. La Synthèse, elle, lisait
+déjà le `_Vu` de la session ouverte.
 
 **« La Synthèse me propose Nuit 1 et Nuit 2 pour une pose d'un soir. »**
 Ce n'est plus le cas depuis la **v0.7.2**. Une pose 21 h → 6 h = **une**
@@ -1167,7 +1184,7 @@ ChiroTool couvre la grande majorité des cas, mais pas (encore) tout :
 | Zone | Ce qui change |
 |------|----------------|
 | **Synthèse** | **v0.8.0** : case **Méthode MNHN 10 % / 75 %** (bandes de confiance Tadarida, colonne 75 %, issue #7). `_Vu` lu s'il existe. Menu Nuit **seulement** s'il y a plusieurs soirs (v0.7.2 : une pose minuit = 1 nuit) |
-| **Activité** | Un `_Vu` remplace le tableur **pour cette nuit seulement**. Case **Méthode MNHN 10 % / 75 %** (même règle que la Synthèse) |
+| **Activité** | Un `_Vu` remplace le tableur **pour cette nuit seulement** (`chirosurf/`, `Data_k/`, racine de session). Case **Méthode MNHN 10 % / 75 %** (même règle que la Synthèse). **v0.8.1** : cache mémoire, plus de rescan à chaque case, les autres carrés restent dans les filtres |
 | **ChiroSurf nuits** | Optionnel (CSV pour valider dans ChiroSurf, méthode 10 % / 75 %) ; distinct de la Synthèse ; coupure **midi**. **v0.7.1** : CSV à côté des WAV ; `_Vu` `Nuit_1_…`. **v0.7.2** : boutons sous le libellé (écran classique) |
 | **Barre d'actions** | **v0.7.2** : une ligne, glissement horizontal si l'écran est étroit |
 | **Valider** | Tri des colonnes, filtres observateur / chiros, bilan `X / Y` (issue #4) |
@@ -1175,7 +1192,8 @@ ChiroTool couvre la grande majorité des cas, mais pas (encore) tout :
 | **Batch** | Plusieurs nuits dans **une** instance (case ☐ Batch). Pas plusieurs exe. |
 | **Titley** | Swift / Ranger : noms usine lus ; un WAV > 5 s est découpé **en entier** (plus seulement les 5 premières secondes, issue #4) |
 | **Démarrage** | Plus de scan auto du dernier dossier (issue #5) |
-| **Upload / Réparer** | Coupure réseau : code 409 = déjà enregistré, Tadarida peut partir. **Vérifier / Réparer** lance l'analyse si le listing portail échoue ; 0 contact → renvoyer Data_k |
+| **Upload / Réparer** | Coupure réseau : code 409 = déjà enregistré, Tadarida peut partir. **Vérifier / Réparer** lance l'analyse si le listing portail échoue ; 0 contact → renvoyer Data_k. **v0.8.1** : wizard d'upload visible tout de suite (issue #9) ; fermer la fenêtre = arrière-plan, recliquer Upload la rouvre |
+| **Participation Titley** | **v0.8.1** (issue #8) : n° de série, type, micro, horaires et T° du `log_*.csv` envoyés à Vigie-Chiro |
 | **Export USB** | **v0.8.1** : un scan d'un paquet Data_k-only retrouve la session (plus le dossier `Data_k/` lui-même). Excel, Summary et ID participation réapparaissent. Ouvrir `ChiroTool_export_…`, pas `Data_k` |
 | **Pastille / TE×10** | **v0.8.1** : après nettoyage, Data_k plus petit que les bruts ne recule plus TE×10 (pastille verte, plus de Préparer en faux « next ») |
 | **Fenêtres** | Après **Afficher le bureau** (Win+D), recliquer ChiroTool ramène la progression. Plus besoin de tuer le process |
@@ -1191,14 +1209,20 @@ Conception / dev : [`SPEC_v06_parcours.md`](SPEC_v06_parcours.md) · issues
 [#4](https://github.com/kevin-guille/ChiroTool/issues/4),
 [#5](https://github.com/kevin-guille/ChiroTool/issues/5),
 [#6](https://github.com/kevin-guille/ChiroTool/issues/6),
-[#7](https://github.com/kevin-guille/ChiroTool/issues/7).
+[#7](https://github.com/kevin-guille/ChiroTool/issues/7),
+[#8](https://github.com/kevin-guille/ChiroTool/issues/8),
+[#9](https://github.com/kevin-guille/ChiroTool/issues/9),
+[#10](https://github.com/kevin-guille/ChiroTool/issues/10).
 
-### Suite (hors v0.8)
+### Suite (hors 0.8.1)
 
 Ne pas relire le 1er message des issues
-[#4](https://github.com/kevin-guille/ChiroTool/issues/4) et
-[#7](https://github.com/kevin-guille/ChiroTool/issues/7) comme une todo
-(SPEC §0.1 et §0.2).
+[#4](https://github.com/kevin-guille/ChiroTool/issues/4),
+[#7](https://github.com/kevin-guille/ChiroTool/issues/7),
+[#8](https://github.com/kevin-guille/ChiroTool/issues/8),
+[#9](https://github.com/kevin-guille/ChiroTool/issues/9) et
+[#10](https://github.com/kevin-guille/ChiroTool/issues/10) comme une todo
+(SPEC §0.1 à §0.4).
 
 - Robustesse / UX du **mode batch**, journal d'upload.
 - Export compilé espèces × nuits ; fusion `_Vu` → xlsx (choix produit).

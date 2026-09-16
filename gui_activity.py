@@ -26,8 +26,10 @@ from tkinter import messagebox
 import customtkinter as ctk
 
 from activity_graph import (
-    aggregate_multi_xlsx,
+    ObservationTableCache,
+    aggregate_loaded_tables,
     cascade_options,
+    discover_activity_sources,
     filter_items,
     list_nights,
     list_passages,
@@ -60,7 +62,13 @@ class ActivityPanel(ctk.CTkFrame):
         self.workspace: Path | None = None
         # Cache d'agrégation : recalculé sur changement de filtres
         self._aggregated: dict = {}
+        # Univers (sans MNHN / chiros / observateur) : listes de filtres
+        # stables quand on coche Méthode MNHN (les autres carrés restent).
+        self._universe: dict = {}
         self._all_xlsx: list[Path] = []
+        self._table_cache = ObservationTableCache()
+        self._loaded_tables: list[tuple[Path, list, list]] = []
+        self._reload_gen = 0
         # Sélections actives — toutes ANDées au moment du rendu.
         # Sémantique : set() = "rien coché" → rien à afficher (vs précédemment
         # "rien coché = pas de filtre"). L'initialisation à "tout coché" se
@@ -322,16 +330,23 @@ class ActivityPanel(ctk.CTkFrame):
             "taxons": self._render_taxons,
         }.get(key, lambda: None)()
 
+    def _filter_source(self) -> dict:
+        """Listes de filtres : univers disque, pas l'agrégat MNHN du moment."""
+        return self._universe or self._aggregated
+
     def _reset_filters(self):
         """Restaure les sélections par défaut (comme au 1er chargement) + vide
         les recherches. Un seul point d'entrée pour « tout remettre à plat »."""
-        agg = self._aggregated or {}
+        agg = self._filter_source()
         self._sel_sites = set(list_sites(agg))
         self._sel_points = set(list_points(agg))
         self._sel_passages = set(list_passages(agg))
         nights = list_nights(agg)
-        self._sel_nights = {nights[-1]} if nights else set()
-        self._sel_taxons = {t for t, _ in list_taxons(agg)[:5]}
+        if len(nights) <= 14:
+            self._sel_nights = set(nights)
+        else:
+            self._sel_nights = {nights[-1]} if nights else set()
+        self._sel_taxons = {t for t, _ in list_taxons(self._aggregated or agg)[:5]}
         for sec in self._sections.values():
             if sec.get("search"):
                 sec["search"].set("")
@@ -344,7 +359,7 @@ class ActivityPanel(ctk.CTkFrame):
             return
         casc = self._cascade()
         rows = [
-            (self._sel_sites, len(list_sites(self._aggregated)), "sites"),
+            (self._sel_sites, len(list_sites(self._filter_source())), "sites"),
             (self._sel_points, len(casc["points"]), "points"),
             (self._sel_passages, len(casc["passages"]), "passages"),
             (self._sel_nights, len(casc["nights"]), "nuits"),
@@ -405,131 +420,188 @@ class ActivityPanel(ctk.CTkFrame):
     def set_workspace(self, workspace: Path | None) -> None:
         """Définit le workspace racine et rafraîchit la liste des xlsx."""
         self.workspace = Path(workspace) if workspace else None
+        self._filters_initialized = False
         self.refresh()
 
     def refresh(self):
-        """Re-scanne le workspace pour trouver tous les xlsx d'observations,
-        recalcule l'agrégation et redessine."""
+        """Recharge depuis le disque (bouton Recharger / nouveau workspace)."""
+        self._reload_from_disk()
+
+    def _agg_kwargs(self) -> dict:
+        return dict(
+            bin_minutes=self._bin_minutes,
+            use_only_validated=self._only_validated,
+            use_observer_taxon=self._observer_taxon,
+            chiros_only=self._chiros_only,
+            use_mnhn=self._use_mnhn,
+        )
+
+    def _schedule(self, fn, *args):
+        """after(0) depuis un thread : ignore si la fenêtre est déjà fermée."""
+        try:
+            if not self.winfo_exists():
+                return
+            self.after(0, fn, *args)
+        except Exception:
+            pass
+
+    def _reload_from_disk(self):
+        """Scan + lecture des tableurs (une fois). Les cases ne relisent plus."""
+        self._reload_gen += 1
+        gen = self._reload_gen
+        self._disk_loading = True
+        self._loaded_tables = []
         if self.workspace is None or not self.workspace.is_dir():
+            self._disk_loading = False
             self.status_lbl.configure(text="(aucun workspace)")
             self._aggregated = {}
+            self._universe = {}
+            self._loaded_tables = []
             self._refresh_filters_ui()
             self._redraw()
             return
 
         self.status_lbl.configure(text="scan des xlsx…")
-        # Threading pour ne pas bloquer l'UI sur gros workspace
+        kwargs = self._agg_kwargs()
+        bin_minutes = self._bin_minutes
+        workspace = self.workspace
+        cache = self._table_cache
+
         def _worker():
-            xlsx_paths = self._discover_xlsx()
             try:
-                aggregated = aggregate_multi_xlsx(
-                    xlsx_paths,
-                    bin_minutes=self._bin_minutes,
-                    use_only_validated=self._only_validated,
-                    use_observer_taxon=self._observer_taxon,
-                    chiros_only=self._chiros_only,
-                    use_mnhn=self._use_mnhn,
-                )
+                from chirosurf_nights import harvest_vu_sidecars
+                sessions: set[Path] = set()
+                for p in discover_activity_sources(workspace):
+                    parent = p.parent
+                    if parent.name.lower() in (
+                        "chirosurf", "chirosurf_nuits", "data_k", "data",
+                    ):
+                        sessions.add(parent.parent)
+                    else:
+                        sessions.add(parent)
+                for sess in sessions:
+                    try:
+                        harvest_vu_sidecars(sess)
+                    except Exception:
+                        pass
+                xlsx_paths = discover_activity_sources(workspace)
+                loaded: list[tuple[Path, list, list]] = []
+                for p in xlsx_paths:
+                    pair = cache.load(p)
+                    if pair is None:
+                        continue
+                    loaded.append((p, pair[0], pair[1]))
+                cache.drop_missing(xlsx_paths)
+                universe = aggregate_loaded_tables(loaded, bin_minutes=bin_minutes)
+                aggregated = aggregate_loaded_tables(loaded, **kwargs)
             except Exception as e:
-                self.after(0, lambda: self.status_lbl.configure(
-                    text=f"erreur agrégation : {e}",
-                    text_color=("#cf222e", "#f85149")))
+                self._schedule(self._on_load_error, gen, str(e))
                 return
-            self.after(0, lambda: self._on_loaded(xlsx_paths, aggregated))
+            self._schedule(
+                self._on_loaded, gen, xlsx_paths, loaded, universe,
+                aggregated, kwargs)
 
         threading.Thread(target=_worker, daemon=True).start()
 
-    def _on_loaded(self, xlsx_paths: list[Path], aggregated: dict):
-        self._all_xlsx = xlsx_paths
-        self._aggregated = aggregated
-        n_nights = len(list_nights(aggregated))
+    def _on_load_error(self, gen: int, message: str):
+        if gen != self._reload_gen:
+            return
+        self._disk_loading = False
+        self.status_lbl.configure(
+            text=f"erreur agrégation : {message}",
+            text_color=("#cf222e", "#f85149"))
+
+    def _reaggregate(self):
+        """Recalcule depuis la RAM. Pas de rglob, pas d'openpyxl."""
+        if getattr(self, "_disk_loading", False):
+            return  # _on_loaded applique les options courantes après lecture.
+        if not self._loaded_tables:
+            self._reload_from_disk()
+            return
+        self._reload_gen += 1
+        gen = self._reload_gen
+        self.status_lbl.configure(text="recalcul (cache)…")
+        loaded = list(self._loaded_tables)
+        kwargs = self._agg_kwargs()
+        bin_minutes = self._bin_minutes
+
+        def _worker():
+            try:
+                universe = aggregate_loaded_tables(loaded, bin_minutes=bin_minutes)
+                aggregated = aggregate_loaded_tables(loaded, **kwargs)
+            except Exception as e:
+                self._schedule(self._on_load_error, gen, str(e))
+                return
+            self._schedule(self._on_reaggregated, gen, universe, aggregated)
+
+        threading.Thread(target=_worker, daemon=True).start()
+
+    def _status_text(self, xlsx_paths: list[Path], aggregated: dict) -> str:
+        n_nights = len(list_nights(self._universe or aggregated))
         n_contacts = sum(sum(bins) for bins in aggregated.values())
+        n_vu = sum(1 for p in xlsx_paths if p.suffix.lower() == ".csv")
+        n_xlsx = len(xlsx_paths) - n_vu
         prefix = ""
         if self._use_mnhn:
-            has_vu = any(p.suffix.lower() == ".csv" for p in xlsx_paths)
-            prefix = "MNHN · "
-            if not has_vu:
-                prefix = "MNHN (xlsx, pas un _Vu) · "
+            prefix = "MNHN · " if n_vu else "MNHN (xlsx, pas un _Vu) · "
+        src = f"{n_vu} _Vu + {n_xlsx} xlsx" if n_vu else f"{n_xlsx} xlsx"
+        return (f"{prefix}{src} · {n_nights} nuits · {n_contacts:,} contacts")
+
+    def _on_loaded(self, gen: int, xlsx_paths: list[Path],
+                   loaded: list, universe: dict, aggregated: dict,
+                   used_kwargs: dict | None = None):
+        if gen != self._reload_gen:
+            return
+        self._disk_loading = False
+        self._all_xlsx = xlsx_paths
+        self._loaded_tables = loaded
+        self._universe = universe
+        self._aggregated = aggregated
         self.status_lbl.configure(
-            text=f"{prefix}{len(xlsx_paths)} source(s) · {n_nights} nuits · "
-                 f"{n_contacts:,} contacts",
+            text=self._status_text(xlsx_paths, aggregated),
             text_color=("gray40", "gray60"),
         )
-        # Initialisation **unique** des sélections par défaut. Après ça,
-        # un clic « Aucun » de l'utilisateur restera respecté.
+        src = universe or aggregated
         if not self._filters_initialized:
-            self._sel_sites = set(list_sites(aggregated))
-            # points : tous ceux du(es) site(s) coché(s)
-            self._sel_points = set(list_points(aggregated))
-            self._sel_passages = set(list_passages(aggregated))
-            nights = list_nights(aggregated)
-            self._sel_nights = {nights[-1]} if nights else set()  # dernière nuit
-            top = list_taxons(aggregated)[:5]
+            self._sel_sites = set(list_sites(src))
+            self._sel_points = set(list_points(src))
+            self._sel_passages = set(list_passages(src))
+            nights = list_nights(src)
+            if len(nights) <= 14:
+                self._sel_nights = set(nights)
+            else:
+                self._sel_nights = {nights[-1]} if nights else set()
+            top = list_taxons(aggregated)[:5] or list_taxons(src)[:5]
             self._sel_taxons = {t for t, _n in top}
             self._filters_initialized = True
-        else:
-            # Lors d'un rechargement (changement workspace, toggle validé…),
-            # on garde les sélections mais on les intersecte avec ce qui existe.
-            self._sel_sites &= set(list_sites(aggregated))
-            self._sel_points &= set(list_points(aggregated))
-            self._sel_passages &= set(list_passages(aggregated))
-            self._sel_nights &= set(list_nights(aggregated))
-            self._sel_taxons &= {t for t, _ in list_taxons(aggregated)}
+        self._refresh_filters_ui()
+        self._redraw()
+        # Un toggle pendant le scan a été ignoré (_disk_loading) : recaler.
+        if used_kwargs is not None and self._agg_kwargs() != used_kwargs:
+            self._reaggregate()
+
+    def _on_reaggregated(self, gen: int, universe: dict, aggregated: dict):
+        if gen != self._reload_gen:
+            return
+        self._universe = universe
+        self._aggregated = aggregated
+        self.status_lbl.configure(
+            text=self._status_text(self._all_xlsx, aggregated),
+            text_color=("gray40", "gray60"),
+        )
+        # On ne touche PAS aux sélections : cocher MNHN ne doit plus faire
+        # disparaître les autres carrés de la liste.
+        if not self._sel_taxons:
+            top = list_taxons(aggregated)[:5]
+            self._sel_taxons = {t for t, _n in top}
         self._refresh_filters_ui()
         self._redraw()
 
     def _discover_xlsx(self) -> list[Path]:
-        """Scan xlsx d'observations + CSV ``_Vu`` ChiroSurf (issue #4.10).
-
-        Un ``_Vu`` remplace l'xlsx **pour cette nuit seulement** (dédup dans
-        ``aggregate_multi_xlsx``). Les autres nuits du tableur restent.
-        """
+        """Compat tests / appels externes : même règle que le cache disque."""
         if self.workspace is None:
             return []
-        xlsx: list[Path] = []
-        vu_csvs: list[Path] = []
-        for p in self.workspace.rglob("*"):
-            if not p.is_file():
-                continue
-            try:
-                rel_depth = len(p.relative_to(self.workspace).parts)
-                if rel_depth > 6:
-                    continue
-            except ValueError:
-                continue
-            low = p.name.lower()
-            if p.suffix.lower() == ".csv" and low.endswith("_vu.csv"):
-                parent = p.parent.name.lower()
-                if parent in ("chirosurf", "chirosurf_nuits", "data_k", "data"):
-                    vu_csvs.append(p)
-                    continue
-            if p.suffix.lower() != ".xlsx":
-                continue
-            if "observations" not in low or not low.startswith("participation-"):
-                continue
-            if "_cleanup" in low or "_backup" in low:
-                continue
-            xlsx.append(p)
-        # Dédupliquer chirosurf/ vs Data_k/ pour la même nuit (issue #7).
-        from chirosurf_nights import parse_chirosurf_csv_name
-        vu_csvs.sort(key=lambda q: (
-            0 if q.parent.name.lower() in ("chirosurf", "chirosurf_nuits") else 1,
-            str(q).lower(),
-        ))
-        vu_kept: list[Path] = []
-        seen_vu: set[tuple] = set()
-        for vp in vu_csvs:
-            parsed = parse_chirosurf_csv_name(vp.name)
-            idx = parsed[0] if parsed else None
-            session = vp.parent.parent
-            key = (session, idx if idx is not None else vp.name.lower())
-            if key in seen_vu:
-                continue
-            seen_vu.add(key)
-            vu_kept.append(vp)
-        # Ne plus écarter tout l'xlsx dès qu'un _Vu existe : aggregate_multi_xlsx
-        # ignore les nuits déjà couvertes par un _Vu et garde les autres.
-        return sorted(xlsx + vu_kept)
+        return discover_activity_sources(self.workspace)
 
     # =========================================================================
     # Filtres : checkboxes nuits + taxons
@@ -539,7 +611,7 @@ class ActivityPanel(ctk.CTkFrame):
         """Options disponibles EN CASCADE selon les sélections amont courantes.
         Une sélection vide (falsy) = pas de contrainte pour cette dimension."""
         return cascade_options(
-            self._aggregated,
+            self._filter_source(),
             sel_sites=(self._sel_sites or None),
             sel_points=(self._sel_points or None),
             sel_passages=(self._sel_passages or None),
@@ -556,7 +628,7 @@ class ActivityPanel(ctk.CTkFrame):
         self._update_filters_summary()
 
     def _render_sites(self):
-        sites = list_sites(self._aggregated)
+        sites = list_sites(self._filter_source())
         self._update_section_header("sites", len(self._sel_sites & set(sites)),
                                     len(sites))
         shown = filter_items(sites, self._section_query("sites"),
@@ -671,22 +743,23 @@ class ActivityPanel(ctk.CTkFrame):
 
     def _set_filter_all(self, kind: str, select: bool):
         """Tout/Aucun générique pour les filtres sites/points/passages/nights."""
+        src = self._filter_source()
         if kind == "sites":
-            self._sel_sites = set(list_sites(self._aggregated)) if select else set()
+            self._sel_sites = set(list_sites(src)) if select else set()
             # Reset points pour qu'ils soient recalculés selon nouveaux sites
             self._sel_points = set()
         elif kind == "points":
             if self._sel_sites:
                 pts = {p for s in self._sel_sites
-                       for p in list_points(self._aggregated, s)}
+                       for p in list_points(src, s)}
             else:
-                pts = set(list_points(self._aggregated))
+                pts = set(list_points(src))
             self._sel_points = pts if select else set()
         elif kind == "passages":
-            self._sel_passages = set(list_passages(self._aggregated)) \
+            self._sel_passages = set(list_passages(src)) \
                 if select else set()
         elif kind == "nights":
-            self._sel_nights = set(list_nights(self._aggregated)) \
+            self._sel_nights = set(list_nights(src)) \
                 if select else set()
         self._refresh_filters_ui()
         self._redraw()
@@ -792,14 +865,14 @@ class ActivityPanel(ctk.CTkFrame):
     def _on_bin_change(self, value: str):
         bins = {"15 min": 15, "30 min": 30, "60 min": 60}
         self._bin_minutes = bins.get(value, 30)
-        self.refresh()
+        self._reaggregate()
 
     def _on_validated_toggle(self):
         if self.validated_var.get():
             self.mnhn_var.set(False)
             self._use_mnhn = False
         self._only_validated = bool(self.validated_var.get())
-        self.refresh()
+        self._reaggregate()
 
     def _on_mnhn_toggle(self):
         if self.mnhn_var.get():
@@ -808,18 +881,18 @@ class ActivityPanel(ctk.CTkFrame):
             self.observer_taxon_var.set(False)
             self._observer_taxon = False
         self._use_mnhn = bool(self.mnhn_var.get())
-        self.refresh()
+        self._reaggregate()
 
     def _on_chiros_toggle(self):
         self._chiros_only = bool(self.chiros_only_var.get())
-        self.refresh()
+        self._reaggregate()
 
     def _on_observer_toggle(self):
         if self.observer_taxon_var.get() and self.mnhn_var.get():
             self.mnhn_var.set(False)
             self._use_mnhn = False
         self._observer_taxon = bool(self.observer_taxon_var.get())
-        self.refresh()
+        self._reaggregate()
 
     # =========================================================================
     # Export PNG
