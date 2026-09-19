@@ -47,11 +47,10 @@ Idéal pour les **bureaux d’études**, **associations** et **observateurs** qu
 
 ## Nouveautés v0.8
 
-La **v0.8.1** (pre-release GitHub du 2026-09-19,
+La **v0.8.1** (release GitHub du 2026-09-19, **Latest**,
 [tag v0.8.1](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.1),
 SHA-256 `14C620BC40BC1E2DB9059653B6830E5B107A1726DCF0107DB3D16BD4123B19AE`)
-remplace la [v0.8.0](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.0)
-pour les tests terrain.
+remplace la [v0.8.0](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.0).
 
 | | Nouveauté | Bénéfice terrain |
 |---|-----------|------------------|
@@ -183,7 +182,7 @@ Les fichiers compressés Wildlife **`.wac`** (SM2, parfois SM3) et **`.w4v`** ne
 ### Option A — Exe portable (recommandé sur le terrain)
 
 1. Téléchargez **`ChiroTool.exe`** depuis la
-   [pre-release v0.8.1](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.1).
+   [release v0.8.1](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.1).
 2. Placez-le où vous voulez (clé USB, dossier campagne…).
 3. Double-cliquez pour lancer.
 

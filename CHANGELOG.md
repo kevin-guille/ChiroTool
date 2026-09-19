@@ -7,12 +7,10 @@ Les versions publiées suivent le SemVer du fichier `version.py` / tags GitHub.
 
 ## [0.8.1] - 2026-09-19
 
-`version.py` = `0.8.1` (build 2026-09-19). Pre-release GitHub
+`version.py` = `0.8.1` (build 2026-09-19). Release GitHub **Latest**
 [v0.8.1](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.1)
-(SHA-256 `14C620BC40BC1E2DB9059653B6830E5B107A1726DCF0107DB3D16BD4123B19AE`). GitHub « Latest » reste
-[v0.7.2](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.7.2)
-tant que 0.8.x est en pre-release. Cumul depuis le 10 septembre : export USB
-Data_k-only, participation Titley
+(SHA-256 `14C620BC40BC1E2DB9059653B6830E5B107A1726DCF0107DB3D16BD4123B19AE`).
+Cumul depuis le 10 septembre : export USB Data_k-only, participation Titley
 ([#8](https://github.com/kevin-guille/ChiroTool/issues/8)), retours du 16
 septembre ([#9](https://github.com/kevin-guille/ChiroTool/issues/9),
 [#10](https://github.com/kevin-guille/ChiroTool/issues/10)).
@@ -76,11 +74,12 @@ du suivi livrée ; fermeture de l'exe et historique live restent ouverts.
   Data_k. Cache tableurs (pas de relecture si mtime inchangé). `_Vu` MNHN
   vide n'est pas remplacé par l'xlsx. TE×10 Titley inchangé. Reprise
   d'upload : pas de `trigger_compute` si PLANIFIE / EN_COURS / TERMINE / FINI.
-  320 tests.
+  320 tests. Fixture Titley versionnée :
+  `tests/fixtures/titley_log_overnight.csv` (CI, le log terrain reste gitignoré).
 
 ### Documentation
 
-- Pre-release GitHub [v0.8.1](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.1)
+- Release GitHub Latest [v0.8.1](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.1)
   (2026-09-19). SHA-256 `14C620BC40BC1E2DB9059653B6830E5B107A1726DCF0107DB3D16BD4123B19AE`.
   Note : [`docs/RELEASE_v0.8.1.md`](docs/RELEASE_v0.8.1.md).
 
@@ -147,9 +146,8 @@ Bilan issues : SPEC §0.1 (#4) et §0.2 (#7).
 ### Documentation
 
 - Pre-release GitHub [v0.8.0](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.0)
-  (2026-09-09). Notes 0.7.1 / 0.7.2 : plus courantes. Liens de
-  téléchargement vers le tag (GitHub Latest reste 0.7.2 tant que 0.8.0
-  est pre-release).
+  (2026-09-09). Remplacée par [v0.8.1](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.1)
+  (Latest).
 
 ## [0.7.2] — 2026-09-01
 

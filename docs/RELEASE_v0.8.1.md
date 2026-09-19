@@ -1,16 +1,11 @@
 # ChiroTool v0.8.1 : participation Titley, upload unitaire, Activité
 
-> **Pre-release GitHub** (2026-09-19) :
+> **Release GitHub** (2026-09-19, Latest) :
 > [v0.8.1](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.1).
 > SHA-256 de l'asset `ChiroTool.exe` vérifié :
 > `14C620BC40BC1E2DB9059653B6830E5B107A1726DCF0107DB3D16BD4123B19AE`.
-> GitHub « Latest » reste [v0.7.2](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.7.2)
-> tant que 0.8.x est en pre-release. L'app lit la liste des releases
-> (pre-releases comprises).
-
-Remplace la pre-release
-[v0.8.0](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.0)
-pour les tests terrain.
+> Remplace la pre-release
+> [v0.8.0](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.0).
 
 Répond aux issues
 [#8](https://github.com/kevin-guille/ChiroTool/issues/8),

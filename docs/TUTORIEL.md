@@ -8,7 +8,7 @@
 
 ![Icône ChiroTool](captures/icon_256.png)
 
-**Version 0.8.1** · Tutoriel utilisateur. Pre-release GitHub : [v0.8.1](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.1).
+**Version 0.8.1** · Tutoriel utilisateur. Release GitHub : [v0.8.1](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.1).
 
 </div>
 
@@ -103,7 +103,7 @@ ChiroTool est un **logiciel portable** : pas d'installation, pas de droits
 administrateur requis.
 
 1. Récupérez le fichier **`ChiroTool.exe`** (≈ 36 Mo) auprès de votre référent ou
-   sur la [pre-release v0.8.1](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.1).
+   sur la [release v0.8.1](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.1).
 2. Placez-le où vous voulez (Bureau, clé USB, disque dur externe…).
 3. Double-cliquez pour le lancer.
 
