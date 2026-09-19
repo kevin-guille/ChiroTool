@@ -2,10 +2,10 @@
 
 | | |
 |--|--|
-| **Statut** | **Livré** : v0.6.0 (2026-08-07, vagues A–C) + **v0.7.0** (2026-08-30, Synthèse autonome, Titley, issues #4–#6) + **v0.7.1** (2026-08-31, issue #7 ChiroSurf CSV+WAV) + **v0.7.2** (2026-09-01, D12 nuit bio + barre d'actions) + **v0.8.0** (2026-09-06, P8 MNHN 10 % / 75 % Synthèse ; 2026-09-09 Activité + Titley TE×10, pre-release GitHub) + **v0.8.1** (2026-09-16, #8 participation Titley, #9 wizard upload, #10 Activité cache ; pas de tag). |
-| **Ouvert** | Issues [#4](https://github.com/kevin-guille/ChiroTool/issues/4) et [#7](https://github.com/kevin-guille/ChiroTool/issues/7) close côté v0.8 (confirmation terrain), voir §0.1 et §0.2. Issues [#8](https://github.com/kevin-guille/ChiroTool/issues/8), [#9](https://github.com/kevin-guille/ChiroTool/issues/9), [#10](https://github.com/kevin-guille/ChiroTool/issues/10) livrées en 0.8.1, voir §0.3 et §0.4. Vague D (export compilé, fusion `_Vu` → xlsx) plus tard. |
-| **Date** | 2026-08-04 (conception) · 2026-08-07 (v0.6) · 2026-08-30 (v0.7) · 2026-09-03 (D13) · 2026-09-06 (P8) · 2026-09-08 (exe 0.8.0 : 409 + Win+D) · 2026-09-09 (Titley TE×10, Activité MNHN, pre-release GitHub [v0.8.0](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.0)) · 2026-09-10 (0.8.1 : scan export + pastille TE + #8) · 2026-09-16 (0.8.1 : #9 wizard, #10 Activité) |
-| **Contexte** | Issue [#3](https://github.com/kevin-guille/ChiroTool/issues/3) (retours terrain) + retours carte / meta + issues [#4](https://github.com/kevin-guille/ChiroTool/issues/4) / [#7](https://github.com/kevin-guille/ChiroTool/issues/7) / [#8](https://github.com/kevin-guille/ChiroTool/issues/8) / [#9](https://github.com/kevin-guille/ChiroTool/issues/9) / [#10](https://github.com/kevin-guille/ChiroTool/issues/10) |
+| **Statut** | **Livré** : v0.6.0 (2026-08-07, vagues A–C) + **v0.7.0** (2026-08-30, Synthèse autonome, Titley, issues #4–#6) + **v0.7.1** (2026-08-31, issue #7 ChiroSurf CSV+WAV) + **v0.7.2** (2026-09-01, D12 nuit bio + barre d'actions) + **v0.8.0** (2026-09-06, P8 MNHN 10 % / 75 % Synthèse ; 2026-09-09 Activité + Titley TE×10, pre-release GitHub) + **v0.8.1** (2026-09-19, #8 participation Titley, #9 wizard upload, #10 Activité cache, pre-release GitHub). |
+| **Ouvert** | Issues [#4](https://github.com/kevin-guille/ChiroTool/issues/4) et [#7](https://github.com/kevin-guille/ChiroTool/issues/7) close côté v0.8 (confirmation terrain), voir §0.1 et §0.2. Issues [#8](https://github.com/kevin-guille/ChiroTool/issues/8), [#9](https://github.com/kevin-guille/ChiroTool/issues/9), [#10](https://github.com/kevin-guille/ChiroTool/issues/10) livrées en 0.8.1, voir §0.3 et §0.4. Issue [#11](https://github.com/kevin-guille/ChiroTool/issues/11) partielle, voir §0.5. Vague D (export compilé, fusion `_Vu` → xlsx) plus tard. |
+| **Date** | 2026-08-04 (conception) · 2026-08-07 (v0.6) · 2026-08-30 (v0.7) · 2026-09-03 (D13) · 2026-09-06 (P8) · 2026-09-08 (exe 0.8.0 : 409 + Win+D) · 2026-09-09 (Titley TE×10, Activité MNHN, pre-release GitHub [v0.8.0](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.0)) · 2026-09-10 (0.8.1 : scan export + pastille TE + #8) · 2026-09-16 (0.8.1 : #9 wizard, #10 Activité) · 2026-09-19 (pre-release GitHub [v0.8.1](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.1)) |
+| **Contexte** | Issue [#3](https://github.com/kevin-guille/ChiroTool/issues/3) (retours terrain) + retours carte / meta + issues [#4](https://github.com/kevin-guille/ChiroTool/issues/4) / [#7](https://github.com/kevin-guille/ChiroTool/issues/7) / [#8](https://github.com/kevin-guille/ChiroTool/issues/8) / [#9](https://github.com/kevin-guille/ChiroTool/issues/9) / [#10](https://github.com/kevin-guille/ChiroTool/issues/10) / [#11](https://github.com/kevin-guille/ChiroTool/issues/11) |
 | **Principe** | Pragmatisme — une vérité disque, peu de fichiers, parcours unifiés, libellés humains d’abord |
 
 Ce document **prime** sur l’improvisation au codage. En cas de doute : revenir ici, ou amender le §8 avant de coder autre chose.
@@ -70,9 +70,23 @@ Le CSV log doit être **dans le dossier de session** (ou `Data/`), comme un Summ
 |---|---------|-----------|
 | #9 | Upload unitaire : wizard vide, participation non créée (batch OK) | **Livré** : formulaire dessiné d'abord, prefill en thread. Log Titley présent : pas de listing Data_k avant le wizard ni pour les dates. |
 | #10 | Activité lente (rescan xlsx à chaque case), filtres morts, MNHN = taxons écoutés seulement, un seul carré | **Livré** : cache RAM ; cases = recalcul mémoire ; `_Vu` racine de session et `Data_k/` ; listes de filtres depuis l'univers (les autres carrés restent) ; 1er scan sans descendre dans les WAV. |
-| (annoncé #7) | Rouvrir le suivi d'upload après fermeture de la fenêtre | **Livré** : fermer = arrière-plan ; recliquer Upload rouvre. |
+| (annoncé #7) | Rouvrir le suivi d'upload après fermeture de la fenêtre | **Livré** : fermer = arrière-plan ; recliquer Upload rouvre. Détail #11 : §0.5. |
 
-L'exe **publié** reste [v0.8.0](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.0) tant qu'il n'y a pas de tag `v0.8.1`.
+Pre-release GitHub : [v0.8.1](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.1).
+
+### 0.5 Issue #11 vs 0.8.1 (suivi d'upload)
+
+Le body du 16 septembre 2026 (Benjamin) : réouvrir le suivi, comportement
+si on ferme ChiroTool, historique en direct, moins de Vérifier / Réparer.
+
+| # | Demande | 0.8.1 |
+|---|---------|-----------|
+| 1 | Réouvrir la fenêtre de suivi | **Livré** : fermer = arrière-plan (`withdraw`) ; recliquer Upload = `reveal`. |
+| 2 | Fermer ChiroTool pendant l'upload | **Pas encore.** `_on_close` n'avertit pas. Le worker est `daemon=True` : tuer l'exe arrête l'envoi local. Tadarida déjà lancée côté serveur continue. |
+| 3 | Historique en temps réel | **Pas encore.** Bouton ⟳ / changement de session / entrée d'onglet. Pas de polling. |
+| 4 | Éviter Vérifier / Réparer | **Partiel.** Recliquer Upload reprend si l'app est restée ouverte. Après kill de l'exe : Upload (reprise 409) ou Vérifier / Réparer. |
+
+Rester **ouverte**. Pas un reliquat de #9.
 
 ---
 

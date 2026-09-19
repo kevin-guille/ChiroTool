@@ -15,7 +15,7 @@ Outil libre pour le protocole **[Vigie-Chiro Point Fixe](https://www.vigienature
 [![Python](https://img.shields.io/badge/Python-3.11%2B-3776ab.svg)](https://www.python.org/)
 [![Windows](https://img.shields.io/badge/Windows-portable-0d419d.svg)](#installation)
 
-**[⬇ Télécharger l’exe](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.0)** ·
+**[⬇ Télécharger l’exe](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.1)** ·
 **[📖 Tutoriel PDF](docs/ChiroTool-Tutoriel.pdf)** ·
 **[💬 Ouvrir une issue](https://github.com/kevin-guille/ChiroTool/issues)**
 
@@ -47,37 +47,32 @@ Idéal pour les **bureaux d’études**, **associations** et **observateurs** qu
 
 ## Nouveautés v0.8
 
-La **v0.8.0** (pre-release GitHub du 2026-09-09,
-[tag v0.8.0](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.0))
-reconstitue la méthode MNHN 10 % / 75 % après un `_Vu` ChiroSurf, et
-conserve tout le son des WAV Titley de plus de 5 s.
+La **v0.8.1** (pre-release GitHub du 2026-09-19,
+[tag v0.8.1](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.1),
+SHA-256 `14C620BC40BC1E2DB9059653B6830E5B107A1726DCF0107DB3D16BD4123B19AE`)
+remplace la [v0.8.0](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.0)
+pour les tests terrain.
 
 | | Nouveauté | Bénéfice terrain |
 |---|-----------|------------------|
-| 📊 | **Méthode MNHN 10 % / 75 %** (Synthèse et Activité) | Bandes de **confiance Tadarida**, pas le temps. Distinct de « identifications validées seulement » ([#7](https://github.com/kevin-guille/ChiroTool/issues/7)) |
-| 🏷️ | **Titley TE×10** | WAV > 5 s découpé **en entier** ([#4](https://github.com/kevin-guille/ChiroTool/issues/4)). Upload grisé si `Data_k` incomplet |
-| ☁️ | **Upload 409** | WAV déjà enregistré : Tadarida peut partir |
-| 🪟 | **Afficher le bureau** | Recliquer ChiroTool ramène la progression |
+| 🏷️ | **Participation Titley** | Série, type, micro, horaires et T° du `log_*.csv` envoyés à Vigie-Chiro ([#8](https://github.com/kevin-guille/ChiroTool/issues/8)) |
+| ☁️ | **Upload unitaire** | Assistant visible tout de suite, plus de fenêtre noire sur un gros Data_k ([#9](https://github.com/kevin-guille/ChiroTool/issues/9)) |
+| 📈 | **Activité** | Tableurs en mémoire ; MNHN / chiros sans rescan ; `_Vu` racine et Data_k ; les autres carrés restent ([#10](https://github.com/kevin-guille/ChiroTool/issues/10)) |
+| 🔌 | **Suivi d'upload** | Fermer la fenêtre = arrière-plan ; recliquer Upload la rouvre (reste : [#11](https://github.com/kevin-guille/ChiroTool/issues/11)) |
+| 📊 | **Méthode MNHN 10 % / 75 %** (dès 0.8.0) | Bandes de **confiance Tadarida**, Synthèse et Activité ([#7](https://github.com/kevin-guille/ChiroTool/issues/7)) |
+| 🏷️ | **Titley TE×10** (dès 0.8.0) | WAV > 5 s découpé **en entier** ([#4](https://github.com/kevin-guille/ChiroTool/issues/4)) |
 
 Après un `_Vu`, « Identifications validées seulement » = contacts **écoutés**.
 « Méthode MNHN 10 % / 75 % » reconstitue l'interprétation (bandes de
 confiance Tadarida), dans la Synthèse **et** l'onglet Activité.
 
-**v0.8.1** (2026-09-16, ce commit) : participation Titley (série, log, T°,
-issue [#8](https://github.com/kevin-guille/ChiroTool/issues/8)) ; wizard
-d'upload qui s'affiche tout de suite (issue
-[#9](https://github.com/kevin-guille/ChiroTool/issues/9)) ; Activité en
-cache mémoire, `_Vu` hors chirosurf/, filtres MNHN qui gardent tous les
-carrés (issue [#10](https://github.com/kevin-guille/ChiroTool/issues/10)) ;
-export USB Data_k-only et pastille TE après nettoyage. L'exe GitHub reste
-la [v0.8.0](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.0)
-tant que le tag `v0.8.1` n'est pas publié. Note :
-[`docs/RELEASE_v0.8.1.md`](docs/RELEASE_v0.8.1.md).
-
-Note 0.8.0 : [`docs/RELEASE_v0.8.0.md`](docs/RELEASE_v0.8.0.md). Bilan des issues
-[#4](https://github.com/kevin-guille/ChiroTool/issues/4) et
-[#7](https://github.com/kevin-guille/ChiroTool/issues/7) : SPEC
-[`§0.1`](docs/SPEC_v06_parcours.md) et [`§0.2`](docs/SPEC_v06_parcours.md)
+Note : [`docs/RELEASE_v0.8.1.md`](docs/RELEASE_v0.8.1.md). Bilan des issues
+[#4](https://github.com/kevin-guille/ChiroTool/issues/4),
+[#7](https://github.com/kevin-guille/ChiroTool/issues/7),
+[#8](https://github.com/kevin-guille/ChiroTool/issues/8),
+[#9](https://github.com/kevin-guille/ChiroTool/issues/9) et
+[#10](https://github.com/kevin-guille/ChiroTool/issues/10) : SPEC
+[`§0.1`](docs/SPEC_v06_parcours.md) à [`§0.4`](docs/SPEC_v06_parcours.md)
 (ne pas relire le 1er message comme une todo). Relancer **Préparer** si un
 Historique 0.7.2 montre moins d'écrits que de segments.
 
@@ -188,7 +183,7 @@ Les fichiers compressés Wildlife **`.wac`** (SM2, parfois SM3) et **`.w4v`** ne
 ### Option A — Exe portable (recommandé sur le terrain)
 
 1. Téléchargez **`ChiroTool.exe`** depuis la
-   [pre-release v0.8.0](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.0).
+   [pre-release v0.8.1](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.1).
 2. Placez-le où vous voulez (clé USB, dossier campagne…).
 3. Double-cliquez pour lancer.
 
@@ -322,7 +317,7 @@ Tests : `pytest tests/` (également en [CI GitHub Actions](https://github.com/ke
 
 Vous avez une saison Point Fixe devant vous ? **ChiroTool est fait pour ça.**
 
-1. **[Téléchargez la v0.8.0](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.0)** (exe ou sources)
+1. **[Téléchargez la v0.8.1](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.1)** (exe ou sources)
 2. Traitez une nuit test de bout en bout
 3. Envoyez un retour — bug, idée, besoin de formation —
    via une [**issue GitHub**](https://github.com/kevin-guille/ChiroTool/issues)
@@ -361,7 +356,7 @@ Distribué sous licence **[MIT](LICENSE)** — usage, modification et redistribu
 
 🦇 **Bon traitement, et bonnes chauves-souris !**
 
-[⬆ Télécharger](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.0)
+[⬆ Télécharger](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.1)
 ·
 [📖 Tutoriel](docs/ChiroTool-Tutoriel.pdf)
 ·

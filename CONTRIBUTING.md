@@ -30,9 +30,11 @@ décrivant :
 [`§0.2`](docs/SPEC_v06_parcours.md)),
 [#8](https://github.com/kevin-guille/ChiroTool/issues/8) (SPEC
 [`§0.3`](docs/SPEC_v06_parcours.md)),
-[#9](https://github.com/kevin-guille/ChiroTool/issues/9) et
+[#9](https://github.com/kevin-guille/ChiroTool/issues/9),
 [#10](https://github.com/kevin-guille/ChiroTool/issues/10) (SPEC
-[`§0.4`](docs/SPEC_v06_parcours.md)) comme une todo.
+[`§0.4`](docs/SPEC_v06_parcours.md)) et
+[#11](https://github.com/kevin-guille/ChiroTool/issues/11) (SPEC
+[`§0.5`](docs/SPEC_v06_parcours.md), partielle) comme une todo.
 En particulier : **pas plusieurs exe** (mode Batch, D14) ; **Valider puis
 Nettoyer** déjà en 0.7 ; **MNHN 10 % / 75 %** dans la **Synthèse et Activité**
 (v0.8, P8) ; ChiroSurf / `_Vu` déjà en 0.7.1.
@@ -45,23 +47,24 @@ Nettoyer** déjà en 0.7 ; **MNHN 10 % / 75 %** dans la **Synthèse et Activité
   Exe du 2026-09-08 : upload 409, Afficher le bureau. Correctif Titley TE×10
   (2026-09-09) : WAV > 5 s découpé en entier. **Publiée** GitHub le 2026-09-09
   en pre-release ([v0.8.0](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.0)).
-- **v0.8.1** (2026-09-16) : issues #8 (série / log Titley / T°), #9 (wizard
+- **v0.8.1** (2026-09-19) : issues #8 (série / log Titley / T°), #9 (wizard
   upload), #10 (Activité cache, `_Vu` racine / Data_k, filtres MNHN). Scan
-  d'un export Data_k-only ; TE×10 conservé après nettoyage. Tag GitHub à
-  créer après rebuild. L'exe en ligne reste
-  [v0.8.0](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.0)
-  jusque-là.
+  d'un export Data_k-only ; TE×10 conservé après nettoyage. Reprise d'upload
+  sans relancer Tadarida si la nuit est déjà analysée. **Publiée** GitHub
+  le 2026-09-19 en pre-release
+  ([v0.8.1](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.1)).
+  Issue #11 (suivi) : réouverture livrée, le reste reste ouvert.
 
 | Document | Rôle |
 |----------|------|
-| [`docs/SPEC_v06_parcours.md`](docs/SPEC_v06_parcours.md) | **Source de vérité** (v0.8 livrée ; §0.1 #4 ; §0.2 #7 ; §0.3 #8 ; §0.4 #9/#10 ; D14 Batch) |
+| [`docs/SPEC_v06_parcours.md`](docs/SPEC_v06_parcours.md) | **Source de vérité** (v0.8 livrée ; §0.1 #4 ; §0.2 #7 ; §0.3 #8 ; §0.4 #9/#10 ; §0.5 #11 partielle ; D14 Batch) |
 | [`CHANGELOG.md`](CHANGELOG.md) | Versions publiées + *Suite possible* |
 | [`docs/RELEASE_v0.6.0.md`](docs/RELEASE_v0.6.0.md) | Note de release GitHub v0.6 |
 | [`docs/RELEASE_v0.7.0.md`](docs/RELEASE_v0.7.0.md) | Note de release GitHub v0.7 |
 | [`docs/RELEASE_v0.7.1.md`](docs/RELEASE_v0.7.1.md) | Note de pre-release GitHub v0.7.1 (issue #7, remplacée) |
 | [`docs/RELEASE_v0.7.2.md`](docs/RELEASE_v0.7.2.md) | Note de release GitHub v0.7.2 (Latest GitHub tant que 0.8.0 est pre-release) |
 | [`docs/RELEASE_v0.8.0.md`](docs/RELEASE_v0.8.0.md) | Note de pre-release GitHub v0.8.0 (2026-09-09, remplacée par 0.8.1) |
-| [`docs/RELEASE_v0.8.1.md`](docs/RELEASE_v0.8.1.md) | Note de release v0.8.1 (tag à créer après rebuild de l'exe) |
+| [`docs/RELEASE_v0.8.1.md`](docs/RELEASE_v0.8.1.md) | Note de pre-release GitHub v0.8.1 (2026-09-19, SHA exe) |
 | [`docs/TUTORIEL.md`](docs/TUTORIEL.md) | Guide utilisateur (pick, Synthèse, ChiroSurf optionnel, repair) |
 | [`docs/ChiroTool-Tutoriel.pdf`](docs/ChiroTool-Tutoriel.pdf) | PDF généré via `python docs/build_pdf.py` |
 | [`samples/issue3_benjamin/`](samples/issue3_benjamin/) | Fixtures CSV multi-nuits + `_Vu` (issue #3) |

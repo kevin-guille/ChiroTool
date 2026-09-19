@@ -8,7 +8,7 @@
 
 ![Icône ChiroTool](captures/icon_256.png)
 
-**Version 0.8.1** · Tutoriel utilisateur. Exe GitHub encore [v0.8.0](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.0) jusqu'au tag `v0.8.1`.
+**Version 0.8.1** · Tutoriel utilisateur. Pre-release GitHub : [v0.8.1](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.1).
 
 </div>
 
@@ -103,7 +103,7 @@ ChiroTool est un **logiciel portable** : pas d'installation, pas de droits
 administrateur requis.
 
 1. Récupérez le fichier **`ChiroTool.exe`** (≈ 36 Mo) auprès de votre référent ou
-   sur la [pre-release v0.8.0](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.0).
+   sur la [pre-release v0.8.1](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.1).
 2. Placez-le où vous voulez (Bureau, clé USB, disque dur externe…).
 3. Double-cliquez pour le lancer.
 
@@ -967,7 +967,7 @@ et joignez un exemple de nom à une [issue](https://github.com/kevin-guille/Chir
 **« Avec la 0.7.2, seuls les 5 premières secondes des Anabat longs partent. »**
 Oui : le moteur TE×10 (Rust) réutilisait le même nom pour chaque tranche
 d'un WAV de plus de 5 s. Seule la première était gardée. C'est corrigé
-dans la **v0.8.0**. **Ne pas uploader** ce `Data_k`. Installez l'exe 0.8.0,
+dans la **v0.8.0** (et les suivantes). **Ne pas uploader** ce `Data_k`. Installez l'exe **0.8.1**,
 relancez **▶ Préparer** : les fichiers déjà écrits restent, les
 tranches manquantes s'ajoutent. Dans l'Historique, une ligne du type
 `402 sources → 470 segments · 402 écrits` signale le trou. Tant que
@@ -1212,7 +1212,8 @@ Conception / dev : [`SPEC_v06_parcours.md`](SPEC_v06_parcours.md) · issues
 [#7](https://github.com/kevin-guille/ChiroTool/issues/7),
 [#8](https://github.com/kevin-guille/ChiroTool/issues/8),
 [#9](https://github.com/kevin-guille/ChiroTool/issues/9),
-[#10](https://github.com/kevin-guille/ChiroTool/issues/10).
+[#10](https://github.com/kevin-guille/ChiroTool/issues/10),
+[#11](https://github.com/kevin-guille/ChiroTool/issues/11).
 
 ### Suite (hors 0.8.1)
 
@@ -1222,9 +1223,12 @@ Ne pas relire le 1er message des issues
 [#8](https://github.com/kevin-guille/ChiroTool/issues/8),
 [#9](https://github.com/kevin-guille/ChiroTool/issues/9) et
 [#10](https://github.com/kevin-guille/ChiroTool/issues/10) comme une todo
-(SPEC §0.1 à §0.4).
+(SPEC §0.1 à §0.4). Issue
+[#11](https://github.com/kevin-guille/ChiroTool/issues/11) : réouverture
+du suivi livrée ; fermeture de l'exe et historique live restent ouverts
+(SPEC §0.5).
 
-- Robustesse / UX du **mode batch**, journal d'upload.
+- Robustesse / UX du **mode batch**, journal d'upload (issue #11).
 - Export compilé espèces × nuits ; fusion `_Vu` → xlsx (choix produit).
 - Pas plusieurs exe : le Batch enchaîne les nuits (SPEC D14).
 
