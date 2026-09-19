@@ -1229,6 +1229,10 @@ du suivi livrée ; fermeture de l'exe et historique live restent ouverts
 (SPEC §0.5).
 
 - Robustesse / UX du **mode batch**, journal d'upload (issue #11).
+- **Batch Préparer** : dernières nuits d'une série (~15) parfois sans
+  renommage alors que le bilan disait OK (SPEC §0.6, 0.8.2). En 0.8.1 :
+  une nuit sans carré / point doit être préparée **une par une** (assistant),
+  puis le batch.
 - Export compilé espèces × nuits ; fusion `_Vu` → xlsx (choix produit).
 - Pas plusieurs exe : le Batch enchaîne les nuits (SPEC D14).
 

@@ -5,6 +5,18 @@ Les versions publiées suivent le SemVer du fichier `version.py` / tags GitHub.
 
 ## [Unreleased]
 
+Cible **0.8.2**. Pas dans l'exe Latest v0.8.1.
+
+### Corrigé (code `main`, pas encore d'exe)
+
+- **Batch Préparer** : une nuit **ignorée** (métadonnées incomplètes, pas
+  d'assistant en batch) n'apparaît plus dans les OK. Bilan :
+  `OK / ignorée(s) / erreur(s)`. Log Titley présent : plus de listing
+  Data_k à chaque nuit (même règle que l'upload unitaire, issue #9).
+  Retour terrain : ~15 nuits, 10-12 premières OK, les dernières sans
+  renommage. Reste à vérifier : `try_auto_meta` + Suivi Excel après
+  beaucoup de nuits (SPEC §0.6).
+
 ## [0.8.1] - 2026-09-19
 
 `version.py` = `0.8.1` (build 2026-09-19). Release GitHub **Latest**

@@ -764,20 +764,24 @@ class ChiroToolApp(ctk.CTk):
 
             if progress:
                 progress(total, total, "terminé")
-            n_ok = sum(1 for r in results
-                        if "error" not in r
-                        and not (isinstance(r.get("result"), dict)
-                                 and r["result"].get("error")))
-            n_err = total - n_ok
+            from pipeline import classify_batch_row
+            kinds = [classify_batch_row(r) for r in results]
+            n_ok = sum(1 for k in kinds if k == "ok")
+            n_skip = sum(1 for k in kinds if k == "skipped")
+            n_err = sum(1 for k in kinds if k == "error")
             log("")
-            log(f"=== Bilan : {n_ok}/{total} OK, {n_err} erreur(s) ===")
-            _log.info("=== Batch %s terminé : %d OK / %d erreur(s) ===",
-                      phase, n_ok, n_err)
+            if n_skip:
+                log(f"=== Bilan : {n_ok}/{total} OK, {n_skip} ignorée(s), "
+                    f"{n_err} erreur(s) ===")
+            else:
+                log(f"=== Bilan : {n_ok}/{total} OK, {n_err} erreur(s) ===")
+            _log.info("=== Batch %s terminé : %d OK / %d ignorée(s) / %d erreur(s) ===",
+                      phase, n_ok, n_skip, n_err)
             # Strip session_obj qui n'est pas sérialisable proprement
             for r in results:
                 r.pop("session_obj", None)
             return {"batch": True, "results": results,
-                     "n_ok": n_ok, "n_err": n_err}
+                     "n_ok": n_ok, "n_skipped": n_skip, "n_err": n_err}
 
         RunDialog(self, title=title, worker=worker)
 
@@ -936,12 +940,17 @@ class ChiroToolApp(ctk.CTk):
                     f"relance le batch. Session ignorée.")
                 return {"skipped": "métadonnées incomplètes (saisie wizard requise)"}
             try:
-                from rename import inspect_summary_vs_wav
-                info = inspect_summary_vs_wav(s.path)
-                if info.get("warning"):
-                    log(f"  ⚠ {s.name} : {info['warning'].splitlines()[0]}")
-                if info.get("prefer_wav") and info.get("wav_min"):
-                    meta.date_debut = info["wav_min"]
+                from chiro_core import find_titley_log
+                # Même règle que l'upload unitaire (issue #9) : un log Titley
+                # suffit pour les horaires. Lister Data_k × N nuits en batch
+                # saturait le disque (retour : 10-12 OK, les dernières sautent).
+                if find_titley_log(s.path) is None:
+                    from rename import inspect_summary_vs_wav
+                    info = inspect_summary_vs_wav(s.path)
+                    if info.get("warning"):
+                        log(f"  ⚠ {s.name} : {info['warning'].splitlines()[0]}")
+                    if info.get("prefer_wav") and info.get("wav_min"):
+                        meta.date_debut = info["wav_min"]
             except Exception:
                 pass
             return _capture_stdout(

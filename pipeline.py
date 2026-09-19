@@ -83,6 +83,29 @@ except Exception:
     TOOL_VERSION = "?"          # version.py introuvable (improbable)
 
 
+def classify_batch_row(row: dict) -> str:
+    """Classe une ligne de résultats batch : ``ok`` / ``skipped`` / ``error``.
+
+    Une nuit ignorée (meta incomplète, pas de wizard en batch) n'est **pas**
+    un succès : le bilan ne doit plus l'afficher dans les OK (retour terrain
+    2026-09-19, ~15 Préparer, dernières sans renommage).
+    """
+    if not isinstance(row, dict):
+        return "error"
+    if row.get("error"):
+        return "error"
+    result = row.get("result")
+    if isinstance(result, dict):
+        if result.get("error"):
+            return "error"
+        errs = result.get("errors")
+        if errs:
+            return "error"
+        if result.get("skipped"):
+            return "skipped"
+    return "ok"
+
+
 # ---------------------------------------------------------------------------
 # Résolution des métadonnées
 # ---------------------------------------------------------------------------

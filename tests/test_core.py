@@ -645,6 +645,24 @@ class TestWalkSessionsDataK:
         assert any("relu depuis" in n for n in (report.get("notes") or []))
 
 
+class TestBatchRowClassify:
+    def test_skipped_is_not_ok(self):
+        from pipeline import classify_batch_row
+        assert classify_batch_row({
+            "session": "n15",
+            "result": {"skipped": "métadonnées incomplètes (saisie wizard requise)"},
+        }) == "skipped"
+        assert classify_batch_row({"session": "n1", "result": {"phase": "prep"}}
+                                  ) == "ok"
+        assert classify_batch_row({"session": "n2", "error": "boom"}) == "error"
+        assert classify_batch_row({
+            "session": "n3", "result": {"error": "rename a échoué"},
+        }) == "error"
+        assert classify_batch_row({
+            "session": "n4", "result": {"errors": ["aucun WAV"]},
+        }) == "error"
+
+
 class TestFinishUploadWithTrigger:
     """Branche all_already_present / trigger : toujours record_action, jamais
     de flag posé en silence si le compute échoue."""
