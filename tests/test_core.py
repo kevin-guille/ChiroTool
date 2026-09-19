@@ -648,12 +648,59 @@ class TestFinishUploadWithTrigger:
     de flag posé en silence si le compute échoue."""
 
     class _ClientOK:
+        def participation_status(self, pid):
+            return {"etat": None}
+
         def trigger_compute(self, pid):
             return {"ok": True}
 
     class _ClientFail:
+        def participation_status(self, pid):
+            return {"etat": None}
+
         def trigger_compute(self, pid):
             raise RuntimeError("HTTP 503 compute down")
+
+    @pytest.mark.parametrize("etat", ["PLANIFIE", "EN_COURS", "TERMINE", "FINI"])
+    def test_resume_does_not_retrigger(self, tmp_path, etat):
+        from manifest import Manifest
+        from pipeline import _finish_upload_with_trigger
+
+        class Client:
+            def participation_status(self, pid):
+                return {"etat": etat}
+
+            def trigger_compute(self, pid):
+                raise AssertionError("nuit déjà lancée")
+
+        result = _finish_upload_with_trigger(
+            Client(), Manifest.load_or_create(tmp_path), tmp_path,
+            {"phase": "upload", "steps": []}, part_id="pid", stats={})
+        assert "error" not in result
+        assert result["steps"][0]["etat"] == etat
+        assert result["steps"][0]["skipped"]
+        m2 = Manifest.load(tmp_path)
+        assert m2.is_done("upload")
+        last = m2.last_action("upload")
+        assert last is not None
+        assert last.stats.get("trigger_skipped") == etat
+
+    def test_status_failure_does_not_trigger(self, tmp_path):
+        from manifest import Manifest
+        from pipeline import _finish_upload_with_trigger
+
+        class Client:
+            def participation_status(self, pid):
+                raise RuntimeError("lecture impossible")
+
+            def trigger_compute(self, pid):
+                raise AssertionError("état inconnu")
+
+        result = _finish_upload_with_trigger(
+            Client(), Manifest.load_or_create(tmp_path), tmp_path,
+            {"phase": "upload", "steps": []}, part_id="pid", stats={})
+        assert "lecture impossible" in result["error"]
+        assert not Manifest.load(tmp_path).is_done("upload")
 
     def test_trigger_ok_sets_uploaded_via_record_action(self, tmp_path):
         from manifest import Manifest

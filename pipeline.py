@@ -69,6 +69,12 @@ from manifest import Manifest
 from naming import SessionMeta, canonical_session_dirname
 from verify import verify_cleanup, verify_rename, verify_te10
 
+# Même ensemble que repair._ETAT_NO_RETRIGGER : une reprise d'upload ne
+# relance pas Tadarida si le serveur a déjà un job (évite double analyse / 429).
+_ETAT_NO_RETRIGGER = frozenset({
+    "PLANIFIE", "EN_COURS", "TERMINE", "FINI",
+})
+
 
 PHASES = ("prep", "upload", "wait", "fetch", "cleanup")
 try:
@@ -901,16 +907,35 @@ def _finish_upload_with_trigger(
     Facteur commun entre la branche « all_already_present » et le chemin
     nominal (upload frais OK). Garantit :
       - pas de ``flags["uploaded"]=True`` hors ``record_action(..., status="ok")``
+      - pas de ``trigger_compute`` si le serveur est déjà PLANIFIE / EN_COURS /
+        TERMINE / FINI (reprise, flag local pas encore posé)
+      - lecture d'état en échec → pas de trigger, flag non posé
       - échec de trigger → status=error, flag non posé, ``out["error"]`` renseigné
       - traçabilité campaign_log + steps
     """
     trigger_err: str | None = None
+    skipped_etat: str | None = None
     try:
-        client.trigger_compute(part_id)
-        out["steps"].append({
-            "step": "trigger_compute",
-            "participation_id": part_id,
-        })
+        # Une reprise peut retrouver une nuit déjà calculée alors que le
+        # manifest local n'a pas enregistré la fin de l'upload.
+        getter = getattr(client, "participation_status", None)
+        etat = ""
+        if callable(getter):
+            status = getter(part_id)
+            if isinstance(status, dict):
+                etat = (status.get("etat") or "").strip().upper()
+        if etat in _ETAT_NO_RETRIGGER:
+            skipped_etat = etat
+            out["steps"].append({
+                "step": "trigger_compute", "participation_id": part_id,
+                "skipped": "traitement déjà lancé ou terminé", "etat": etat,
+            })
+        else:
+            client.trigger_compute(part_id)
+            out["steps"].append({
+                "step": "trigger_compute",
+                "participation_id": part_id,
+            })
     except Exception as e:
         trigger_err = str(e)
         print(f"  ⚠ trigger_compute : {e}", flush=True)
@@ -922,6 +947,8 @@ def _finish_upload_with_trigger(
 
     stats = dict(stats)
     stats["trigger_ok"] = trigger_err is None
+    if skipped_etat:
+        stats["trigger_skipped"] = skipped_etat
     if trigger_err is not None:
         stats["trigger_error"] = trigger_err
 

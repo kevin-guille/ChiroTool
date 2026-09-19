@@ -24,7 +24,8 @@ et la méthode MNHN 10 % / 75 % ([#7](https://github.com/kevin-guille/ChiroTool/
 - **Participation Titley** : n° de série, type, micro. Horaires et T° lus
   dans le `log_*.csv` (`Recording start` / `stop`, pas les 38 °C de jour).
   T° corrigées à la main conservées. **Vérifier / Réparer** peut PATCH
-  sans relancer Tadarida.
+  sans relancer Tadarida. Une reprise d'upload ne relance pas Tadarida
+  si la nuit est déjà PLANIFIE / EN_COURS / TERMINE / FINI.
 - **Upload unitaire** : l'assistant « Nouvelle participation » s'affiche
   tout de suite (plus de fenêtre noire sur un gros Data_k). Le batch ne
   change pas. Fermer le suivi d'upload le met en arrière-plan ; recliquer

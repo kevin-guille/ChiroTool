@@ -5,7 +5,7 @@ Les versions publiées suivent le SemVer du fichier `version.py` / tags GitHub.
 
 ## [Unreleased]
 
-## [0.8.1] - 2026-09-16
+## [0.8.1] - 2026-09-19
 
 `version.py` = `0.8.1`. La pre-release [v0.8.0](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.0)
 reste l'exe GitHub tant que le tag `v0.8.1` n'est pas créé (après rebuild).
@@ -60,6 +60,10 @@ septembre ([#9](https://github.com/kevin-guille/ChiroTool/issues/9),
   forcées, ou horaires Titley) : PATCH sans relancer Tadarida. Un PATCH
   météo / matériel est **annulé** si le portail n'est pas lisible (Eve
   remplacerait tout le sous-document).
+- **Reprise d'upload** : si les WAV sont déjà sur le serveur et que Tadarida
+  est PLANIFIE / EN_COURS / TERMINE / FINI, on ne relance plus `compute`
+  (le flag local n'était pas toujours posé). Lecture d'état en échec : pas
+  de trigger.
 
 ### Tests
 
