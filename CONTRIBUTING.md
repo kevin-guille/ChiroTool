@@ -34,8 +34,9 @@ décrivant :
 [#10](https://github.com/kevin-guille/ChiroTool/issues/10) (SPEC
 [`§0.4`](docs/SPEC_v06_parcours.md)) et
 [#11](https://github.com/kevin-guille/ChiroTool/issues/11) (SPEC
-[`§0.5`](docs/SPEC_v06_parcours.md), partielle) ni le batch Préparer
-[`§0.6`](docs/SPEC_v06_parcours.md) (0.8.2) comme une todo.
+[`§0.5`](docs/SPEC_v06_parcours.md), partielle) comme une todo.
+Le batch Préparer (dernières nuits « OK » sans rename) reste **interne** :
+SPEC [`§0.6`](docs/SPEC_v06_parcours.md), pas d'issue GitHub, cible 0.8.2.
 En particulier : **pas plusieurs exe** (mode Batch, D14) ; **Valider puis
 Nettoyer** déjà en 0.7 ; **MNHN 10 % / 75 %** dans la **Synthèse et Activité**
 (v0.8, P8) ; ChiroSurf / `_Vu` déjà en 0.7.1.
@@ -58,7 +59,7 @@ Nettoyer** déjà en 0.7 ; **MNHN 10 % / 75 %** dans la **Synthèse et Activité
 
 | Document | Rôle |
 |----------|------|
-| [`docs/SPEC_v06_parcours.md`](docs/SPEC_v06_parcours.md) | **Source de vérité** (v0.8 livrée ; §0.1 #4 ; §0.2 #7 ; §0.3 #8 ; §0.4 #9/#10 ; §0.5 #11 partielle ; §0.6 batch Préparer 0.8.2 ; D14 Batch) |
+| [`docs/SPEC_v06_parcours.md`](docs/SPEC_v06_parcours.md) | **Source de vérité** (v0.8 livrée ; §0.1 #4 ; §0.2 #7 ; §0.3 #8 ; §0.4 #9/#10 ; §0.5 #11 partielle ; §0.6 batch Préparer interne 0.8.2 ; D14 Batch) |
 | [`CHANGELOG.md`](CHANGELOG.md) | Versions publiées + *Suite possible* |
 | [`docs/RELEASE_v0.6.0.md`](docs/RELEASE_v0.6.0.md) | Note de release GitHub v0.6 |
 | [`docs/RELEASE_v0.7.0.md`](docs/RELEASE_v0.7.0.md) | Note de release GitHub v0.7 |

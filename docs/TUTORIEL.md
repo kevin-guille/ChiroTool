@@ -495,6 +495,13 @@ Vous pouvez **fermer l'application** pendant l'attente : les analyses continuent
 côté serveur. Au retour, relancez « Upload » sur les nuits concernées (ou utilisez
 « 🔄 Sync API » dans le Registre) pour récupérer les résultats.
 
+Le batch **n'ouvre pas** l'assistant métadonnées. Une nuit sans carré / point
+(jamais préparée à la main) est **ignorée**. En **0.8.1**, le bilan pouvait
+quand même afficher OK alors que les fichiers n'avaient pas été renommés
+(surtout vers la fin d'une série d'une quinzaine). Contrôle : les noms dans
+le dossier. Si rien n'a bougé, **▶ Préparer** cette nuit **seule** (l'assistant
+peut saisir le carré / point), puis relancer le batch.
+
 ---
 
 ## 8 · Valider les sons et remonter vos identifications
@@ -1094,6 +1101,11 @@ Corrigé en **0.8.1** (issue #9). Le formulaire s'affiche d'abord ; le
 log Titley / Summary se lit ensuite. Le **batch** n'ouvre pas cet assistant
 (d'où l'impression que « seul le batch marche »). Mettez à jour l'exe.
 
+**« En batch Préparer, les dernières nuits disent OK mais les fichiers n'ont pas été renommés. »**
+Le batch ignore une nuit dont le carré / point n'est pas connu (pas
+d'assistant). En **0.8.1** cette ignorance pouvait compter comme un succès.
+Préparez d'abord ces nuits **une par une**, puis le batch. Voir [§7](#7--traiter-plusieurs-nuits-dun-coup-mode-batch).
+
 **« L'onglet Activité est très lent, les filtres ne font rien, un seul carré s'affiche. »**
 Corrigé en **0.8.1** (issue #10). Les tableurs sont gardés en mémoire :
 cocher MNHN / chiros ne relit plus le disque. Tous les carrés restent dans
@@ -1229,10 +1241,10 @@ du suivi livrée ; fermeture de l'exe et historique live restent ouverts
 (SPEC §0.5).
 
 - Robustesse / UX du **mode batch**, journal d'upload (issue #11).
-- **Batch Préparer** : dernières nuits d'une série (~15) parfois sans
-  renommage alors que le bilan disait OK (SPEC §0.6, 0.8.2). En 0.8.1 :
-  une nuit sans carré / point doit être préparée **une par une** (assistant),
-  puis le batch.
+- **Batch Préparer** (interne, SPEC §0.6, pas d'issue GitHub) : dernières
+  nuits d'une série (~15) parfois sans renommage alors que le bilan disait
+  OK. Cible 0.8.2. En 0.8.1 : préparer ces nuits **une par une**, puis le
+  batch.
 - Export compilé espèces × nuits ; fusion `_Vu` → xlsx (choix produit).
 - Pas plusieurs exe : le Batch enchaîne les nuits (SPEC D14).
 

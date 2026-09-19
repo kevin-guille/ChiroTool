@@ -3,7 +3,7 @@
 | | |
 |--|--|
 | **Statut** | **Livré** : v0.6.0 (2026-08-07, vagues A–C) + **v0.7.0** (2026-08-30, Synthèse autonome, Titley, issues #4–#6) + **v0.7.1** (2026-08-31, issue #7 ChiroSurf CSV+WAV) + **v0.7.2** (2026-09-01, D12 nuit bio + barre d'actions) + **v0.8.0** (2026-09-06, P8 MNHN 10 % / 75 % Synthèse ; 2026-09-09 Activité + Titley TE×10, pre-release GitHub) + **v0.8.1** (2026-09-19, #8 participation Titley, #9 wizard upload, #10 Activité cache, Latest GitHub). |
-| **Ouvert** | Issues [#4](https://github.com/kevin-guille/ChiroTool/issues/4) et [#7](https://github.com/kevin-guille/ChiroTool/issues/7) close côté v0.8 (confirmation terrain), voir §0.1 et §0.2. Issues [#8](https://github.com/kevin-guille/ChiroTool/issues/8), [#9](https://github.com/kevin-guille/ChiroTool/issues/9), [#10](https://github.com/kevin-guille/ChiroTool/issues/10) livrées en 0.8.1, voir §0.3 et §0.4. Issue [#11](https://github.com/kevin-guille/ChiroTool/issues/11) partielle, voir §0.5. Batch Préparer dernières nuits, voir §0.6 (0.8.2). Vague D (export compilé, fusion `_Vu` → xlsx) plus tard. |
+| **Ouvert** | Issues [#4](https://github.com/kevin-guille/ChiroTool/issues/4) et [#7](https://github.com/kevin-guille/ChiroTool/issues/7) close côté v0.8 (confirmation terrain), voir §0.1 et §0.2. Issues [#8](https://github.com/kevin-guille/ChiroTool/issues/8), [#9](https://github.com/kevin-guille/ChiroTool/issues/9), [#10](https://github.com/kevin-guille/ChiroTool/issues/10) livrées en 0.8.1, voir §0.3 et §0.4. Issue [#11](https://github.com/kevin-guille/ChiroTool/issues/11) partielle, voir §0.5. Batch Préparer (interne, pas d'issue GitHub), voir §0.6 (0.8.2). Vague D (export compilé, fusion `_Vu` → xlsx) plus tard. |
 | **Date** | 2026-08-04 (conception) · 2026-08-07 (v0.6) · 2026-08-30 (v0.7) · 2026-09-03 (D13) · 2026-09-06 (P8) · 2026-09-08 (exe 0.8.0 : 409 + Win+D) · 2026-09-09 (Titley TE×10, Activité MNHN, pre-release GitHub [v0.8.0](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.0)) · 2026-09-10 (0.8.1 : scan export + pastille TE + #8) · 2026-09-16 (0.8.1 : #9 wizard, #10 Activité) · 2026-09-19 (Latest GitHub [v0.8.1](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.1)) |
 | **Contexte** | Issue [#3](https://github.com/kevin-guille/ChiroTool/issues/3) (retours terrain) + retours carte / meta + issues [#4](https://github.com/kevin-guille/ChiroTool/issues/4) / [#7](https://github.com/kevin-guille/ChiroTool/issues/7) / [#8](https://github.com/kevin-guille/ChiroTool/issues/8) / [#9](https://github.com/kevin-guille/ChiroTool/issues/9) / [#10](https://github.com/kevin-guille/ChiroTool/issues/10) / [#11](https://github.com/kevin-guille/ChiroTool/issues/11) |
 | **Principe** | Pragmatisme — une vérité disque, peu de fichiers, parcours unifiés, libellés humains d’abord |
@@ -88,13 +88,15 @@ si on ferme ChiroTool, historique en direct, moins de Vérifier / Réparer.
 
 Rester **ouverte**. Pas un reliquat de #9.
 
-### 0.6 Batch Préparer : dernières nuits « OK » sans renommage (prochaine release)
+### 0.6 Batch Préparer : dernières nuits « OK » sans renommage
+
+**Interne.** Pas d'issue GitHub. Cible exe **0.8.2**.
 
 Retour collègue (2026-09-19) : ~15 nuits en **batch ▶ Préparer**. Les 10–12
 premières passent. Les dernières **ne sont pas renommées** mais le bilan
 affiche **OK**.
 
-Vérifié dans le code 0.8.1 (pas livré ici, cible 0.8.2) :
+Vérifié dans le code 0.8.1 (correctifs 1–2 sur `main`, pas dans l'exe Latest) :
 
 | # | Cause | 0.8.1 | Prochaine |
 |---|-------|-------|-----------|
@@ -105,6 +107,9 @@ Vérifié dans le code 0.8.1 (pas livré ici, cible 0.8.2) :
 
 Le batch n'ouvre **pas** l'assistant meta (thread). Une nuit sans carré /
 point / Suivi est **ignorée**, ce n'est pas un succès.
+
+Contournement 0.8.1 : préparer d'abord les nuits sans carré / point **une
+par une** (assistant), puis le batch.
 
 ---
 
@@ -571,7 +576,7 @@ Le tutoriel **ne décrit pas** les features non livrées comme déjà disponible
 | 2026-09-10 | v0.8.1 | Scan : `Data_k/` n'est plus une session (export USB Data_k-only, xlsx/manifest au parent). Repair remonte au parent et relit l'ID depuis le nom du xlsx. Après cleanup, le contrôle Titley ne recule plus TE×10. |
 | 2026-09-16 | v0.8.1 | §0.4 : issue #9 wizard upload (paint d'abord, Titley sans listing WAV) ; issue #10 Activité cache + `_Vu` racine/Data_k + filtres MNHN stables. Suivi upload rouvert. |
 | 2026-09-19 | v0.8.1 | Tag GitHub Latest `v0.8.1` (SHA exe vérifié). Fixture Titley `tests/fixtures/titley_log_overnight.csv` pour la CI. §0.5 : issue #11 partielle. |
-| 2026-09-19 | batch | §0.6 : ~15 Préparer, dernières nuits sans rename mais OK. Bilan skipped ≠ succès ; pas de listing WAV Titley en batch. Reste : `try_auto_meta` / Suivi. |
+| 2026-09-19 | batch | §0.6 interne (pas d'issue GitHub) : ~15 Préparer, dernières nuits sans rename mais OK. Bilan skipped ≠ succès ; pas de listing WAV Titley en batch. Reste : `try_auto_meta` / Suivi. |
 
 ---
 
@@ -582,6 +587,7 @@ Le tutoriel **ne décrit pas** les features non livrées comme déjà disponible
 - Issue [#7](https://github.com/kevin-guille/ChiroTool/issues/7) : liaison ChiroSurf (v0.7.1 / 0.7.2) ; interprétation 10 % / 75 % Synthèse et Activité (P8). Bilan v0.8 en §0.2. Ne pas traiter le 1er message comme une todo.
 - Issue [#8](https://github.com/kevin-guille/ChiroTool/issues/8) : participation Titley. Bilan 0.8.1 en §0.3.
 - Issues [#9](https://github.com/kevin-guille/ChiroTool/issues/9) / [#10](https://github.com/kevin-guille/ChiroTool/issues/10) : wizard upload et Activité. Bilan 0.8.1 en §0.4.
+- Batch Préparer (~15 nuits, dernières sans rename, bilan OK) : **interne**, §0.6. Pas d'issue GitHub.
 - Échantillons : `samples/issue3_benjamin/` (multi + Nuit_1/2 + `_Vu`). Log Titley de test : `tests/fixtures/titley_log_overnight.csv` (le log terrain `samples/issue4_mickael/` reste gitignoré).
 - Forum Vigie-Chiro :
   - [t483 — analyser plusieurs nuits consécutives](https://vigie-chiro.forumactif.com/t483-chiro-surf-analyser-plusieurs-nuits-consecutives) (Yann T., Yves Bas, LouSauvajon)

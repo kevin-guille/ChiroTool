@@ -6,6 +6,7 @@ Les versions publiées suivent le SemVer du fichier `version.py` / tags GitHub.
 ## [Unreleased]
 
 Cible **0.8.2**. Pas dans l'exe Latest v0.8.1.
+Suivi **interne** (SPEC §0.6), pas d'issue GitHub.
 
 ### Corrigé (code `main`, pas encore d'exe)
 
