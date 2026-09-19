@@ -28,6 +28,8 @@ from pathlib import Path
 
 import pytest
 
+_TITLEY_LOG = Path(__file__).resolve().parent / "fixtures" / "titley_log_overnight.csv"
+
 
 # =========================================================================
 # naming
@@ -3766,9 +3768,9 @@ class TestParticipationMetaDiff:
         from shutil import copyfile
         from chiro_core import collect_local_participation_fields
         from manifest import Manifest
-        src = Path(__file__).resolve().parents[1] / "samples/issue4_mickael/log_2026-08-21.csv"
+        src = _TITLEY_LOG
         if not src.is_file():
-            pytest.skip("log Titley sample absent")
+            pytest.skip("log Titley fixture absente")
         session = tmp_path / "sess"
         session.mkdir()
         copyfile(src, session / "log_2026-08-21.csv")
@@ -4583,7 +4585,7 @@ class TestSynthesisMinProba:
 class TestTitleyLog:
     def test_real_log(self):
         from chiro_core import parse_titley_log
-        path = Path(__file__).resolve().parents[1] / "samples/issue4_mickael/log_2026-08-21.csv"
+        path = _TITLEY_LOG
         info = parse_titley_log(path)
         assert info.device_model == "Anabat Swift"
         assert info.device_id == "669178"
@@ -4730,9 +4732,7 @@ class TestTitleyLog:
         import json
         import shutil
         from chiro_core import collect_wizard_prefill
-        source = Path(__file__).resolve().parents[1]
-        shutil.copyfile(source / "samples/issue4_mickael/log_2026-08-21.csv",
-                        tmp_path / "log_2026-08-21.csv")
+        shutil.copyfile(_TITLEY_LOG, tmp_path / "log_2026-08-21.csv")
         (tmp_path / "_session_manifest.json").write_text(json.dumps({
             "schema_version": 1,
             "meta": {
@@ -4763,9 +4763,7 @@ class TestTitleyLog:
         import shutil
         import chiro_core
         from chiro_core import collect_wizard_prefill
-        source = Path(__file__).resolve().parents[1]
-        shutil.copyfile(source / "samples/issue4_mickael/log_2026-08-21.csv",
-                        tmp_path / "log_2026-08-21.csv")
+        shutil.copyfile(_TITLEY_LOG, tmp_path / "log_2026-08-21.csv")
         called = {"n": 0}
 
         def boom(session):
