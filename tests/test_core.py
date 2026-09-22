@@ -4376,7 +4376,7 @@ class TestChiroSurfNights:
 
 
 class TestMnhnSynthesis:
-    """Méthode MNHN 10 % / 75 % : bandes de confiance, pas le temps."""
+    """Relecture du _Vu : bandes de confiance Tadarida et seuil couvrant 75 % du pool."""
 
     HEADERS = ["nom du fichier", "tadarida_taxon", "tadarida_probabilite",
                "observateur_taxon"]

@@ -3,8 +3,10 @@ gui_synthesis.py — fenêtre « Synthèse de la nuit ».
 
 Affiche, pour une nuit, le nombre de contacts par espèce retenue (validation
 observateur si présente, sinon Tadarida) + les totaux, et permet un export CSV
-pour les rapports. S'appuie sur ``synthesis.compute_night_synthesis`` et, pour la méthode
-MNHN 10 % / 75 %, ``compute_mnhn_synthesis``.
+pour les rapports. S’appuie sur ``synthesis.compute_night_synthesis`` et, pour la
+relecture d’un ``_Vu`` produit dans ChiroSurf, ``compute_mnhn_synthesis``.
+Cette relecture est distincte de la procédure de validation Vigie-Chiro,
+réalisée dans ChiroSurf, logiciel tiers optionnel.
 """
 
 from __future__ import annotations

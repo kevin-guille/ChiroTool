@@ -244,7 +244,9 @@ def aggregate_rows(headers, rows, *,
     - ``use_observer_taxon`` : ne garder que les lignes avec
       ``observateur_taxon`` et grouper sous ce code (issue #4.10).
     - ``chiros_only`` : ignorer orthoptères / bruit / oiseaux (issue #4.9).
-    - ``use_mnhn`` : méthode MNHN 10 % / 75 % (même règle que la Synthèse).
+    - ``use_mnhn`` : relecture d’un ``_Vu`` produit dans ChiroSurf
+      (même règle que la Synthèse). Ce calcul n’est pas l’évaluation
+      d’activité de ChiroSurf.
       Prime sur ``use_only_validated`` et ``use_observer_taxon``.
     """
     if bin_minutes <= 0 or 1440 % bin_minutes != 0:

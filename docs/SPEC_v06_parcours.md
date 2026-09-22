@@ -2,9 +2,9 @@
 
 | | |
 |--|--|
-| **Statut** | **Livré** : v0.6.0 (2026-08-07, vagues A–C) + **v0.7.0** (2026-08-30, Synthèse autonome, Titley, issues #4–#6) + **v0.7.1** (2026-08-31, issue #7 ChiroSurf CSV+WAV) + **v0.7.2** (2026-09-01, D12 nuit bio + barre d'actions) + **v0.8.0** (2026-09-06, P8 MNHN 10 % / 75 % Synthèse ; 2026-09-09 Activité + Titley TE×10, pre-release GitHub) + **v0.8.1** (2026-09-19, #8 participation Titley, #9 wizard upload, #10 Activité cache, Latest GitHub). |
+| **Statut** | **Livré** : v0.6.0 (2026-08-07, vagues A à C) + **v0.7.0** (2026-08-30, Synthèse autonome, Titley, issues #4 à #6) + **v0.7.1** (2026-08-31, issue #7 ChiroSurf CSV+WAV) + **v0.7.2** (2026-09-01, D12 nuit bio + barre d'actions) + **v0.8.0** (2026-09-06, P8 relecture du `_Vu` dans la Synthèse ; 2026-09-09 Activité + Titley TE×10, pre-release GitHub) + **v0.8.1** (2026-09-19, #8 participation Titley, #9 wizard upload, #10 Activité cache, Latest GitHub). |
 | **Ouvert** | Issues [#4](https://github.com/kevin-guille/ChiroTool/issues/4) et [#7](https://github.com/kevin-guille/ChiroTool/issues/7) close côté v0.8 (confirmation terrain), voir §0.1 et §0.2. Issues [#8](https://github.com/kevin-guille/ChiroTool/issues/8), [#9](https://github.com/kevin-guille/ChiroTool/issues/9), [#10](https://github.com/kevin-guille/ChiroTool/issues/10) livrées en 0.8.1, voir §0.3 et §0.4. Issue [#11](https://github.com/kevin-guille/ChiroTool/issues/11) partielle, voir §0.5. Batch Préparer (interne, pas d'issue GitHub), voir §0.6 (0.8.2). Vague D (export compilé, fusion `_Vu` → xlsx) plus tard. |
-| **Date** | 2026-08-04 (conception) · 2026-08-07 (v0.6) · 2026-08-30 (v0.7) · 2026-09-03 (D13) · 2026-09-06 (P8) · 2026-09-08 (exe 0.8.0 : 409 + Win+D) · 2026-09-09 (Titley TE×10, Activité MNHN, pre-release GitHub [v0.8.0](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.0)) · 2026-09-10 (0.8.1 : scan export + pastille TE + #8) · 2026-09-16 (0.8.1 : #9 wizard, #10 Activité) · 2026-09-19 (Latest GitHub [v0.8.1](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.1)) |
+| **Date** | 2026-08-04 (conception) · 2026-08-07 (v0.6) · 2026-08-30 (v0.7) · 2026-09-03 (D13) · 2026-09-06 (P8) · 2026-09-08 (exe 0.8.0 : 409 + Win+D) · 2026-09-09 (Titley TE×10, Activité avec relecture du `_Vu`, pre-release GitHub [v0.8.0](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.0)) · 2026-09-10 (0.8.1 : scan export + pastille TE + #8) · 2026-09-16 (0.8.1 : #9 wizard, #10 Activité) · 2026-09-19 (Latest GitHub [v0.8.1](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.1)) |
 | **Contexte** | Issue [#3](https://github.com/kevin-guille/ChiroTool/issues/3) (retours terrain) + retours carte / meta + issues [#4](https://github.com/kevin-guille/ChiroTool/issues/4) / [#7](https://github.com/kevin-guille/ChiroTool/issues/7) / [#8](https://github.com/kevin-guille/ChiroTool/issues/8) / [#9](https://github.com/kevin-guille/ChiroTool/issues/9) / [#10](https://github.com/kevin-guille/ChiroTool/issues/10) / [#11](https://github.com/kevin-guille/ChiroTool/issues/11) |
 | **Principe** | Pragmatisme — une vérité disque, peu de fichiers, parcours unifiés, libellés humains d’abord |
 
@@ -27,29 +27,29 @@ Le body du 17 août 2026 est **périmé**. Statut à la **v0.8** (plus le correc
 | 5 | Nettoyer à droite de Valider | **Livré** 0.7.0 (`gui_app`, issue #4.5) |
 | 6 | Vue session : bilan validés | **Livré** 0.7.0 (`X / Y`) |
 | 7 | Doc : saucissonnage 5 s | **Livré** (tutoriel §6 / §12) |
-| 8 | Graphes type ChiroSurf en bout de chaîne | **Livré** 0.7 : 🌊 ChiroSurf nuits (optionnel) + 📊 Synthèse. Issue #7 : CSV + `_Vu` + MNHN Synthèse et Activité. |
+| 8 | Graphes type ChiroSurf en bout de chaîne | **Livré** 0.7 : 🌊 ChiroSurf nuits (optionnel) + 📊 Synthèse. Issue #7 : CSV + relecture du `_Vu` dans Synthèse et Activité. |
 | 9 | Filtre chiros (Activité, etc.) | **Livré** 0.7.0 |
 | 10 | Taxons observateur dans Activité | **Livré** 0.7.0 |
 
-Méthode MNHN 10 % / 75 % : **Synthèse et Activité** (P8, D13). Même moteur.
+Interprétation _Vu (ChiroSurf) : **Synthèse et Activité** (P8, D13). Même règle de relecture. ChiroTool prépare, envoie, suit, archive et fait une synthèse de campagne. La procédure de validation Vigie-Chiro se fait dans ChiroSurf, logiciel tiers optionnel. L’onglet Activité n’est pas l’évaluation d’activité de ChiroSurf.
 
 ### 0.2 Issue #7 vs v0.8 (ne pas relire le 1er message comme backlog)
 
 Le body du 31 août 2026 (crash ChiroSurf + `_Vu` hors ChiroTool) est **périmé**.
-La méthode 10 % / 75 % est dans les commentaires (2 sept, précisée 4 sept,
+La règle de relecture du `_Vu` est décrite dans les commentaires (2 sept, précisée 4 sept,
 graphe Nyclei). Statut à la **v0.8** (rebuild 2026-09-09) :
 
 | # | Demande | v0.8 |
 |---|---------|------|
-| 1 | ▶ ChiroSurf plante à l'ouverture | **Livré** 0.7.1 : CSV copié à côté des WAV (`Data_k/`) |
+| 1 | « Ouvrir dans ChiroSurf » plante à l’ouverture du CSV de nuit | **Livré** 0.7.1 : CSV copié à côté des WAV (`Data_k/`) |
 | 2 | `_Vu` produit hors ChiroTool non reconnu | **Livré** 0.7.1 : `Nuit1_`, `Nuit_1_`, `Nuit_1-` ; harvest `Data_k/` → `chirosurf/` |
 | 3 | Barre d'actions : Synthèse / ChiroSurf hors cadre | **Livré** 0.7.2 : une ligne + glissement |
-| 4 | Case méthode 10 % / 75 % dans la Synthèse | **Livré** 0.8.0 (P8). Distinct de « Identifications validées seulement » |
+| 4 | Case « Interprétation _Vu (ChiroSurf) » dans la Synthèse | **Livré** 0.8.0 (P8). Distinct de « Identifications validées seulement » |
 | 5 | Bandes = confiance Tadarida, pas le temps | **Livré** 0.8.0 (D13 / P8, graphe Nyclei) |
-| 6 | Même méthode dans l'onglet Activité | **Livré** 0.8.0 rebuild 2026-09-09 |
+| 6 | Même règle de relecture du `_Vu` dans l'onglet Activité | **Livré** 0.8.0 rebuild 2026-09-09 |
 
 « Identifications validées seulement » = lignes écoutées. Ce n'est pas la
-méthode MNHN.
+relecture du `_Vu`.
 
 ### 0.3 Issue #8 vs 0.8.1 (participation Titley)
 
@@ -71,7 +71,7 @@ Le CSV log doit être **dans le dossier de session** (ou `Data/`), comme un Summ
 | # | Demande | 0.8.1 |
 |---|---------|-----------|
 | #9 | Upload unitaire : wizard vide, participation non créée (batch OK) | **Livré** : formulaire dessiné d'abord, prefill en thread. Log Titley présent : pas de listing Data_k avant le wizard ni pour les dates. |
-| #10 | Activité lente (rescan xlsx à chaque case), filtres morts, MNHN = taxons écoutés seulement, un seul carré | **Livré** : cache RAM ; cases = recalcul mémoire ; `_Vu` racine de session et `Data_k/` ; listes de filtres depuis l'univers (les autres carrés restent) ; 1er scan sans descendre dans les WAV. |
+| #10 | Activité lente (rescan xlsx à chaque case), filtres morts, relecture du `_Vu` limitée aux taxons écoutés, un seul carré | **Livré** : cache RAM ; cases = recalcul mémoire ; `_Vu` racine de session et `Data_k/` ; listes de filtres depuis l'univers (les autres carrés restent) ; 1er scan sans descendre dans les WAV. |
 | (annoncé #7) | Rouvrir le suivi d'upload après fermeture de la fenêtre | **Livré** : fermer = arrière-plan ; recliquer Upload rouvre. Détail #11 : §0.5. |
 
 Release GitHub Latest : [v0.8.1](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.1).
@@ -127,11 +127,11 @@ par une** (assistant), puis le batch.
 | D6 | **Libellés humains d’abord** ; n° de carré / Zx en secondaire (toujours visibles). |
 | D7 | **« 📍 Carte » (vue session)** : **on garde le bouton**, on le **répare** — pas de France vide. Voir §2. |
 | D8 | Coordonnées GPS **persistées** dans le manifest de session dès qu’un point est choisi/créé/réutilisé (sinon « Voir sur la carte » reste fragile). |
-| D9 | Validation contact-par-contact **conservée** ; méthode ChiroSurf 10 % / 75 % en **complément** via le logiciel ChiroSurf (CSV par nuit, D3). |
+| D9 | Validation contact par contact **optionnelle et conservée** dans ChiroTool. Elle est distincte de la procédure de validation Vigie-Chiro, réalisée dans ChiroSurf, logiciel tiers optionnel (CSV par nuit, D3). |
 | D10 | Rayon de chargement mode **PICK** = **5 km** (constante unique, ajustable plus tard si retour terrain). |
 | D11 | Naming CSV nuit : **préfixe** `Nuit{n}_` + stem d’origine (voir §1.2.1) — aligné usage Benjamin + contrainte ChiroSurf `_Vu`. |
 | D12 | **Nuit biologique = coupure à midi, jamais à minuit.** Une pose soir + matin = **une** nuit. Le sélecteur Synthèse n'apparaît que s'il y a **plusieurs soirs**. Voir §1.2.2 — **non négociable**. |
-| D13 | **Méthode MNHN 10 % / 75 %** = bandes de **confiance Tadarida** (pas des paquets chronologiques). Case « identifications validées seulement » = contacts **écoutés** (inchangée). Case distincte « Méthode MNHN 10 % / 75 % ». Voir P8. **Livré Synthèse + Activité.** |
+| D13 | **Interprétation _Vu (ChiroSurf)** = relecture d’un fichier `_Vu` déjà produit dans ChiroSurf, avec un seuil couvrant 75 % du pool et des bandes de **confiance Tadarida** (pas des paquets chronologiques). Case « identifications validées seulement » = contacts **écoutés** (inchangée). Case distincte « Interprétation _Vu (ChiroSurf) ». Voir P8. **Livré Synthèse + Activité.** |
 | D14 | **Pas plusieurs exe.** Une instance, le mode **Batch** enchaîne les nuits (issue #4 point 2). Thomas : déjà résolu par la case Batch. Ne pas rouvrir. |
 
 ---
@@ -371,17 +371,17 @@ Légende fichiers : `+` créé · `~` modifié · `=` inchangé · `→` lecture
 
 ---
 
-### P4 — Participation multi-nuits → validation ChiroSurf (méthode MNHN)
+### P4 : Participation multi-nuits et validation dans ChiroSurf
 
-**Acteur** : Benjamin / LPO — 10 %→75 % nuit par nuit.
+**Acteur** : Benjamin / LPO. Procédure de validation Vigie-Chiro dans ChiroSurf, logiciel tiers optionnel, nuit par nuit.
 
 1. Session avec xlsx observations (1 participation, N nuits bio).
-2. Zone **Validation** : conserver **Valider** (contact-par-contact) **et** entrée **ChiroSurf (nuits)**.
+2. Zone **Validation** : conserver **Valider** (contact par contact, optionnel) **et** entrée **ChiroSurf (nuits)**.
 3. Premier usage → crée `chirosurf/` + 1 CSV brut / nuit bio (lazy, depuis xlsx), naming **D11** (`Nuit{n}_{stem}.csv`).
 4. UI liste : `28/07 · Nuit 1 · ~8000 contacts · [Ouvrir dossier] [Importer _Vu]` (etc.).
-5. Utilisateur ouvre le CSV **sans** `_Vu` dans ChiroSurf (même dossier que les WAV / Data_k selon config CS) → produit `Nuit{n}_{stem}_Vu.csv`.
+5. Utilisateur ouvre le CSV **sans** `_Vu` avec « Ouvrir dans ChiroSurf » (CSV copié à côté des WAV dans `Data_k/`) → produit `Nuit{n}_{stem}_Vu.csv`.
 6. **Importer _Vu** → synthèse (et éventuellement fusion vers copie de travail locale ; pas d’upload forcé).
-7. Validation contact-par-contact reste disponible sur l’xlsx (D9).
+7. La validation contact par contact reste optionnelle sur l’xlsx et distincte de la procédure ChiroSurf (D9). Pour écouter un WAV, le bouton s’appelle « Ouvrir le son ».
 
 **Fichiers** :
 - `+` `chirosurf/Nuit{n}_{stem}-observations.csv` (N nuits)
@@ -398,7 +398,7 @@ Légende fichiers : `+` créé · `~` modifié · `=` inchangé · `→` lecture
 2. Source : xlsx **ou** `_Vu` de la nuit choisie si multi et importé.
 3. Option **identifications validées seulement** (existant) : lignes
    `observateur_taxon` renseigné uniquement. Option distincte
-   **Méthode MNHN 10 % / 75 %** (P8). Les deux s'excluent.
+   **Interprétation _Vu (ChiroSurf)** (P8). Les deux s'excluent.
 4. **Nouveau** : seuil **proba Tadarida minimale** (synthèse non validée).
 5. Référentiels d’activité : national / région (déjà via n° site) / milieu (existant) — **exposer**, ne pas réécrire.
 6. Plus tard (hors v0.7) : export compilé multi-nuits (espèces × nuits) en action explicite.
@@ -432,14 +432,16 @@ Indépendant de P2–P5 ; livrable Vague A.
 
 ---
 
-### P8 : Synthèse « méthode 10 % / 75 % »
+### P8 : Synthèse avec « Interprétation _Vu (ChiroSurf) »
 
 **Statut** : **validé** Benjamin 2026-09-04 (issue [#7](https://github.com/kevin-guille/ChiroTool/issues/7),
 graphe ChiroSurf). Logique dans `synthesis.compute_mnhn_synthesis`.
 v1 = Synthèse ; onglet Activité : **même case** (`iter_mnhn_contacts`).
 
-**Constat** : ChiroSurf n'écrit pas le 10 % / 75 % dans le `_Vu`. On reconstitue
-depuis `tadarida_taxon` + `tadarida_probabilite` + `observateur_taxon`.
+**Constat** : le `_Vu` produit dans ChiroSurf contient les annotations des
+contacts écoutés. ChiroTool en fait une relecture à partir de
+`tadarida_taxon` + `tadarida_probabilite` + `observateur_taxon` pour la synthèse.
+Cette règle de calcul ne réalise pas la procédure de validation Vigie-Chiro.
 `validated_only=True` (16 écoutés / 8000 sur Nuit_1) reste un autre mode.
 
 Quoi :
@@ -472,8 +474,8 @@ Comment (graphe ChiroSurf, mode cumulé) :
 - Proba absente / invalide : hors pool extrapolable. Ligne validée sans
   proba : +1 direct, sans bande.
 - Classes d'activité recalculées sur ces effectifs. Cumul multi-nuits :
-  MNHN **par nuit** puis somme ; pas de classe d'activité sur le cumul.
-- `min_tadarida_proba` ignoré (et désactivé) en mode MNHN.
+  relecture du `_Vu` **par nuit** puis somme ; pas de classe d'activité sur le cumul.
+- `min_tadarida_proba` ignoré (et désactivé) en mode « Interprétation _Vu (ChiroSurf) ».
 
 **Piège** : « 1 validation manuelle → tous les Tadarida de l'espèce » raterait
 un test en validation partielle (capture #7 : 3 écoutés, Pipkuh 316 / Nyclei
@@ -507,7 +509,7 @@ toute la participation.
 | Ne plus jamais charger l’API carte | **Non** | Browse / pick create ont encore besoin de l’API ; FOCUS non |
 | Carte 100 % offline pour create point | **Non** | `resolve_carre` + create site = API |
 | Auto-organisation multi-contrats / sites d’étude dans un contrat | **Plus tard** | Demandé par Benjamin en exploration — hors v0.6 cœur |
-| Interprétation 10 % / 75 % (Synthèse et Activité) | **Oui** | Issue #7 / P8. Bandes de confiance Tadarida (Benjamin 2026-09-04). |
+| Interprétation _Vu (ChiroSurf) dans Synthèse et Activité | **Oui** | Issue #7 / P8. Bandes de confiance Tadarida (Benjamin 2026-09-04). |
 
 ---
 
@@ -537,7 +539,7 @@ toute la participation.
 | **B — Point** | D8 lat/lon manifest · PointSelection · wizard 3 entrées · FOCUS carte · mode PICK | **Livré v0.6** |
 | **C — ChiroSurf** | Split lazy · UI nuits · import `_Vu` · synthèse proba min | **Livré v0.6** ; v0.7 : Synthèse autonome (sélecteur de nuit, sans passer par ChiroSurf) |
 | **D — Polish** | Export multi-nuits compilé · fusion `_Vu` → xlsx · captures tuto | **Plus tard** (pas un oubli) |
-| **E : Synthèse 10 % / 75 %** | Interprétation statistique du `_Vu` (P8) | **Livré v0.8.0** (Synthèse + Activité). |
+| **E : Synthèse avec relecture du `_Vu`** | Interprétation statistique du `_Vu` (P8) | **Livré v0.8.0** (Synthèse + Activité). |
 
 ---
 
@@ -569,14 +571,14 @@ Le tutoriel **ne décrit pas** les features non livrées comme déjà disponible
 | 2026-09-01 | v0.7.2 | **D12** : nuit bio = midi, jamais minuit ; parse horodatage tolérant ; pas de fallback calendaire ; sélecteur Synthèse seulement si ≥ 2 soirs. Barre d'actions **une ligne + glissement horizontal** ; boutons ChiroSurf sous le libellé. |
 | 2026-09-03 | issue #7 | **D13** + **P8** : proposition chronologique soumise à Benjamin (ne pas coder telle quelle). |
 | 2026-09-06 | issue #7 | P8 **corrigé** : 10 % = bandes de confiance Tadarida (graphe ChiroSurf). `compute_mnhn_synthesis`. Case distincte. D04 : bande F75 doit contenir une validation concordante. |
-| 2026-09-06 | audit | Activité : `_Vu` ne masque plus les autres nuits de l'xlsx. Synthèse MNHN : source par nuit, export diagnostics, garde clic, avertissement hors `_Vu`. |
+| 2026-09-06 | audit | Activité : `_Vu` ne masque plus les autres nuits de l'xlsx. Synthèse avec relecture du `_Vu` : source par nuit, export diagnostics, garde clic, avertissement hors `_Vu`. |
 | 2026-09-08 | v0.8.0 | Upload HTTP 409 = déjà enregistré (skip + Tadarida). Repair : sonde les titres si listing 403. Win+D : `gui_windowing` restaure les modales (icône barre des tâches, grab). |
 | 2026-09-09 | issue #4 | TE×10 Rust : timestamp en fin de stem. WAV > 5 s découpé en entier. `Data_k` tronqué : plus d'upload. **D14** : pas plusieurs exe (Batch). §0.1 : bilan #4 vs v0.8 (ne plus relire le 1er message). |
-| 2026-09-09 | P8 Activité | Case MNHN 10 % / 75 % dans l'onglet Activité (`iter_mnhn_contacts`, même règle que la Synthèse). |
-| 2026-09-09 | issue #7 | §0.2 : bilan #7 vs v0.8 (ne plus relire le 1er message). MNHN Synthèse + Activité. |
+| 2026-09-09 | P8 Activité | Case « Interprétation _Vu (ChiroSurf) » dans l'onglet Activité (`iter_mnhn_contacts`, même règle que la Synthèse). |
+| 2026-09-09 | issue #7 | §0.2 : bilan #7 vs v0.8 (ne plus relire le 1er message). Relecture du `_Vu` dans Synthèse + Activité. |
 | 2026-09-09 | v0.8.0 | Pre-release GitHub publiée (tag v0.8.0, SHA exe vérifié). Latest GitHub reste 0.7.2 tant que la case pre-release est cochée. |
 | 2026-09-10 | v0.8.1 | Scan : `Data_k/` n'est plus une session (export USB Data_k-only, xlsx/manifest au parent). Repair remonte au parent et relit l'ID depuis le nom du xlsx. Après cleanup, le contrôle Titley ne recule plus TE×10. |
-| 2026-09-16 | v0.8.1 | §0.4 : issue #9 wizard upload (paint d'abord, Titley sans listing WAV) ; issue #10 Activité cache + `_Vu` racine/Data_k + filtres MNHN stables. Suivi upload rouvert. |
+| 2026-09-16 | v0.8.1 | §0.4 : issue #9 wizard upload (paint d'abord, Titley sans listing WAV) ; issue #10 Activité cache + `_Vu` racine/Data_k + filtres de relecture du `_Vu` stables. Suivi upload rouvert. |
 | 2026-09-19 | v0.8.1 | Tag GitHub Latest `v0.8.1` (SHA exe vérifié). Fixture Titley `tests/fixtures/titley_log_overnight.csv` pour la CI. §0.5 : issue #11 partielle. |
 | 2026-09-19 | batch | §0.6 interne (pas d'issue GitHub) : ~15 Préparer, dernières nuits sans rename mais OK. Bilan skipped ≠ succès ; pas de listing WAV Titley en batch. Reste : `try_auto_meta` / Suivi. |
 
@@ -584,9 +586,9 @@ Le tutoriel **ne décrit pas** les features non livrées comme déjà disponible
 
 ## 9. Références
 
-- Issue #3 : méthode validation MNHN, multi-nuits, pièces CSV Benjamin.
+- Issue #3 : validation dans ChiroSurf, multi-nuits, pièces CSV Benjamin.
 - Issue [#4](https://github.com/kevin-guille/ChiroTool/issues/4) : retours Thomas / Mickaël. Bilan v0.8 en §0.1. Ne pas traiter le 1er message comme une todo.
-- Issue [#7](https://github.com/kevin-guille/ChiroTool/issues/7) : liaison ChiroSurf (v0.7.1 / 0.7.2) ; interprétation 10 % / 75 % Synthèse et Activité (P8). Bilan v0.8 en §0.2. Ne pas traiter le 1er message comme une todo.
+- Issue [#7](https://github.com/kevin-guille/ChiroTool/issues/7) : liaison ChiroSurf (v0.7.1 / 0.7.2) ; relecture du `_Vu` produit dans ChiroSurf pour Synthèse et Activité (P8). Bilan v0.8 en §0.2. Ne pas traiter le 1er message comme une todo.
 - Issue [#8](https://github.com/kevin-guille/ChiroTool/issues/8) : participation Titley. Bilan 0.8.1 en §0.3.
 - Issues [#9](https://github.com/kevin-guille/ChiroTool/issues/9) / [#10](https://github.com/kevin-guille/ChiroTool/issues/10) : wizard upload et Activité. Bilan 0.8.1 en §0.4.
 - Batch Préparer (~15 nuits, dernières sans rename, bilan OK) : **interne**, §0.6. Pas d'issue GitHub.

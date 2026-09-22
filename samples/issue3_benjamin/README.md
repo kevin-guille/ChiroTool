@@ -41,8 +41,9 @@ Nuit_1_<id>-participation-<id>-observations_Vu.csv
 Référence pour les tests du split multi-nuits, de l'import `_Vu`, du
 compteur « identifications validées » (16 écoutés / 8000 en Nuit 1), et
 de `compute_mnhn_synthesis` (Pippip 184, Pipkuh 73, Barbar 6, Nyclei 9,
-MyoGT 1). Le `_Vu` n'annote que les lignes écoutées ; la méthode 10 % /
-75 % est reconstituée (SPEC P8).
+MyoGT 1). Le `_Vu` n’annote que les lignes écoutées ; ChiroTool relit ces annotations
+avec les bandes de confiance Tadarida et le seuil couvrant 75 % du pool
+pour la synthèse (SPEC P8).
 Ne pas traiter comme données de production à redistribuer hors dev.
 
 Conception associée : [`docs/SPEC_v06_parcours.md`](../../docs/SPEC_v06_parcours.md).

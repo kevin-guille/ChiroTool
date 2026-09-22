@@ -5,8 +5,9 @@ Compte les contacts par **espèce retenue** (taxon observateur si la ligne a ét
 validée, sinon taxon Tadarida) et fournit les totaux, à partir des lignes d'un
 tableur d'observations Vigie-Chiro (11 colonnes standard).
 
-``compute_mnhn_synthesis`` reconstitue la méthode ChiroSurf 10 % / 75 %
-(bandes de confiance Tadarida, issue #7 / SPEC P8). Distinct de
+``compute_mnhn_synthesis`` relit un fichier ``_Vu`` produit dans ChiroSurf
+(bandes de confiance Tadarida, seuil couvrant 75 % du pool, issue #7 / SPEC P8).
+Cette relecture est distincte de la procédure de validation Vigie-Chiro et de
 ``validated_only`` (lignes écoutées seulement).
 
 Logique pure : pas d'I/O, pas de GUI → testable unitairement (voir
@@ -70,7 +71,7 @@ def compute_night_synthesis(headers: list, rows: list, *,
     ``validated_only`` : ne compter que les contacts **validés par l'observateur**
     (colonne ``observateur_taxon`` renseignée) et ignorer les identifications
     automatiques Tadarida non revues. Ce n'est **pas** l'interprétation
-    ChiroSurf 10 % / 75 % (voir ``compute_mnhn_synthesis``).
+    d’un ``_Vu`` produit dans ChiroSurf (voir ``compute_mnhn_synthesis``).
 
     ``min_tadarida_proba`` : si défini (0–1), ignore les contacts non validés
     dont la proba Tadarida est absente ou strictement inférieure au seuil
@@ -164,7 +165,7 @@ def compute_night_synthesis(headers: list, rows: list, *,
     }
 
 
-# -- Méthode MNHN / ChiroSurf 10 % / 75 % (issue #7) ------------------------
+# Relecture d’un _Vu produit dans ChiroSurf (issue #7)
 
 _MNHN_N_BINS = 10
 
@@ -240,7 +241,7 @@ def _empty_species_acc() -> dict:
 
 def _mnhn_accumulate(headers: list, rows: list
                       ) -> tuple[set[str], dict[str, dict], dict[str, int]]:
-    """Premier passage MNHN : espèces écoutées + accumulateurs par taxon."""
+    """Premier passage de relecture du _Vu : espèces écoutées + accumulateurs par taxon."""
     ci = _col_index(headers)
     t_file = ci.get("nom du fichier")
     per: dict[str, dict] = {}
@@ -310,7 +311,7 @@ def _mnhn_keep_rules(listened: set[str], per: dict[str, dict]) -> dict[str, dict
 
 
 def iter_mnhn_contacts(headers: list, rows: list):
-    """Yield ``(row, taxon)`` pour chaque contact retenu (méthode MNHN).
+    """Yield ``(row, taxon)`` pour chaque contact retenu lors de la relecture du ``_Vu``.
 
     Même règle que ``compute_mnhn_synthesis`` : pool Tadarida filtré par
     bandes de confiance, corrections forcées, espèces absentes de Tadarida.
@@ -345,9 +346,10 @@ def iter_mnhn_contacts(headers: list, rows: list):
 
 def compute_mnhn_synthesis(headers: list, rows: list, *,
                            chiros_only: bool = False) -> dict:
-    """Synthèse méthode MNHN / ChiroSurf 10 % / 75 % (SPEC P8).
+    """Synthèse par relecture d’un ``_Vu`` produit dans ChiroSurf (SPEC P8).
 
-    Reconstructible depuis un ``_Vu`` seul. Ne pas confondre avec
+    Calcul à partir d’un ``_Vu`` seul, distinct de la procédure de validation
+    Vigie-Chiro réalisée dans ChiroSurf. Ne pas confondre avec
     ``validated_only`` (lignes écoutées uniquement).
 
     Pour chaque espèce avec au moins un ``observateur_taxon`` :
