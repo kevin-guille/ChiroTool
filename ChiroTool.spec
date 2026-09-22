@@ -80,7 +80,7 @@ pyz = PYZ(a.pure)
 # -- Métadonnées d'éditeur Windows (resource VERSIONINFO) --------------------
 # Rendent le binaire « légitime » (clic droit → Propriétés → Détails) et un peu
 # moins suspect pour les heuristiques antivirus. Auteur = Kevin Guille (projet
-# personnel). Acer Campestre n'apparaît PAS ici (seulement dans l'« À propos »).
+# personnel).
 # La version est générée depuis version.py pour rester toujours synchronisée.
 import sys as _sys
 if str(SPECPATH) not in _sys.path:
