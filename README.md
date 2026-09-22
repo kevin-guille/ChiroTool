@@ -19,6 +19,8 @@ Outil libre pour le protocole **[Vigie-Chiro Point Fixe](https://www.vigienature
 **[📖 Tutoriel PDF](docs/ChiroTool-Tutoriel.pdf)** ·
 **[💬 Ouvrir une issue](https://github.com/kevin-guille/ChiroTool/issues)**
 
+Le badge Téléchargements compte les fichiers encore joints aux releases. Le PDF du tutoriel n'y est plus : il ne gonfle plus ce total. Il reste dans le dépôt et sur le site.
+
 </div>
 
 ---

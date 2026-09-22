@@ -8,6 +8,11 @@ Les versions publiées suivent le SemVer du fichier `version.py` / tags GitHub.
 Cible **0.8.2**. Pas dans l'exe Latest v0.8.1.
 Suivi **interne** (SPEC §0.6), pas d'issue GitHub.
 
+### Documentation
+
+- Capture de validation retirée du tutoriel (`14-validation.png`). À reprendre plus tard depuis l'interface réelle.
+- Le badge GitHub des téléchargements ne compte que les fichiers encore joints aux releases. Le PDF du tutoriel n'est plus joint.
+
 ### Corrigé (code `main`, pas encore d'exe)
 
 - **Batch Préparer** : une nuit **ignorée** (métadonnées incomplètes, pas

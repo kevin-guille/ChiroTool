@@ -2,10 +2,7 @@
 
 ## Vérification des libellés (22 septembre 2026)
 
-Captures à refaire depuis l’interface réelle, non pilotable dans cette session :
-
-- `14-validation.png` : ancien bouton d’écoute ; libellé actuel « Ouvrir le son ».
-- `../_captures_raw/14-validation.png` : même bouton périmé.
+`14-validation.png` a été retirée du dépôt. Le bouton d'écoute actuel est « Ouvrir le son ». On pourra reprendre une capture plus tard, depuis l'interface réelle.
 
 Les captures `05-fenetre-principale.png`, `06-vue-session.png`,
 `15-synthesis.png`, `../_captures_raw/15-synthesis.png` et

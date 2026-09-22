@@ -540,10 +540,6 @@ les envoie, suit l'analyse et archive. Deux usages restent **distincts** :
    enregistrées »** (titre + bouton *Enregistrer* orangé) vous rappelle de
    sauvegarder ; il disparaît après enregistrement.
 
-> 📸 **[Capture 14 : ancienne vue de validation, à refaire. Le bouton d’écoute
-> visible est périmé ; son libellé actuel est « Ouvrir le son ». La saisie
-> guidée et l’envoi des identifications restent illustrés.]**
-
 **📊 Synthèse** est le récapitulatif ChiroTool. **🌊 CSV nuits** est un
 pont optionnel vers le logiciel externe. Ce ne sont pas deux étapes d'une même validation.
 
