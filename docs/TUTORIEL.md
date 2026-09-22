@@ -59,8 +59,8 @@ entières** de manipulations répétitives, sujettes aux erreurs.
 
 **En résumé** : vous déposez vos dossiers de nuits, vous cliquez, et ChiroTool
 gère le renommage, l'expansion temporelle, l'envoi à Vigie-Chiro, l'analyse
-Tadarida, le nettoyage et le suivi. Vous gardez la main sur ce qui compte : la
-**validation scientifique** des espèces.
+Tadarida, le nettoyage, le suivi, l’archivage et la synthèse de campagne.
+La validation scientifique des espèces se fait dans le logiciel externe.
 
 C'est **gratuit, local et open-source**. Vos données restent chez vous (sauf les
 WAV envoyés à Vigie-Chiro, comme d'habitude).
@@ -91,8 +91,8 @@ WAV envoyés à Vigie-Chiro, comme d'habitude).
    avec niveaux d'activité, graphes, suivi de campagne
 ```
 
-**Trois boutons, dans l'ordre** — puis la validation, qui est la seule étape où
-votre expertise est irremplaçable. Et depuis la v0.5, vos identifications
+**Trois boutons, dans l'ordre**, puis la validation dans le logiciel externe,
+qui fait appel à votre expertise. Depuis la v0.5, vos identifications
 repartent vers le portail national en un clic.
 
 ---
@@ -512,7 +512,7 @@ les envoie, suit l'analyse et archive. Deux usages restent **distincts** :
 - **Dans ChiroTool, en option** : une validation contact par contact, puis
   l'envoi de ces identifications vers le portail. Ce n'est pas la procédure
   de validation Vigie-Chiro.
-- **Dans le logiciel externe, logiciel tiers, en option** : la procédure de validation
+- **Dans le logiciel externe, en option** : la procédure de validation
   Vigie-Chiro. ChiroTool peut préparer un CSV par nuit et l'ouvrir dans le logiciel externe. Il ne fait pas cette validation.
 
 ### A · Validation contact par contact (ChiroTool, optionnelle)
@@ -540,9 +540,9 @@ les envoie, suit l'analyse et archive. Deux usages restent **distincts** :
    enregistrées »** (titre + bouton *Enregistrer* orangé) vous rappelle de
    sauvegarder ; il disparaît après enregistrement.
 
-> 📸 **[Capture 14 — Vue de validation : la saisie guidée (✓ connu), le bouton
-> « Monter au genre » pour les sons incertains, et « Envoyer » qui remonte vos
-> identifications vers Vigie-Chiro.]**
+> 📸 **[Capture 14 : ancienne vue de validation, à refaire. Le bouton d’écoute
+> visible est périmé ; son libellé actuel est « Ouvrir le son ». La saisie
+> guidée et l’envoi des identifications restent illustrés.]**
 
 **📊 Synthèse** est le récapitulatif ChiroTool. **🌊 CSV nuits** est un
 pont optionnel vers le logiciel externe. Ce ne sont pas deux étapes d'une même validation.
@@ -573,7 +573,7 @@ Si vous **n'utilisez pas** le logiciel externe : ignorez cette section. Le réca
 ChiroTool est **📊 Synthèse**
 ([§9](#9--la-synthèse-dune-nuit-et-les-niveaux-dactivité)).
 
-Pour cette analyse, se reporter à ChiroSurf. ChiroTool
+Pour ce type d'analyse, se reporter à ChiroSurf. ChiroTool
 ne la lance pas et ne la refait pas. Il peut seulement préparer un CSV par
 nuit biologique, puis ouvrir ce CSV dans le logiciel externe. Le logiciel externe travaille sur
 une **nuit unique** : d'où la découpe.

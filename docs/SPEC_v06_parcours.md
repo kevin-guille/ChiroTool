@@ -10,7 +10,7 @@
 
 Ce document **prime** sur l’improvisation au codage. En cas de doute : revenir ici, ou amender le §8 avant de coder autre chose.
 
-> Libellés publics (septembre 2026). Pour ce type d’analyse, se reporter à ChiroSurf. ChiroTool prépare, envoie, suit et archive. La case utilisateur s’appelle « Interprétation _Vu » et relit un fichier _Vu. Le calcul interne (`compute_mnhn_synthesis`) ne change pas. Le bouton d’écoute d’un WAV s’appelle « Ouvrir le son ».
+> Libellés publics (septembre 2026). Pour ce type d'analyse, se reporter à ChiroSurf. ChiroTool prépare, envoie, suit, archive et produit une synthèse de campagne. La case utilisateur s’appelle « Interprétation _Vu » et relit un fichier _Vu. Le calcul interne (`compute_mnhn_synthesis`) ne change pas. Le bouton d’écoute d’un WAV s’appelle « Ouvrir le son ».
 
 **Public** : développeurs / mainteneur. Le tutoriel utilisateur (`TUTORIEL.md`) ne reprend les parcours qu’**après** livraison de chaque vague.
 

@@ -1,5 +1,18 @@
 # Guide des captures d'écran du tutoriel
 
+## Vérification des libellés (22 septembre 2026)
+
+Captures à refaire depuis l’interface réelle, non pilotable dans cette session :
+
+- `14-validation.png` : ancien bouton d’écoute ; libellé actuel « Ouvrir le son ».
+- `../_captures_raw/14-validation.png` : même bouton périmé.
+
+Les captures `05-fenetre-principale.png`, `06-vue-session.png`,
+`15-synthesis.png`, `../_captures_raw/15-synthesis.png` et
+`exemple-graphe-activite.png` restent conservées : aucun libellé périmé
+signalé n’y apparaît. Ce sont des illustrations historiques ; la capture de
+synthèse ne montre pas la case actuelle « Interprétation _Vu ».
+
 Ce dossier contient les images du tutoriel `TUTORIEL.md`. Deux d'entre elles
 sont déjà générées et prêtes :
 

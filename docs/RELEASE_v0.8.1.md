@@ -36,8 +36,8 @@ Remplacez seulement l'exe.
   sur un gros Data_k). Le batch ne change pas.
 - **📈 Activité** (issue
   [#10](https://github.com/kevin-guille/ChiroTool/issues/10)) : tableurs en
-  mémoire. Cocher MNHN / chiros ne relit plus le disque. Un `_Vu` à la
-  racine de session ou dans `Data_k/` est lu. Cocher MNHN ne fait plus
+  mémoire. Cocher « Interprétation _Vu » / chiros ne relit plus le disque. Un `_Vu` à la
+  racine de session ou dans `Data_k/` est lu. Cocher « Interprétation _Vu » ne fait plus
   disparaître les autres carrés.
 - **🔌 Suivi d'upload** : fermer la fenêtre pendant l'envoi la met en
   arrière-plan ; recliquer Upload la rouvre. (Le reste de l'issue

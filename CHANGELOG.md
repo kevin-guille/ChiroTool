@@ -48,9 +48,9 @@ du suivi livrée ; fermeture de l'exe et historique live restent ouverts.
   les WAV ne sont plus listés ni avant le wizard (`inspect_summary_vs_wav`
   sauté) ni pour le pré-remplissage.
 - **Activité (issue #10)** : les tableurs sont lus une fois et gardés en
-  mémoire. Cocher MNHN / chiros / taxons observateur ne relit plus le
+  mémoire. Cocher « Interprétation _Vu » / chiros / taxons observateur ne relit plus le
   disque. Un `_Vu` à la racine de session ou dans `Data_k/` est pris en
-  compte. Cocher MNHN ne fait plus disparaître les autres carrés de la
+  compte. Cocher « Interprétation _Vu » ne fait plus disparaître les autres carrés de la
   liste. Le premier scan ne descend plus dans les milliers de WAV.
 - **Suivi d'upload** : fermer la fenêtre pendant l'envoi la met en
   arrière-plan. Recliquer Upload la rouvre. Le bouton Arrière-plan est
@@ -84,7 +84,7 @@ du suivi livrée ; fermeture de l'exe et historique live restent ouverts.
 ### Tests
 
 - Prefill Titley sans lister Data_k. Découverte `_Vu` en racine et dans
-  Data_k. Cache tableurs (pas de relecture si mtime inchangé). `_Vu` MNHN
+  Data_k. Cache tableurs (pas de relecture si mtime inchangé). `_Vu` en mode « Interprétation _Vu »
   vide n'est pas remplacé par l'xlsx. TE×10 Titley inchangé. Reprise
   d'upload : pas de `trigger_compute` si PLANIFIE / EN_COURS / TERMINE / FINI.
   320 tests. Fixture Titley versionnée :
@@ -155,7 +155,7 @@ Bilan issues : SPEC §0.1 (#4) et §0.2 (#7).
 - `_Vu` nuit 1 + xlsx nuit 2 : les deux nuits restent dans Activité.
 - Upload 409 = déjà enregistré ; repair sonde titres ; restauration
   des fenêtres après Afficher le bureau.
-- Activité MNHN : totaux graphe = Synthèse (71 / 102). TE×10 Titley :
+- Activité avec « Interprétation _Vu » : totaux graphe = Synthèse (71 / 102). TE×10 Titley :
   3 dest distincts, Data_k tronqué refusé.
 
 ### Documentation

@@ -4,6 +4,14 @@ Merci de l'intérêt que vous portez au projet ! ChiroTool est développé sur d
 temps personnel et maintenu à temps partiel — les retours de terrain sont
 précieux et toute aide est bienvenue.
 
+## Formulation
+
+ChiroTool prépare, envoie, suit, archive et produit une synthèse de campagne.
+Pour la validation Vigie-Chiro ou la relecture fine d'un _Vu, utiliser une seule phrase : « Pour ce type d'analyse, se reporter à ChiroSurf. » Ailleurs : logiciel externe, fichier _Vu, CSV par nuit, Interprétation _Vu.
+Libellés : case « Interprétation _Vu », barre « CSV nuits », bouton CSV « Ouvrir le CSV », écoute « Ouvrir le son ».
+Ne pas présenter la méthode du MNHN comme une fonction, ni ajouter de formule d'interdiction ou de publicité. Ne pas réintroduire Acer.
+Conserver chirosurf/ et les noms de code, la logique Python, les assertions et les scénarios de test. Écrire en français, sans tiret cadratin, demi-cadratin ni double tiret.
+
 ## Signaler un bug ou proposer une idée
 
 Ouvrez une [issue](https://github.com/kevin-guille/ChiroTool/issues) en

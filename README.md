@@ -29,7 +29,7 @@ Sur une nuit Point Fixe, le parcours manuel est long et fragile :
 
 > renommer → expansion TE×10 → créer la participation → uploader des centaines de WAV → attendre Tadarida → récupérer le xlsx → nettoyer dans un tableur → archiver.
 
-**ChiroTool prépare, envoie et suit les nuits dans une application locale et portable**, pensée pour le terrain et le bureau d’études. Pour la validation Vigie-Chiro, se reporter à ChiroSurf.
+**ChiroTool prépare, envoie, suit et archive les nuits, et produit une synthèse de campagne dans une application locale et portable**, pensée pour le terrain et le bureau d’études. Validation Vigie-Chiro et relecture fine d’un `_Vu` : Pour ce type d'analyse, se reporter à ChiroSurf.
 
 | Avant | Avec ChiroTool |
 |-------|----------------|
