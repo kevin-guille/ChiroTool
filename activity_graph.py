@@ -3,8 +3,7 @@ activity_graph.py — agrégation et rendu d'un graphe d'activité horaire.
 
 Source de données : xlsx d'observations Vigie-Chiro (téléchargé via
 ``download_observations_as_xlsx`` ou présent à la racine de la session).
-On utilise en priorité le ``validateur_taxon`` (validation humaine via
-ChiroSurf), avec fallback sur ``observateur_taxon`` puis ``tadarida_taxon``.
+On utilise en priorité le ``validateur_taxon`` (validation humaine via le logiciel externe), avec fallback sur ``observateur_taxon`` puis ``tadarida_taxon``.
 
 L'heure de chaque contact est extraite du **nom du fichier WAV**, pas du
 champ ``temps_debut`` (qui est en secondes depuis le début de l'enregistrement
@@ -244,9 +243,9 @@ def aggregate_rows(headers, rows, *,
     - ``use_observer_taxon`` : ne garder que les lignes avec
       ``observateur_taxon`` et grouper sous ce code (issue #4.10).
     - ``chiros_only`` : ignorer orthoptères / bruit / oiseaux (issue #4.9).
-    - ``use_mnhn`` : relecture d’un ``_Vu`` produit dans ChiroSurf
+    - ``use_mnhn`` : relecture d’un ``_Vu`` produit dans le logiciel externe
       (même règle que la Synthèse). Ce calcul n’est pas l’évaluation
-      d’activité de ChiroSurf.
+      d’activité du logiciel externe.
       Prime sur ``use_only_validated`` et ``use_observer_taxon``.
     """
     if bin_minutes <= 0 or 1440 % bin_minutes != 0:
@@ -329,7 +328,7 @@ def is_observations_xlsx_name(name: str) -> bool:
 
 
 def is_vu_csv_name(name: str) -> bool:
-    """True pour un sidecar ChiroSurf ``*_Vu.csv``."""
+    """True pour un fichier annexe ``*_Vu.csv``."""
     low = str(name or "").lower()
     if "_cleanup" in low or "_backup" in low:
         return False
@@ -346,7 +345,7 @@ def discover_activity_sources(workspace: Path, *, max_depth: int = 6
                               ) -> list[Path]:
     """xlsx ``participation-*-observations`` + CSV ``_Vu`` sous le workspace.
 
-    Un ``_Vu`` est accepté où ChiroSurf / l'utilisateur le pose (chirosurf/,
+    Un ``_Vu`` est accepté où le logiciel externe / l'utilisateur le pose (chirosurf/,
     Data_k/, Data/, racine de session). Pas seulement dans trois dossiers
     magiques : sinon un ``_Vu`` collé à côté de l'xlsx disparaît du graphe
     alors que la Synthèse (par session) le voit encore.
@@ -496,7 +495,7 @@ class ObservationTableCache:
 
 
 def _iter_table_file(path: Path):
-    """Yield (headers, rows) depuis un xlsx ou un CSV ChiroSurf."""
+    """Yield (headers, rows) depuis un xlsx ou un CSV par nuit."""
     loaded = load_observation_table(Path(path))
     if loaded is None:
         return
@@ -511,7 +510,7 @@ def aggregate_xlsx(xlsx_path: Path, *,
                     chiros_only: bool = False,
                     use_mnhn: bool = False,
                     ) -> dict[tuple[str, str, int | None, str, str], list[int]]:
-    """Agrège un xlsx **ou** un CSV ``_Vu`` / nuit ChiroSurf."""
+    """Agrège un xlsx **ou** un CSV ``_Vu`` par nuit."""
     result: dict[tuple[str, str, int | None, str, str], list[int]] = {}
     for headers, rows in _iter_table_file(Path(xlsx_path)):
         partial = aggregate_rows(

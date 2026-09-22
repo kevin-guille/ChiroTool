@@ -12,9 +12,9 @@ Répond aux issues
 [#9](https://github.com/kevin-guille/ChiroTool/issues/9) et
 [#10](https://github.com/kevin-guille/ChiroTool/issues/10).
 Conserve le TE×10 Titley ([#4](https://github.com/kevin-guille/ChiroTool/issues/4))
-et la relecture d'un `_Vu` produit dans ChiroSurf
+et la relecture d'un `_Vu` produit dans le logiciel externe
 ([#7](https://github.com/kevin-guille/ChiroTool/issues/7)).
-La validation Vigie-Chiro se fait dans ChiroSurf.
+La validation Vigie-Chiro se fait dans le logiciel externe.
 
 L'issue [#11](https://github.com/kevin-guille/ChiroTool/issues/11) (suivi
 d'upload) est **partielle** : réouvrir la fenêtre est dans cette version ;

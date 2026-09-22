@@ -1119,8 +1119,7 @@ class PreferencesDialog(ctk.CTkToplevel):
 
         ctk.CTkLabel(tab, text=(
             "Chemin vers le programme qui ouvre un WAV, pour écouter un son.\n"
-            "ChiroSurf peut être indiqué ici. L'écoute n'est pas une validation. "
-            "La procédure Vigie-Chiro se fait dans ChiroSurf."),
+            "L'écoute n'est pas une validation."),
                       font=ctk.CTkFont(size=11),
                       text_color=("gray30", "gray70"),
                       wraplength=640, justify="left", anchor="w").grid(

@@ -1150,7 +1150,7 @@ class ChiroToolApp(ctk.CTk):
         self.bind("<Control-o>", lambda e: self._on_browse())
         self.bind("<Control-q>", lambda e: self._on_close())
         # Event personnalisé : ouvrir les préférences (p.ex. depuis la vue
-        # validation quand ChiroSurf n'est pas configuré)
+        # validation quand le logiciel externe n'est pas configuré)
         self.bind("<<OpenPreferences>>", lambda e: self._on_settings())
 
     # -- Handlers -----------------------------------------------------------
@@ -1572,7 +1572,7 @@ class ChiroToolApp(ctk.CTk):
         if has_obs:
             _btn("🔍 Valider", lambda: self._open_validation_view(s),
                  "Validation contact par contact dans ChiroTool, distincte "
-                 "de la procédure ChiroSurf. Ouvrir le son lance le logiciel "
+                 "de la procédure du logiciel externe. Ouvrir le son lance le logiciel "
                  "externe (écoute seulement).", accent="#1f6feb")
         # Nettoyer à droite de Valider (issue #4.5) : on identifie d'abord,
         # on purge ensuite. Le bouton reste grisé tant que Tadarida n'a pas
@@ -1583,13 +1583,12 @@ class ChiroToolApp(ctk.CTk):
              is_primary=(next_step == "cleanup"), enabled=can_cleanup)
         if has_obs:
             _btn("📊 Synthèse", lambda: self._open_synthesis_view(s),
-                 "Récapitulatif de campagne par espèce. Si un _Vu ChiroSurf "
-                 "existe, une case permet de le relire. Ce n'est pas la "
-                 "validation Vigie-Chiro.")
-            _btn("🌊 ChiroSurf nuits",
+                 "Récapitulatif de campagne par espèce. Si un _Vu "
+                 "existe, la case Interprétation _Vu permet de le relire. "
+                 "Pour cette analyse, se reporter à ChiroSurf.")
+            _btn("🌊 CSV nuits",
                  lambda: self._open_chirosurf_nights_for_path(s.path, s.name),
-                 "Optionnel : préparer un CSV par nuit pour l'ouvrir dans "
-                 "ChiroSurf. La validation se fait dans ChiroSurf.")
+                 "Optionnel : préparer un CSV par nuit pour le logiciel externe.")
 
         _btn("✎ Métadonnées", lambda: self._edit_meta(s),
              "Modifier les métadonnées de la session (site, point, passage, série…)")
@@ -2353,7 +2352,7 @@ class ChiroToolApp(ctk.CTk):
         self._open_chirosurf_nights_for_path(s.path, s.name)
 
     def _open_chirosurf_nights_for_path(self, session_path, session_name: str | None = None):
-        """Prépare / liste les CSV nuit pour ChiroSurf (SPEC P4 / issues #3, #4.8)."""
+        """Prépare / liste les CSV nuit pour le logiciel externe (SPEC P4 / issues #3, #4.8)."""
         session_path = Path(session_path)
         name = session_name or session_path.name
         xlsx = find_observations_xlsx(session_path)
@@ -2373,32 +2372,32 @@ class ChiroToolApp(ctk.CTk):
             nights = prepare_chirosurf_nights(session_path, xlsx, force_raw=False)
         except Exception as e:
             messagebox.showerror(
-                "ChiroSurf nuits",
+                "CSV nuits",
                 f"Impossible de préparer les CSV :\n{e}",
             )
             return
         if not nights:
             messagebox.showinfo(
-                "ChiroSurf nuits",
+                "CSV nuits",
                 "Aucun contact exploitable dans le tableur.",
             )
             return
 
         # Dialog simple liste + actions
         dlg = ctk.CTkToplevel(self)
-        dlg.title(f"ChiroSurf — nuits · {name}")
+        dlg.title(f"CSV nuits · {name}")
         dlg.geometry("680x480")
         dlg.minsize(520, 360)
         bind_modal(dlg, self)
         ctk.CTkLabel(
-            dlg, text="Préparer un CSV par nuit pour ChiroSurf (optionnel)",
+            dlg, text="Préparer un CSV par nuit (optionnel)",
             font=ctk.CTkFont(size=14, weight="bold"), anchor="w",
         ).pack(fill="x", padx=14, pady=(12, 4))
         ctk.CTkLabel(
-            dlg, text="La validation Vigie-Chiro se fait dans ChiroSurf, "
+            dlg, text="La validation Vigie-Chiro se fait dans le logiciel externe, "
                       "pas dans ChiroTool. Coupure à midi : le matin du 17 "
-                      "reste la nuit du 16. Ouvrir dans ChiroSurf copie le "
-                      "CSV à côté des WAV (Data_k) : ChiroSurf 4.x cherche "
+                      "reste la nuit du 16. Ouvrir le CSV copie le "
+                      "CSV à côté des WAV (Data_k) : le logiciel externe (version 4.x) cherche "
                       "les sons dans le même dossier que le tableur. Un _Vu "
                       "déjà produit (Nuit_1_…, chirosurf/ ou Data_k/) est "
                       "reconnu. Le récapitulatif ChiroTool, c'est Synthèse.",
@@ -2456,7 +2455,7 @@ class ChiroToolApp(ctk.CTk):
                     target = prepare_chirosurf_launch(session_path, p)
                 except ChiroSurfLaunchError as e:
                     messagebox.showwarning(
-                        "ChiroSurf", str(e), parent=dlg,
+                        "CSV nuits", str(e), parent=dlg,
                     )
                     return
                 launch_chirosurf(exe, target, parent=dlg)
@@ -2475,7 +2474,7 @@ class ChiroToolApp(ctk.CTk):
                 if not has or not p.is_file():
                     messagebox.showinfo(
                         "Pas encore de _Vu",
-                        "Ouvrez d'abord le CSV dans ChiroSurf et faites-y "
+                        "Ouvrez d'abord le CSV dans le logiciel externe et faites-y "
                         "la validation. Le _Vu apparaît à côté du CSV "
                         "(dans Data_k/ après ouverture depuis ChiroTool).",
                         parent=dlg,
@@ -2488,7 +2487,7 @@ class ChiroToolApp(ctk.CTk):
             btns = ctk.CTkFrame(row, fg_color="transparent")
             btns.grid(row=1, column=0, sticky="w", padx=8, pady=(0, 8))
             ctk.CTkButton(
-                btns, text="Ouvrir dans ChiroSurf", width=168, height=28,
+                btns, text="Ouvrir le CSV", width=168, height=28,
                 command=_open_raw,
             ).pack(side="left", padx=(0, 4))
             ctk.CTkButton(

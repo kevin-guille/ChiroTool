@@ -2,8 +2,8 @@
 
 Fichiers fournis sur
 [issue #3](https://github.com/kevin-guille/ChiroTool/issues/3)
-(commentaire du 2026-08-03) pour cadrer le split multi-nuits / import `_Vu`
-ChiroSurf.
+(commentaire du 2026-08-03) pour cadrer le split multi-nuits / import de fichiers `_Vu`
+produits dans le logiciel externe.
 
 ## Contenu
 
@@ -11,9 +11,9 @@ ChiroSurf.
 |---------------|------|
 | `multi_nuits-observations.csv` | CSV Tadarida brut **2 nuits biologiques** (participation unique) |
 | `Nuit_1-observations.csv` | Nuit 1 scindée (brut) |
-| `Nuit_1-observations_Vu.csv` | Nuit 1 après validation ChiroSurf |
+| `Nuit_1-observations_Vu.csv` | Nuit 1 après validation dans le logiciel externe |
 | `Nuit_2-observations.csv` | Nuit 2 scindée (brut) |
-| `Nuit_2-observations_Vu.csv` | Nuit 2 après validation ChiroSurf |
+| `Nuit_2-observations_Vu.csv` | Nuit 2 après validation dans le logiciel externe |
 
 Noms d’origine GitHub (convention retenue dans la SPEC) :
 
@@ -32,8 +32,8 @@ Nuit_1_<id>-participation-<id>-observations_Vu.csv
 - `_Vu` = **mêmes lignes** que le brut. `observateur_taxon` /
   `observateur_probabilite` ne sont remplis que sur les contacts **écoutés**
   (16 lignes SUR / PROBABLE sur Nuit_1 comme sur Nuit_2). La méthode
-  ChiroSurf 10 % → 75 % n'annote pas le reste de la nuit.
-- ChiroSurf écrit le `_Vu` **à côté** du brut ; on rouvre le CSV sans `_Vu`
+  du logiciel externe de 10 % à 75 % n'annote pas le reste de la nuit.
+- Le logiciel externe écrit le `_Vu` **à côté** du brut ; on rouvre le CSV sans `_Vu`
   pour continuer.
 
 ## Usage

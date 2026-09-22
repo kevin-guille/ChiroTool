@@ -5,7 +5,7 @@ Compte les contacts par **espèce retenue** (taxon observateur si la ligne a ét
 validée, sinon taxon Tadarida) et fournit les totaux, à partir des lignes d'un
 tableur d'observations Vigie-Chiro (11 colonnes standard).
 
-``compute_mnhn_synthesis`` relit un fichier ``_Vu`` produit dans ChiroSurf
+``compute_mnhn_synthesis`` relit un fichier ``_Vu`` produit dans le logiciel externe
 (bandes de confiance Tadarida, seuil couvrant 75 % du pool, issue #7 / SPEC P8).
 Cette relecture est distincte de la procédure de validation Vigie-Chiro et de
 ``validated_only`` (lignes écoutées seulement).
@@ -71,7 +71,7 @@ def compute_night_synthesis(headers: list, rows: list, *,
     ``validated_only`` : ne compter que les contacts **validés par l'observateur**
     (colonne ``observateur_taxon`` renseignée) et ignorer les identifications
     automatiques Tadarida non revues. Ce n'est **pas** l'interprétation
-    d’un ``_Vu`` produit dans ChiroSurf (voir ``compute_mnhn_synthesis``).
+    d’un ``_Vu`` produit dans le logiciel externe (voir ``compute_mnhn_synthesis``).
 
     ``min_tadarida_proba`` : si défini (0–1), ignore les contacts non validés
     dont la proba Tadarida est absente ou strictement inférieure au seuil
@@ -165,7 +165,7 @@ def compute_night_synthesis(headers: list, rows: list, *,
     }
 
 
-# Relecture d’un _Vu produit dans ChiroSurf (issue #7)
+# Relecture d’un _Vu produit dans le logiciel externe (issue #7)
 
 _MNHN_N_BINS = 10
 
@@ -187,7 +187,7 @@ def mnhn_proba_bin(value) -> int | None:
     """Bande exclusive 0..9 : ``[k/10, (k+1)/10)``, ``k=9`` pour ``p >= 0.9``.
 
     ``None`` si la proba est absente, illisible, négative ou non finie.
-    ``p >= 1`` est ramené à la bande 0.9 (graphe ChiroSurf ``>= 0.90``).
+    ``p >= 1`` est ramené à la bande 0.9 (graphe du logiciel externe ``>= 0.90``).
     """
     if value in (None, ""):
         return None
@@ -346,10 +346,10 @@ def iter_mnhn_contacts(headers: list, rows: list):
 
 def compute_mnhn_synthesis(headers: list, rows: list, *,
                            chiros_only: bool = False) -> dict:
-    """Synthèse par relecture d’un ``_Vu`` produit dans ChiroSurf (SPEC P8).
+    """Synthèse par relecture d’un ``_Vu`` produit dans le logiciel externe (SPEC P8).
 
     Calcul à partir d’un ``_Vu`` seul, distinct de la procédure de validation
-    Vigie-Chiro réalisée dans ChiroSurf. Ne pas confondre avec
+    Vigie-Chiro réalisée dans le logiciel externe. Ne pas confondre avec
     ``validated_only`` (lignes écoutées uniquement).
 
     Pour chaque espèce avec au moins un ``observateur_taxon`` :

@@ -5,7 +5,7 @@ Permet de visualiser, pour une ou plusieurs nuits validées, le nombre de
 contacts par tranche horaire (15/30/60 minutes), filtrable par taxon.
 
 Source : xlsx d'observations (présents à la racine de chaque session, ou
-le suffixe ``_<initiales>.xlsx`` après validation ChiroSurf).
+le suffixe ``_<initiales>.xlsx`` après validation dans le logiciel externe).
 
 Rendu : graphique linéaire sur ``tk.Canvas`` natif (cohérent avec le
 dashboard, zéro dépendance ajoutée).
@@ -132,7 +132,7 @@ class ActivityPanel(ctk.CTkFrame):
         ).grid(row=0, column=3, padx=(0, 8))
         self.mnhn_var = ctk.BooleanVar(value=False)
         ctk.CTkCheckBox(
-            bar, text="Interprétation _Vu (ChiroSurf)",
+            bar, text="Interprétation _Vu",
             variable=self.mnhn_var,
             command=self._on_mnhn_toggle,
         ).grid(row=0, column=4, padx=(0, 8))
@@ -543,7 +543,7 @@ class ActivityPanel(ctk.CTkFrame):
         n_xlsx = len(xlsx_paths) - n_vu
         prefix = ""
         if self._use_mnhn:
-            prefix = "_Vu ChiroSurf · " if n_vu else "Tableur, pas un _Vu · "
+            prefix = "_Vu · " if n_vu else "Tableur, pas un _Vu · "
         src = f"{n_vu} _Vu + {n_xlsx} xlsx" if n_vu else f"{n_xlsx} xlsx"
         return (f"{prefix}{src} · {n_nights} nuits · {n_contacts:,} contacts")
 
@@ -1009,7 +1009,7 @@ class ActivityPanel(ctk.CTkFrame):
                 sub_parts.append(f"{len(nights)} nuits ({nights[0]} → {nights[-1]})")
         sub_parts.append(f"tranche : {self._bin_minutes} min")
         if self._use_mnhn:
-            sub_parts.append("relecture _Vu ChiroSurf")
+            sub_parts.append("relecture _Vu")
         if self._only_validated:
             sub_parts.append("validés humains uniquement")
         if self._observer_taxon:

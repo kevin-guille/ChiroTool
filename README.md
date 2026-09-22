@@ -29,7 +29,7 @@ Sur une nuit Point Fixe, le parcours manuel est long et fragile :
 
 > renommer → expansion TE×10 → créer la participation → uploader des centaines de WAV → attendre Tadarida → récupérer le xlsx → nettoyer dans un tableur → archiver.
 
-**ChiroTool prépare, envoie et suit les nuits dans une application locale et portable**, pensée pour le terrain et le bureau d’études. La validation Vigie-Chiro se fait dans ChiroSurf.
+**ChiroTool prépare, envoie et suit les nuits dans une application locale et portable**, pensée pour le terrain et le bureau d’études. Pour la validation Vigie-Chiro, se reporter à ChiroSurf.
 
 | Avant | Avec ChiroTool |
 |-------|----------------|
@@ -58,13 +58,13 @@ remplace la [v0.8.0](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8
 | ☁️ | **Upload unitaire** | Assistant visible tout de suite, plus de fenêtre noire sur un gros Data_k ([#9](https://github.com/kevin-guille/ChiroTool/issues/9)) |
 | 📈 | **Activité** | Tableurs en mémoire ; relecture d'un `_Vu` et filtre chiros sans rescan ; `_Vu` racine et Data_k ; les autres carrés restent ([#10](https://github.com/kevin-guille/ChiroTool/issues/10)) |
 | 🔌 | **Suivi d'upload** | Fermer la fenêtre = arrière-plan ; recliquer Upload la rouvre (reste : [#11](https://github.com/kevin-guille/ChiroTool/issues/11)) |
-| 📊 | **Relecture d'un `_Vu` ChiroSurf** (dès 0.8.0) | Case dans la Synthèse et l'Activité. Le fichier est produit dans ChiroSurf. Ce n'est pas la validation Vigie-Chiro ([#7](https://github.com/kevin-guille/ChiroTool/issues/7)) |
+| 📊 | **Relecture d'un `_Vu`** (dès 0.8.0) | Case dans la Synthèse et l'Activité. Le fichier est produit dans le logiciel externe. Ce n'est pas la validation Vigie-Chiro ([#7](https://github.com/kevin-guille/ChiroTool/issues/7)) |
 | 🏷️ | **Titley TE×10** (dès 0.8.0) | WAV > 5 s découpé **en entier** ([#4](https://github.com/kevin-guille/ChiroTool/issues/4)) |
 
 Après un `_Vu`, « Identifications validées seulement » = contacts **écoutés**.
-« Interprétation _Vu (ChiroSurf) » relit ce fichier (bandes de confiance
+« Interprétation _Vu » relit ce fichier (bandes de confiance
 Tadarida), dans la Synthèse **et** l'onglet Activité. La validation
-Vigie-Chiro se fait dans ChiroSurf.
+Vigie-Chiro se fait dans le logiciel externe.
 
 Note : [`docs/RELEASE_v0.8.1.md`](docs/RELEASE_v0.8.1.md). Bilan des issues
 [#4](https://github.com/kevin-guille/ChiroTool/issues/4),
@@ -78,7 +78,7 @@ Historique 0.7.2 montre moins d'écrits que de segments.
 
 ### v0.7 (rappel)
 
-La **v0.7** sépare Synthèse et ChiroSurf, lit les noms Titley, et reprend
+La **v0.7** sépare Synthèse et CSV nuits, lit les noms Titley, et reprend
 [#4](https://github.com/kevin-guille/ChiroTool/issues/4) (Valider),
 [#5](https://github.com/kevin-guille/ChiroTool/issues/5) (démarrage) et
 [#6](https://github.com/kevin-guille/ChiroTool/issues/6) (WAC) :
@@ -86,7 +86,7 @@ La **v0.7** sépare Synthèse et ChiroSurf, lit les noms Titley, et reprend
 | | Nouveauté | Bénéfice terrain |
 |---|-----------|------------------|
 | 📊 | **Synthèse** (xlsx, `_Vu` si présent) | Récapitulatif ChiroTool. Une pose qui passe minuit = **1** nuit ; menu Nuit seulement s’il y a **plusieurs soirs** |
-| 🌊 | **ChiroSurf nuits** optionnel | CSV pour ouvrir la nuit **dans ChiroSurf**. La validation s'y fait. **v0.7.1** : CSV à côté des WAV ; `_Vu` `Nuit_1_…`. **v0.7.2** : barre d’actions glissable |
+| 🌊 | **CSV nuits** optionnel | CSV pour ouvrir la nuit **dans le logiciel externe**. La validation s'y fait. **v0.7.1** : CSV à côté des WAV ; `_Vu` `Nuit_1_…`. **v0.7.2** : barre d’actions glissable |
 | 🏷️ | **Titley** Anabat Swift / Ranger | Noms usine lus (la découpe 5 s intégrale est en v0.8) |
 | 🔍 | **Valider** : tri, filtres, bilan `X / Y` | Lecture plus rapide d’une nuit |
 | 📂 | Plus de **scan auto** au démarrage | SSD EXFAT endormi ne fige plus l’UI |
@@ -96,13 +96,12 @@ La **v0.7** sépare Synthèse et ChiroSurf, lit les noms Titley, et reprend
 Synthèse (plus de Nuit 1 / Nuit 2 à minuit). Note :
 [`docs/RELEASE_v0.7.2.md`](docs/RELEASE_v0.7.2.md).
 
-**v0.7.1** : ouvrir le CSV dans ChiroSurf le copie à côté des WAV ; `_Vu`
+**v0.7.1** : ouvrir le CSV dans le logiciel externe le copie à côté des WAV ; `_Vu`
 `Nuit_1_…` reconnus. [`docs/RELEASE_v0.7.1.md`](docs/RELEASE_v0.7.1.md).
 
 ### v0.6 (rappel)
 
-Vérifier / Réparer, export USB, pick + FOCUS carte, ChiroSurf multi-nuits
-(CSV), synthèse `_Vu` / proba min, météo non bloquante — voir le
+Vérifier / Réparer, export USB, pick + FOCUS carte, CSV multi-nuits, synthèse `_Vu` / proba min, météo non bloquante : voir le
 [changelog](CHANGELOG.md).
 
 👉 Détail : [Changelog](CHANGELOG.md) · [Tutoriel](docs/TUTORIEL.md) · [SPEC](docs/SPEC_v06_parcours.md) · [Releases](https://github.com/kevin-guille/ChiroTool/releases)
@@ -142,11 +141,11 @@ Vérifier / Réparer, export USB, pick + FOCUS carte, ChiroSurf multi-nuits
 
 ### Après l’analyse
 
-- **Validation contact par contact** (optionnelle, distincte de la procédure ChiroSurf) : raccourcis, tri, filtres, écoute dans un logiciel externe, envoi des identifications
+- **Validation contact par contact** (optionnelle, distincte de la procédure du logiciel externe) : raccourcis, tri, filtres, écoute dans un logiciel externe, envoi des identifications
 - **Vue session** : bilan `X / Y` ; **Valider** · **Nettoyer** · **Synthèse**
 - **Synthèse** de campagne par espèce + classes d'activité ChiroTool (`_Vu` optionnel ; menu Nuit seulement si plusieurs soirs)
-- **ChiroSurf nuits** (optionnel) : CSV `chirosurf/Nuit{n}_…csv` pour l'ouvrir dans ChiroSurf
-- **Graphes d’activité** ChiroTool (chiros seulement, taxons observateur, relecture d'un `_Vu` ChiroSurf)
+- **CSV nuits** (optionnel) : CSV `chirosurf/Nuit{n}_…csv` pour l'ouvrir dans le logiciel externe
+- **Graphes d’activité** ChiroTool (chiros seulement, taxons observateur, relecture d'un `_Vu`)
 - **Registre de campagne** multi-sites (SQLite, export CSV / xlsx)
 - **Export portable de sessions** (clé USB / partage : Data_k ± Data + métadonnées + `chirosurf/` si présent). Sur l'autre poste : ouvrir `ChiroTool_export_…` puis Scanner (pas un sous-dossier `Data_k/`)
 - **Carte OSM** : pick depuis les meta (5 km), FOCUS session, carrés STOC, create/reuse (y compris autre observateur)

@@ -99,7 +99,7 @@ du suivi livrée ; fermeture de l'exe et historique live restent ouverts.
 ## [0.8.0] — 2026-09-06
 
 Issue [#7](https://github.com/kevin-guille/ChiroTool/issues/7) : relecture
-d'un fichier `_Vu` produit dans ChiroSurf, dans la Synthèse **et** l'onglet
+d'un fichier `_Vu` produit dans le logiciel externe, dans la Synthèse **et** l'onglet
 Activité (bandes de confiance Tadarida). Ce n'est pas la procédure de
 validation Vigie-Chiro. Issue [#4](https://github.com/kevin-guille/ChiroTool/issues/4) :
 TE×10 Titley, tout le son. Exe reconstruit le 2026-09-08 et le 2026-09-09
@@ -110,19 +110,18 @@ Bilan issues : SPEC §0.1 (#4) et §0.2 (#7).
 
 ### Ajouté
 
-- **Synthèse, relecture d'un `_Vu` ChiroSurf** (issue
+- **Synthèse, relecture d'un `_Vu`** (issue
   [#7](https://github.com/kevin-guille/ChiroTool/issues/7)) : case distincte
-  dans 📊 Synthèse. Le fichier est produit dans ChiroSurf. Bandes de
+  dans 📊 Synthèse. Le fichier est produit dans le logiciel externe. Bandes de
   **confiance Tadarida** (pas le temps). Si une validation concordante
   atteint la bande qui couvre 75 % des contacts de l'espèce, toute
   l'espèce est retenue ; sinon, seulement les bandes qui contiennent un
   contact écouté. « Identifications validées seulement » reste les lignes
-  écoutées. SPEC P8. La procédure de validation Vigie-Chiro se fait dans
-  ChiroSurf.
+  écoutées. SPEC P8. La procédure de validation Vigie-Chiro se fait dans le logiciel externe.
 - **Activité, même relecture** (issue #7 / P8, rebuild 2026-09-09) :
   même case que la Synthèse (`iter_mnhn_contacts`). Distinct de « Validés
   humains seulement ». Sans `_Vu`, rappel dans la barre de statut.
-  Ce n'est pas l'évaluation d'activité de ChiroSurf.
+  Ce n'est pas l'évaluation d'activité du logiciel externe.
 
 ### Corrigé
 
@@ -132,7 +131,7 @@ Bilan issues : SPEC §0.1 (#4) et §0.2 (#7).
   chargé ; colonne **Seuil _Vu** dans le tableau ; export CSV avec
   `Atteint_75` / `F75` / pool / proba illisibles ; libellé de source
   nuit par nuit en cumul ; avertissement si la source n'est pas un
-  `_Vu` ChiroSurf. Un `_Vu` illisible ou sans colonnes Vigie-Chiro
+  `_Vu`. Un `_Vu` illisible ou sans colonnes Vigie-Chiro
   affiche le nom du fichier et replie sur le tableur.
 - **Upload code 409** : un WAV déjà enregistré n'est plus un échec. Il est
   sauté et Tadarida peut partir. Cas typique : l'envoi a créé les fiches,
@@ -174,7 +173,7 @@ Correctifs terrain après 0.7.0 / pre-release 0.7.1
 
 - **Vue session** : barre d'actions sur **une ligne**, glissement horizontal
   si le panneau est trop étroit (plus rien de coupé après 📍 Carte). Dans
-  **ChiroSurf nuits**, les boutons ▶ / 📈 / Synthèse passent sous le libellé,
+  **CSV nuits**, les boutons ▶ / 📈 / Synthèse passent sous le libellé,
   alignés à gauche.
 - **Synthèse / nuit biologique (D12)** : une pose qui passe **minuit**
   (soir + matin) est **une** nuit. Plus de sélecteur « Nuit 1 / Nuit 2 »
@@ -194,18 +193,18 @@ Correctifs terrain après 0.7.0 / pre-release 0.7.1
 ## [0.7.1] — 2026-08-31
 
 Issue [#7](https://github.com/kevin-guille/ChiroTool/issues/7)
-(Benjamin — liaison ChiroSurf).
+(Benjamin : liaison avec le logiciel externe).
 
 ### Corrigé
 
-- **Ouvrir dans ChiroSurf** (fenêtre nuits) : le CSV est copié à côté des WAV
-  (`Data_k/` sinon `Data/`) avant lancement. ChiroSurf 4.x glob
+- **Ouvrir le CSV** (fenêtre nuits) : le CSV est copié à côté des WAV
+  (`Data_k/` sinon `Data/`) avant lancement. Le logiciel externe (version 4.x) glob
   `*.{wav,mp3}` dans le dossier du tableur ; un CSV isolé dans
   `chirosurf/` faisait planter le script de démarrage (Tcl
   *no files matched glob pattern*). S'il n'y a aucun WAV, l'ouverture
   est refusée avec un message clair (nuit déjà nettoyée).
 - **`_Vu` hors ChiroTool** : reconnaissance de `Nuit1_`, `Nuit_1_` et
-  `Nuit_1-` ; un `_Vu` collé dans `chirosurf/` ou écrit par ChiroSurf
+  `Nuit_1-` ; un `_Vu` collé dans `chirosurf/` ou écrit par le logiciel externe
   dans `Data_k/` (à côté du CSV ouvert) est listé, rapatrié vers
   `chirosurf/`, et lu par Synthèse / Activité.
 
@@ -234,12 +233,12 @@ Retours issues [#4](https://github.com/kevin-guille/ChiroTool/issues/4),
   seulement** (issue #4).
 - **Vue session** : bilan `X / Y` contacts avec taxon observateur (xlsx en
   arrière-plan, cache) et nombre d'identifications déjà envoyées si sidecar.
-- **Synthèse** : sélecteur de **nuit biologique** (indépendant de ChiroSurf) ;
+- **Synthèse** : sélecteur de **nuit biologique** (indépendant du logiciel externe) ;
   `_Vu` lu s'il existe ; cumul multi-nuits sans classes d'activité
   (contacts/nuit).
-- **ChiroSurf nuits** : ouverture du CSV brut dans ChiroSurf et du `_Vu`
+- **CSV nuits** : ouverture du CSV brut dans le logiciel externe et du `_Vu`
   depuis la liste des nuits et depuis Valider (issue #4.8).
-  **Optionnel** : préparer l'ouverture dans ChiroSurf, pas une validation
+  **Optionnel** : préparer l'ouverture dans le logiciel externe, pas une validation
   faite par ChiroTool. Distinct de la Synthèse.
 - **Activité** : filtres **Chiros seulement** et **Taxons observateur** ;
   lecture des CSV `_Vu` (issue #4.9–10).
@@ -253,8 +252,8 @@ Retours issues [#4](https://github.com/kevin-guille/ChiroTool/issues/4),
 - **Valider** : le 2e clic sur un en-tête conserve le tri (callback heading
   reposé après mise à jour du libellé ▲ / ▼).
 - **Vue session** : bouton **Nettoyer** à droite de **Valider** (issue #4.5) ;
-  **📊 Synthèse** (récapitulatif ChiroTool) avant **🌊 ChiroSurf nuits**
-  (ouverture d'un CSV dans ChiroSurf).
+  **📊 Synthèse** (récapitulatif ChiroTool) avant **🌊 CSV nuits**
+  (ouverture d'un CSV dans le logiciel externe).
 - **Upload / participation** : libellés Vent et Couverture nuageuse lisibles
   (titre + aide empilés, plus superposés).
 - **Démarrage** (issue #5) : plus de scan auto du dernier dossier (EXFAT /
@@ -269,7 +268,7 @@ Retours issues [#4](https://github.com/kevin-guille/ChiroTool/issues/4),
 
 ### Documentation
 
-- Tutoriel + PDF : distinction Synthèse / ChiroSurf ; coupure **midi** (nuit
+- Tutoriel + PDF : distinction Synthèse / CSV nuits ; coupure **midi** (nuit
   biologique) ; Titley ; dates Summary ≠ WAV ; démarrage sans scan auto ;
   SM2 / `.wac` / `.w4v` (issue [#6](https://github.com/kevin-guille/ChiroTool/issues/6)).
 - README + landing GitHub Pages : v0.7.
@@ -298,9 +297,9 @@ Issue [#3](https://github.com/kevin-guille/ChiroTool/issues/3) (retours terrain)
   commune, points dans **5 km**, create/reuse → champs remplis.
 - **FOCUS 📍 Carte** : recentrage sans full-API (manifest → active_point → cache),
   marqueurs du projet/dossier + highlight de la nuit.
-- **ChiroSurf multi-nuits** (lazy) : bouton **🌊 ChiroSurf nuits** → dossier
+- **CSV multi-nuits** (lazy) : bouton **🌊 CSV nuits** → dossier
   `chirosurf/Nuit{n}_…-observations.csv` (nuit biologique, coupure midi)
-  pour ouvrir le CSV dans ChiroSurf ; un `_Vu` déjà produit est reconnu.
+  pour ouvrir le CSV dans le logiciel externe ; un `_Vu` déjà produit est reconnu.
   La synthèse ChiroTool reste à part.
 - **Synthèse** : filtre **proba Tadarida minimale** ; source xlsx ou `_Vu`.
 - Modules `point_selection.py`, `chirosurf_nights.py` (tests unitaires).
@@ -326,7 +325,7 @@ Issue [#3](https://github.com/kevin-guille/ChiroTool/issues/3) (retours terrain)
 
 ### Documentation
 
-- Tutoriel v0.6 (meta/carte FOCUS, ChiroSurf nuits, repair/token, météo
+- Tutoriel v0.6 (meta/carte FOCUS, CSV nuits, repair/token, météo
   optionnelle, FAQ) + PDF régénéré.
 - SPEC, samples issue #3, CONTRIBUTING, README, landing GitHub Pages.
 
@@ -341,7 +340,7 @@ dans une instance.
 - Robustesse / UX **mode batch** (données complémentaires participation,
   template avant lot, journal d'upload).
 - Export multi-nuits compilé (espèces × nuits).
-- Fusion `_Vu` → xlsx (choix produit : la relecture d'un `_Vu` ChiroSurf
+- Fusion `_Vu` → xlsx (choix produit : la relecture d'un `_Vu`
   n'alimente pas l'envoi Vigie-Chiro aujourd'hui).
 - Modes export formalisés Léger / Travail / Complet.
 

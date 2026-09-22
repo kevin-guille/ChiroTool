@@ -1,14 +1,14 @@
-# ChiroTool v0.6.0 : multi-nuits ChiroSurf, carte et reprise fiable
+# ChiroTool v0.6.0 : CSV multi-nuits, carte et reprise fiable
 
 ChiroTool prépare, envoie et suit les enregistrements Vigie-Chiro Point
 Fixe, du dossier brut jusqu'au tableur Tadarida, dans une application libre.
-La validation Vigie-Chiro se fait dans ChiroSurf.
+La validation Vigie-Chiro se fait dans le logiciel externe.
 
 ## ✨ La nouveauté de cette version
 
 La **v0.6** répond à l’[issue #3](https://github.com/kevin-guille/ChiroTool/issues/3)
-(retours terrain) : préparer un CSV par nuit pour l'ouvrir dans ChiroSurf.
-La validation Vigie-Chiro se fait dans ChiroSurf. ChiroTool conserve une
+(retours terrain) : préparer un CSV par nuit pour l'ouvrir dans le logiciel externe.
+La validation Vigie-Chiro se fait dans le logiciel externe. ChiroTool conserve une
 validation contact par contact, distincte de cette procédure.
 
 Elle fiabilise aussi le parcours **point / carte / serveur** : choisir un point
@@ -18,8 +18,8 @@ relancée sur le portail web.
 
 ## 🧰 Ce qui arrive avec cette version
 
-- **ChiroSurf nuits** : dossier `chirosurf/Nuit{n}_…-observations.csv`
-  (nuit biologique, coupure midi) pour ouvrir le CSV dans ChiroSurf ;
+- **CSV nuits** : dossier `chirosurf/Nuit{n}_…-observations.csv`
+  (nuit biologique, coupure midi) pour ouvrir le CSV dans le logiciel externe ;
   un `_Vu` déjà produit est reconnu ; la synthèse ChiroTool reste à part
 - **Vérifier / Réparer** : diagnostic Data_k ↔ serveur, couverture WAV,
   fetch xlsx, alignement des flags, relance Tadarida **avec confirmations**

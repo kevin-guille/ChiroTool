@@ -2,7 +2,7 @@
 gui_validation.py — Vue de validation d'une nuit d'enregistrement.
 
 Ouvre une fenêtre modale dédiée pour une validation contact par contact,
-distincte de la procédure ChiroSurf : tableau filtrable, édition inline,
+distincte de la procédure du logiciel externe : tableau filtrable, édition inline,
 écoute du WAV dans le logiciel externe configuré.
 
 Fonctionnalités :
@@ -69,7 +69,7 @@ CONFIDENCE_VALUES = ("POSSIBLE", "PROBABLE", "SUR")
 
 
 def launch_chirosurf(exe: str | None, target: Path, *, parent=None) -> bool:
-    """Lance ChiroSurf sur un WAV ou un CSV. True si le process a démarré."""
+    """Lance le logiciel externe sur un WAV ou un CSV. True si le process a démarré."""
     target = Path(target)
     if not target.is_file():
         messagebox.showwarning(
@@ -1273,7 +1273,7 @@ class ValidationView(ctk.CTkToplevel):
         self.tree.focus(target)
         self.tree.see(target)
 
-    # -- ChiroSurf ----------------------------------------------------------
+    # Écoute dans le logiciel externe
 
     def _open_in_chirosurf(self):
         sel = self.tree.selection()
@@ -1296,14 +1296,14 @@ class ValidationView(ctk.CTkToplevel):
         launch_chirosurf(self.chirosurf_path, wav_path, parent=self)
 
     def _open_chirosurf_nights_dialog(self):
-        """Issue #4.8 : CSV par nuit → graphes / validation ChiroSurf."""
+        """Issue #4.8 : CSV par nuit → graphes / validation dans le logiciel externe."""
         opener = getattr(self.master, "_open_chirosurf_nights_for_path", None)
         if callable(opener):
             opener(self.session_path)
             return
         messagebox.showinfo(
-            "ChiroSurf nuits",
-            "Revenez à la vue session et cliquez « 🌊 ChiroSurf nuits ».",
+            "CSV nuits",
+            "Revenez à la vue session et cliquez « 🌊 CSV nuits ».",
             parent=self,
         )
 

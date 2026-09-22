@@ -4,9 +4,9 @@ gui_synthesis.py — fenêtre « Synthèse de la nuit ».
 Affiche, pour une nuit, le nombre de contacts par espèce retenue (validation
 observateur si présente, sinon Tadarida) + les totaux, et permet un export CSV
 pour les rapports. S’appuie sur ``synthesis.compute_night_synthesis`` et, pour la
-relecture d’un ``_Vu`` produit dans ChiroSurf, ``compute_mnhn_synthesis``.
+relecture d’un ``_Vu`` produit dans le logiciel externe, ``compute_mnhn_synthesis``.
 Cette relecture est distincte de la procédure de validation Vigie-Chiro,
-réalisée dans ChiroSurf, logiciel tiers optionnel.
+réalisée dans le logiciel externe optionnel.
 """
 
 from __future__ import annotations
@@ -115,7 +115,7 @@ class SynthesisView(ctk.CTkToplevel):
             font=ctk.CTkFont(size=16, weight="bold"), anchor="w",
         ).grid(row=0, column=0, sticky="w")
 
-        # Sélecteur de nuit (multi-nuits bio) : indépendant de ChiroSurf.
+        # Sélecteur de nuit (multi-nuits bio) : indépendant du logiciel externe.
         self.night_row = ctk.CTkFrame(header, fg_color="transparent")
         self.night_row.grid(row=1, column=0, columnspan=3, sticky="w", pady=(6, 0))
         ctk.CTkLabel(
@@ -140,7 +140,7 @@ class SynthesisView(ctk.CTkToplevel):
         ).grid(row=2, column=0, sticky="w", pady=(4, 0))
         self.mnhn_var = ctk.BooleanVar(value=False)
         ctk.CTkCheckBox(
-            header, text="Interprétation _Vu (ChiroSurf)",
+            header, text="Interprétation _Vu",
             variable=self.mnhn_var, command=self._on_mnhn_toggle,
             font=ctk.CTkFont(size=11), checkbox_width=18, checkbox_height=18,
         ).grid(row=3, column=0, sticky="w", pady=(4, 0))
@@ -392,7 +392,7 @@ class SynthesisView(ctk.CTkToplevel):
                         used_xlsx = True
                     parts.append(compute_mnhn_synthesis(h, r, chiros_only=chiros))
                 self.result = merge_night_syntheses(parts)
-                self._source_label = "_Vu ChiroSurf · " + " · ".join(src_bits)
+                self._source_label = "_Vu · " + " · ".join(src_bits)
                 self._mnhn_xlsx_warning = used_xlsx
             else:
                 self.result = compute_mnhn_synthesis(
@@ -509,7 +509,7 @@ class SynthesisView(ctk.CTkToplevel):
         val = res.get("validated_contacts", 0)
         src = getattr(self, "_source_label", "") or ""
         mnhn = res.get("method") == "mnhn"
-        contacts_lbl = ("contacts relus (_Vu ChiroSurf)" if mnhn
+        contacts_lbl = ("contacts relus (_Vu)" if mnhn
                         else "contacts détectés")
         self.count_lbl.configure(text=(
             f"{res.get('total_contacts', 0)} {contacts_lbl}  ·  "
@@ -524,7 +524,7 @@ class SynthesisView(ctk.CTkToplevel):
         if res.get("method") == "mnhn" and getattr(self, "_mnhn_xlsx_warning", False):
             mnhn_warn = (
                 " Source tableur : cette relecture vise un fichier _Vu produit "
-                "dans ChiroSurf. La validation contact par contact dans "
+                "dans le logiciel externe. La validation contact par contact dans "
                 "ChiroTool n'est pas la procédure Vigie-Chiro. "
             )
         mnhn_empty = (
@@ -533,7 +533,7 @@ class SynthesisView(ctk.CTkToplevel):
         if mnhn_empty:
             self.note_lbl.configure(text=(
                 "Aucun contact écouté dans cette source. Rien à relire. "
-                "La validation Vigie-Chiro se fait dans ChiroSurf, qui "
+                "La validation Vigie-Chiro se fait dans le logiciel externe, qui "
                 "produit le _Vu."
                 + mnhn_warn))
         elif self._mixed_nights:
@@ -552,7 +552,7 @@ class SynthesisView(ctk.CTkToplevel):
             prefix = ""
             if res.get("method") == "mnhn":
                 prefix = (
-                    "Relecture d'un fichier _Vu produit dans ChiroSurf "
+                    "Relecture d'un fichier _Vu produit dans le logiciel externe "
                     "(bandes de confiance Tadarida). Ce n'est pas la "
                     "procédure de validation Vigie-Chiro. Une ligne verte = "
                     "au moins un contact écouté. "
@@ -569,7 +569,7 @@ class SynthesisView(ctk.CTkToplevel):
             note = ""
             if res.get("method") == "mnhn":
                 note = (
-                    "Relecture d'un fichier _Vu produit dans ChiroSurf "
+                    "Relecture d'un fichier _Vu produit dans le logiciel externe "
                     "(bandes de confiance Tadarida). Ce n'est pas la "
                     "procédure de validation Vigie-Chiro. Une ligne verte = "
                     "au moins un contact écouté."
@@ -600,7 +600,7 @@ class SynthesisView(ctk.CTkToplevel):
                 # En-tête « propre » : contexte + rappels, avant les données.
                 w.writerow(["Synthèse de nuit", self.session_path.name])
                 if res.get("method") == "mnhn":
-                    w.writerow(["Relecture", "Fichier _Vu produit dans ChiroSurf (bandes de confiance Tadarida)"])
+                    w.writerow(["Relecture", "Fichier _Vu produit dans le logiciel externe (bandes de confiance Tadarida)"])
                     w.writerow(["Contacts retenus", res.get("total_contacts", 0)])
                 else:
                     w.writerow(["Contacts détectés", res.get("total_contacts", 0)])
@@ -610,7 +610,7 @@ class SynthesisView(ctk.CTkToplevel):
                     w.writerow([
                         "Avertissement",
                         "Source tableur : la relecture vise un fichier _Vu "
-                        "produit dans ChiroSurf.",
+                        "produit dans le logiciel externe.",
                     ])
                 w.writerow(["Identifiés (validés)", res.get("validated_contacts", 0)])
                 w.writerow(["Espèces de chiroptères", res.get("richesse_chiros", 0)])
