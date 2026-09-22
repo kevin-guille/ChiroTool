@@ -344,9 +344,8 @@ Distribué sous licence **[MIT](LICENSE)** — usage, modification et redistribu
 
 ## Crédits
 
-- **Auteur** : [Kevin Guille](https://fr.linkedin.com/in/kevin-guille-764b6a150) — chargé d’études naturalistes
-- **Avec le soutien de** : [Acer Campestre](https://www.acer-campestre.fr/)
-  ([LinkedIn](https://fr.linkedin.com/company/acer-campestre))
+- **Auteur** : [Kevin Guille](https://fr.linkedin.com/in/kevin-guille-764b6a150)
+- **Projet** : personnel, développé sur temps personnel
 - **Protocole & API** : [Vigie-Chiro / MNHN](https://www.vigienature.fr/fr/chauves-souris)
 
 ---

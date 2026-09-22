@@ -1254,11 +1254,9 @@ du suivi livrée ; fermeture de l'exe et historique live restent ouverts
 
 **ChiroTool** est un projet **libre et open-source**.
 
-- **Auteur** : GUILLE Kevin — Chargé d'études naturalistes
+- **Auteur** : Kevin Guille
   [LinkedIn](https://fr.linkedin.com/in/kevin-guille-764b6a150)
-- **Avec le soutien de** : [Acer Campestre](https://www.acer-campestre.fr/) —
-  bureau d'études en écologie
-  ([LinkedIn](https://fr.linkedin.com/company/acer-campestre))
+- **Projet** : personnel, développé sur temps personnel
 - **Protocole & API** : [Vigie-Chiro / MNHN](https://www.vigienature.fr/fr/chauves-souris)
 - **Licence** : MIT (usage et contributions libres)
 
