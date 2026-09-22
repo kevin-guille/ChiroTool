@@ -10,6 +10,8 @@
 
 Ce document **prime** sur l’improvisation au codage. En cas de doute : revenir ici, ou amender le §8 avant de coder autre chose.
 
+> Libellés publics (septembre 2026). La procédure de validation Vigie-Chiro se fait dans ChiroSurf. ChiroTool prépare, envoie, suit et archive. La case utilisateur s'appelle « Interprétation _Vu (ChiroSurf) » : c'est la relecture d'un fichier déjà produit dans ChiroSurf, pas une méthode officielle appliquée par ChiroTool. Ne pas l'appeler « méthode MNHN » dans un texte ou un libellé visible. Le calcul interne (`compute_mnhn_synthesis`) ne change pas. L'onglet Activité n'est pas l'évaluation d'activité de ChiroSurf. Le bouton d'écoute d'un WAV s'appelle « Ouvrir le son ».
+
 **Public** : développeurs / mainteneur. Le tutoriel utilisateur (`TUTORIEL.md`) ne reprend les parcours qu’**après** livraison de chaque vague.
 
 ### 0.1 Issue #4 vs v0.8 (ne pas relire le 1er message comme backlog)

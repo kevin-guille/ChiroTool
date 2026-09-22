@@ -38,19 +38,20 @@ décrivant :
 Le batch Préparer (dernières nuits « OK » sans rename) reste **interne** :
 SPEC [`§0.6`](docs/SPEC_v06_parcours.md), pas d'issue GitHub, cible 0.8.2.
 En particulier : **pas plusieurs exe** (mode Batch, D14) ; **Valider puis
-Nettoyer** déjà en 0.7 ; **MNHN 10 % / 75 %** dans la **Synthèse et Activité**
-(v0.8, P8) ; ChiroSurf / `_Vu` déjà en 0.7.1.
+Nettoyer** déjà en 0.7 ; relecture d'un `_Vu` produit dans ChiroSurf dans
+la **Synthèse et Activité** (v0.8, P8, pas la procédure de validation
+Vigie-Chiro) ; CSV pour ouvrir une nuit dans ChiroSurf déjà en 0.7.1.
 
 - **v0.6** : PointSelection, carte pick/FOCUS, Vérifier / Réparer, export USB.
 - **v0.7** : Synthèse autonome, Titley (noms), Valider tri/filtres, Batch,
   plus de scan auto (#5), WAC documenté (#6). **v0.7.1 / 0.7.2** : ChiroSurf
   CSV + `_Vu`, nuit bio midi (D12), barre d'actions glissable.
-- **v0.8.0** : MNHN 10 % / 75 % dans la Synthèse et Activité (P8, issue #7).
+- **v0.8.0** : relecture d'un `_Vu` ChiroSurf dans la Synthèse et Activité (P8, issue #7).
   Exe du 2026-09-08 : upload 409, Afficher le bureau. Correctif Titley TE×10
   (2026-09-09) : WAV > 5 s découpé en entier. **Publiée** GitHub le 2026-09-09
   en pre-release ([v0.8.0](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.0)).
 - **v0.8.1** (2026-09-19) : issues #8 (série / log Titley / T°), #9 (wizard
-  upload), #10 (Activité cache, `_Vu` racine / Data_k, filtres MNHN). Scan
+  upload), #10 (Activité cache, `_Vu` racine / Data_k, filtres de relecture). Scan
   d'un export Data_k-only ; TE×10 conservé après nettoyage. Reprise d'upload
   sans relancer Tadarida si la nuit est déjà analysée. **Publiée** GitHub
   le 2026-09-19 en Latest
@@ -67,7 +68,7 @@ Nettoyer** déjà en 0.7 ; **MNHN 10 % / 75 %** dans la **Synthèse et Activité
 | [`docs/RELEASE_v0.7.2.md`](docs/RELEASE_v0.7.2.md) | Note de release GitHub v0.7.2 (remplacée par 0.8.1) |
 | [`docs/RELEASE_v0.8.0.md`](docs/RELEASE_v0.8.0.md) | Note de pre-release GitHub v0.8.0 (2026-09-09, remplacée par 0.8.1) |
 | [`docs/RELEASE_v0.8.1.md`](docs/RELEASE_v0.8.1.md) | Note de release GitHub v0.8.1 (Latest, 2026-09-19, SHA exe) |
-| [`docs/TUTORIEL.md`](docs/TUTORIEL.md) | Guide utilisateur (pick, Synthèse, ChiroSurf optionnel, repair) |
+| [`docs/TUTORIEL.md`](docs/TUTORIEL.md) | Guide utilisateur (pick, Synthèse, CSV optionnel pour ChiroSurf, repair) |
 | [`docs/ChiroTool-Tutoriel.pdf`](docs/ChiroTool-Tutoriel.pdf) | PDF généré via `python docs/build_pdf.py` |
 | [`samples/issue3_benjamin/`](samples/issue3_benjamin/) | Fixtures CSV multi-nuits + `_Vu` (issue #3) |
 | [`tests/fixtures/titley_log_overnight.csv`](tests/fixtures/titley_log_overnight.csv) | Log Titley de test (CI). Le log terrain `samples/issue4_mickael/` n'est pas versionné. |

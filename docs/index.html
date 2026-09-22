@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
 <title>ChiroTool — Automatiser le traitement Vigie-Chiro Point Fixe (chiroptères)</title>
-<meta name="description" content="ChiroTool v0.8 automatise le traitement des nuits chiroptères Vigie-Chiro Point Fixe (MNHN) : renommage, TE×10, upload, Tadarida, synthèse et graphes d'activité (méthode MNHN 10 % / 75 %), ChiroSurf optionnel, Titley, Vérifier/Réparer, carte, nettoyage sécurisé, validation et registre. Logiciel libre pour bureaux d'études et naturalistes.">
+<meta name="description" content="ChiroTool v0.8 prépare, envoie et suit les nuits Vigie-Chiro Point Fixe (MNHN) : renommage, TE×10, upload, Tadarida, synthèse de campagne, CSV optionnel pour ChiroSurf, Titley, Vérifier/Réparer, carte, nettoyage et registre. La validation Vigie-Chiro se fait dans ChiroSurf. Logiciel libre, pas un outil officiel du MNHN.">
 <meta name="keywords" content="ChiroTool, Vigie-Chiro, Point Fixe, chiroptères, chauves-souris, Tadarida, Kaleidoscope, expansion temporelle, bioacoustique, ultrasons, MNHN, logiciel libre, open source, bureau d'études, Kevin Guille">
 <meta name="author" content="Kevin Guille">
 <link rel="canonical" href="https://kevin-guille.github.io/ChiroTool/">
@@ -14,13 +14,13 @@
 <meta property="og:type" content="website">
 <meta property="og:locale" content="fr_FR">
 <meta property="og:title" content="ChiroTool v0.8 : le traitement Vigie-Chiro Point Fixe automatisé">
-<meta property="og:description" content="Logiciel libre pour naturalistes et BE : renommage, TE×10 (Titley compris), upload, Tadarida, synthèse et graphes (méthode MNHN 10 % / 75 %), ChiroSurf optionnel, Vérifier/Réparer, carte, nettoyage avec garde-fous et registre.">
+<meta property="og:description" content="Logiciel libre pour naturalistes et BE : renommage, TE×10 (Titley compris), upload, Tadarida, synthèse de campagne, CSV optionnel pour ChiroSurf. La validation Vigie-Chiro se fait dans ChiroSurf.">
 <meta property="og:url" content="https://kevin-guille.github.io/ChiroTool/">
 <meta property="og:image" content="https://kevin-guille.github.io/ChiroTool/captures/05-fenetre-principale.png">
 <meta property="og:site_name" content="ChiroTool">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="ChiroTool v0.8 : traitement Vigie-Chiro Point Fixe automatisé">
-<meta name="twitter:description" content="v0.8 : méthode MNHN 10 % / 75 % (Synthèse et Activité), TE×10 Titley intégral. Toute la chaîne Point Fixe en une app locale.">
+<meta name="twitter:description" content="v0.8 : préparation, envoi et suivi des nuits Point Fixe. TE×10 Titley intégral. La validation Vigie-Chiro se fait dans ChiroSurf.">
 <meta name="twitter:image" content="https://kevin-guille.github.io/ChiroTool/captures/05-fenetre-principale.png">
 
 <link rel="icon" type="image/png" href="captures/icon_256.png">
@@ -37,7 +37,7 @@
       "applicationCategory": "ScientificApplication",
       "applicationSubCategory": "Bioacoustique / traitement Vigie-Chiro",
       "softwareVersion": "0.8.1",
-      "description": "Logiciel libre qui automatise le traitement des enregistrements ultrason de chauves-souris pour le protocole Vigie-Chiro Point Fixe (MNHN) : renommage, expansion temporelle TE×10, participation et upload API, suivi Tadarida, synthèse par nuit, méthode MNHN 10 % / 75 % (Synthèse et Activité), ChiroSurf optionnel, Titley Swift/Ranger, Vérifier/Réparer, carte pick/FOCUS, nettoyage avec garde-fous, envoi des identifications, graphes d'activité et registre de campagne.",
+      "description": "Logiciel libre qui prépare, envoie et suit les enregistrements ultrason du protocole Vigie-Chiro Point Fixe (MNHN) : renommage, expansion temporelle TE×10, participation et upload API, suivi Tadarida, synthèse de campagne, CSV optionnel pour ouvrir une nuit dans ChiroSurf, Titley Swift/Ranger, Vérifier/Réparer, carte, nettoyage, registre. La validation Vigie-Chiro se fait dans ChiroSurf. ChiroTool n'est pas un outil officiel du MNHN.",
       "url": "https://kevin-guille.github.io/ChiroTool/",
       "downloadUrl": "https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.1",
       "softwareHelp": "https://kevin-guille.github.io/ChiroTool/ChiroTool-Tutoriel.pdf",
@@ -394,13 +394,14 @@
   <div class="wrap hero-grid">
     <div>
       <div class="pill"><span class="dot"></span> v0.8.1 : Titley, upload unitaire, Activité</div>
-      <h1>Le traitement de vos nuits chiroptères, automatisé de A à Z.</h1>
+      <h1>Préparer, envoyer et suivre vos nuits chiroptères.</h1>
       <p class="tag">Logiciel libre pour le protocole Vigie-Chiro Point Fixe (MNHN).</p>
       <p class="lead">
-        Renommage, expansion temporelle, upload, analyse Tadarida, nettoyage sécurisé,
-        validation et registre&nbsp;: ChiroTool regroupe toute la chaîne dans
-        <strong>une application locale et portable</strong>. Vous gardez la main sur
-        ce qui compte — la validation scientifique des espèces.
+        Renommage, expansion temporelle, upload, suivi Tadarida, nettoyage,
+        synthèse de campagne et registre, dans
+        <strong>une application locale et portable</strong>.
+        La validation Vigie-Chiro se fait dans ChiroSurf, logiciel tiers.
+        ChiroTool n’est pas un outil officiel du MNHN.
       </p>
       <div class="cta">
         <a class="btn lg" href="#telecharger">⬇ Télécharger ChiroTool</a>
@@ -417,7 +418,7 @@
       <div class="hero-shot-wrap">
         <img class="hero-shot" src="captures/05-fenetre-principale.png"
              alt="Fenêtre principale de ChiroTool : liste des nuits et détail de session">
-        <div class="hero-badge">Interface v0.8 · MNHN 10 % / 75 %</div>
+        <div class="hero-badge">Interface v0.8 · préparation et suivi</div>
       </div>
     </div>
   </div>
@@ -427,7 +428,7 @@
   <div class="wrap">
     <div class="section-head">
       <div class="eyebrow">Pourquoi ChiroTool</div>
-      <h2>La corvée du Point Fixe, en une seule application.</h2>
+      <h2>La corvée de fichiers du Point Fixe, dans une application.</h2>
       <p class="lead-c">
         Sur une nuit Point Fixe, le parcours manuel enchaîne renommage, TE×10, portail,
         upload de centaines de WAV, attente Tadarida, tableur et nettoyage.
@@ -462,7 +463,7 @@
           <li>Participation + upload via l’API (reprise)</li>
           <li>Suivi automatique de l’analyse Tadarida</li>
           <li>Nettoyage avec aperçu et garde-fous</li>
-          <li>Validation, graphes, synthèse d’activité</li>
+          <li>Graphes et synthèse de campagne (validation Vigie-Chiro : ChiroSurf)</li>
           <li>Registre multi-sites centralisé</li>
         </ul>
       </div>
@@ -500,20 +501,20 @@
     <div class="banner-v">
       <div>
         <strong>Nouveautés v0.8.1</strong>
-        <span> : participation Titley (série, log, T°, issue #8) ; wizard d’upload visible tout de suite (issue #9) ; Activité en cache, filtres MNHN qui gardent tous les carrés (issue #10). Conservé depuis 0.8.0 : méthode MNHN 10 % / 75 % (Synthèse et Activité, issue #7) ; WAV Titley &gt; 5&nbsp;s découpé en entier (issue #4).</span>
+        <span> : participation Titley (série, log, T°, issue #8) ; wizard d’upload visible tout de suite (issue #9) ; Activité en cache, les autres carrés restent dans les filtres (issue #10). Conservé depuis 0.8.0 : relecture d’un fichier _Vu produit dans ChiroSurf (Synthèse et Activité, issue #7) ; WAV Titley &gt; 5&nbsp;s découpé en entier (issue #4). La validation Vigie-Chiro se fait dans ChiroSurf.</span>
       </div>
       <a class="btn outline sm" href="https://github.com/kevin-guille/ChiroTool/releases">Voir les releases →</a>
     </div>
 
     <div class="section-head">
       <div class="eyebrow">Ce qui change pour vous</div>
-      <h2>Synthèse pour tout le monde. ChiroSurf, si vous l’utilisez.</h2>
+      <h2>Synthèse ChiroTool. Validation dans ChiroSurf, si vous l’utilisez.</h2>
       <p class="lead-c">
-        La <strong>v0.8</strong> reconstitue la <strong>méthode MNHN 10&nbsp;% / 75&nbsp;%</strong>
-        dans la Synthèse et l’onglet Activité (bandes de confiance Tadarida),
-        et découpe les WAV Titley de plus de 5&nbsp;s en entier.
-        La v0.7 distingue <strong>📊 Synthèse</strong> (récap + activité, choix de nuit)
-        et <strong>🌊 ChiroSurf nuits</strong> (CSV pour valider dans ChiroSurf, optionnel).
+        La <strong>v0.8</strong> peut relire un fichier <code>_Vu</code> déjà produit
+        dans ChiroSurf (Synthèse et onglet Activité). Ce n’est pas la procédure
+        de validation Vigie-Chiro. Elle découpe aussi les WAV Titley de plus de 5&nbsp;s
+        en entier. <strong>📊 Synthèse</strong> est le récapitulatif ChiroTool.
+        <strong>🌊 ChiroSurf nuits</strong> prépare un CSV pour l’ouvrir dans ChiroSurf.
       </p>
     </div>
 
@@ -522,14 +523,14 @@
         <div class="ic">📊</div>
         <div>
           <h3>Synthèse par nuit</h3>
-          <p>Récapitulatif et niveaux d’activité. Une pose soir + matin = <strong>une</strong> nuit (coupure midi). Le choix de nuit n’apparaît que s’il y a plusieurs soirs. ChiroSurf n’est pas requis. Après un <code>_Vu</code> : « identifications validées seulement » = contacts écoutés ; « Méthode MNHN 10&nbsp;% / 75&nbsp;% » reconstitue l’interprétation (bandes de confiance Tadarida), aussi dans l’onglet Activité.</p>
+          <p>Récapitulatif ChiroTool et classes d’activité (aide de lecture, pas l’outil d’activité de ChiroSurf). Une pose soir + matin = <strong>une</strong> nuit (coupure midi). Le choix de nuit n’apparaît que s’il y a plusieurs soirs. Après un <code>_Vu</code> : « identifications validées seulement » = contacts écoutés ; « Interprétation _Vu (ChiroSurf) » relit le fichier produit dans ChiroSurf.</p>
         </div>
       </div>
       <div class="news">
         <div class="ic">🌊</div>
         <div>
           <h3>ChiroSurf, optionnel</h3>
-          <p>CSV par nuit biologique (coupure <strong>midi</strong>, jamais minuit) pour valider dans ChiroSurf (méthode 10&nbsp;% / 75&nbsp;%). Distinct de la Synthèse. v0.7.1&nbsp;: CSV à côté des WAV ; <code>_Vu</code> <code>Nuit_1_…</code>. v0.7.2&nbsp;: barre d’actions glissable sur écran classique.</p>
+          <p>CSV par nuit biologique (coupure <strong>midi</strong>, jamais minuit) pour l’ouvrir dans ChiroSurf. La validation se fait dans ChiroSurf. v0.7.1&nbsp;: CSV à côté des WAV ; <code>_Vu</code> <code>Nuit_1_…</code>. v0.7.2&nbsp;: barre d’actions glissable sur écran classique.</p>
         </div>
       </div>
       <div class="news">
@@ -582,9 +583,9 @@
       <div class="f"><div class="ic">🧹</div><h3>Nettoyage par seuils</h3>
         <p>Seuils par groupe (chiros, orthos, micromam, oiseaux), aperçu chiffré et garde-fou mass-delete.</p></div>
       <div class="f"><div class="ic">🔍</div><h3>Validation &amp; envoi</h3>
-        <p>Contacts filtrables, taxons, envoi des identifications vers le portail. ChiroSurf reste optionnel (méthode 10&nbsp;%→75&nbsp;%).</p></div>
+        <p>Validation contact par contact, optionnelle et distincte de la procédure ChiroSurf. Envoi des identifications vers le portail.</p></div>
       <div class="f"><div class="ic">📈</div><h3>Graphes &amp; synthèse</h3>
-        <p>Activité horaire et récap par espèce, avec choix de nuit. Source xlsx ou <code>_Vu</code>. Case Méthode MNHN 10&nbsp;% / 75&nbsp;% (même règle que la Synthèse).</p></div>
+        <p>Activité horaire et récap ChiroTool, avec choix de nuit. Source xlsx ou <code>_Vu</code>. Case « Interprétation _Vu (ChiroSurf) » pour relire un fichier déjà produit dans ChiroSurf.</p></div>
       <div class="f"><div class="ic">🗂️</div><h3>Registre &amp; export USB</h3>
         <p>Suivi multi-sites / multi-contrats, export CSV/xlsx, paquet portable Data_k ± Data pour un collègue.</p></div>
       <div class="f"><div class="ic">🗺️</div><h3>Carte pick &amp; FOCUS</h3>
@@ -607,7 +608,7 @@
       <div class="step"><div class="num">2</div><h3>Upload + Tadarida</h3>
         <p>L'assistant pré-remplit la participation (météo optionnelle). ChiroTool uploade, suit l'analyse et récupère les observations. En cas de coupure&nbsp;: <strong>Vérifier / Réparer</strong> (Tadarida peut partir si les fichiers sont déjà enregistrés).</p></div>
       <div class="step"><div class="num">3</div><h3>Nettoyer &amp; valider</h3>
-        <p>Aperçu des suppressions, synthèse par nuit, validation contact-par-contact, envoi des identifications. ChiroSurf 10&nbsp;%→75&nbsp;% si vous l’utilisez.</p></div>
+        <p>Aperçu des suppressions, synthèse de campagne, validation contact par contact si vous le souhaitez. Pour la procédure Vigie-Chiro, ouvrez la nuit dans ChiroSurf.</p></div>
     </div>
   </div>
 </section>

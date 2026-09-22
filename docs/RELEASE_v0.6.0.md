@@ -1,15 +1,15 @@
 # ChiroTool v0.6.0 : multi-nuits ChiroSurf, carte et reprise fiable
 
-ChiroTool automatise toute la chaîne de traitement des enregistrements
-Vigie-Chiro Point Fixe, du dossier brut jusqu'aux résultats validés, dans une
-seule application libre et gratuite.
+ChiroTool prépare, envoie et suit les enregistrements Vigie-Chiro Point
+Fixe, du dossier brut jusqu'au tableur Tadarida, dans une application libre.
+La validation Vigie-Chiro se fait dans ChiroSurf.
 
 ## ✨ La nouveauté de cette version
 
 La **v0.6** répond à l’[issue #3](https://github.com/kevin-guille/ChiroTool/issues/3)
-(retours terrain, usage LPO / MNHN) : scinder une participation multi-nuits pour
-la **méthode de validation ChiroSurf 10 % → 75 %**, nuit par nuit, tout en
-conservant la validation contact-par-contact déjà présente.
+(retours terrain) : préparer un CSV par nuit pour l'ouvrir dans ChiroSurf.
+La validation Vigie-Chiro se fait dans ChiroSurf. ChiroTool conserve une
+validation contact par contact, distincte de cette procédure.
 
 Elle fiabilise aussi le parcours **point / carte / serveur** : choisir un point
 sur la carte pour les métadonnées, recentrer une nuit sans recharger toute la
@@ -19,7 +19,8 @@ relancée sur le portail web.
 ## 🧰 Ce qui arrive avec cette version
 
 - **ChiroSurf nuits** : dossier `chirosurf/Nuit{n}_…-observations.csv`
-  (nuit biologique, coupure midi) ; import des `_Vu` ; synthèse par nuit
+  (nuit biologique, coupure midi) pour ouvrir le CSV dans ChiroSurf ;
+  un `_Vu` déjà produit est reconnu ; la synthèse ChiroTool reste à part
 - **Vérifier / Réparer** : diagnostic Data_k ↔ serveur, couverture WAV,
   fetch xlsx, alignement des flags, relance Tadarida **avec confirmations**
 - **Pick carte** depuis l’assistant métadonnées (commune, rayon 5 km,

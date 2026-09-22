@@ -1,4 +1,4 @@
-# ChiroTool v0.7.1 (pre-release) : liaison ChiroSurf
+# ChiroTool v0.7.1 (pre-release) : ouvrir un CSV dans ChiroSurf
 
 > **Remplacée par [v0.8.1](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.1)**
 > (Latest). Ne plus tester cet exe. Garder cette pre-release pour
@@ -9,7 +9,7 @@ Correctif ciblé suite au test terrain de
 
 ## 🔧 Corrections
 
-- **▶ ChiroSurf** : le CSV nuit est copié à côté des WAV (`Data_k/`) avant
+- **Ouvrir dans ChiroSurf** : le CSV nuit est copié à côté des WAV (`Data_k/`) avant
   ouverture. ChiroSurf 4.x cherche les sons dans le **même dossier** que le
   tableur ; un CSV isolé dans `chirosurf/` faisait planter le démarrage
   (*no files matched glob pattern*). Sans WAV (nuit déjà nettoyée),
@@ -30,8 +30,9 @@ Tutoriel : [https://kevin-guille.github.io/ChiroTool/](https://kevin-guille.gith
 Outil indépendant, compatible avec le protocole Vigie-Chiro Point Fixe via son
 API publique. Ce n'est pas un outil officiel du MNHN.
 
-Pre-release : merci de confirmer sur une nuit réelle (▶ ChiroSurf ouvre
-sans erreur Tcl, le `_Vu` réapparaît dans ChiroTool après validation).
+Pre-release : merci de confirmer sur une nuit réelle (ouvrir le CSV dans
+ChiroSurf ne plante plus, le `_Vu` produit dans ChiroSurf réapparaît
+dans ChiroTool).
 
 ---
 

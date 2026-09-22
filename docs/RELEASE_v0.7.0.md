@@ -1,8 +1,8 @@
 # ChiroTool v0.7.0 : Synthèse par nuit, Titley, ChiroSurf optionnel
 
-ChiroTool automatise toute la chaîne de traitement des enregistrements
-Vigie-Chiro Point Fixe, du dossier brut jusqu'aux résultats validés, dans une
-seule application libre et gratuite.
+ChiroTool prépare, envoie et suit les enregistrements Vigie-Chiro Point
+Fixe, du dossier brut jusqu'au tableur Tadarida, dans une application libre.
+La validation Vigie-Chiro se fait dans ChiroSurf.
 
 ## ✨ La nouveauté de cette version
 
@@ -11,15 +11,16 @@ La **v0.7** répond aux issues
 [#5](https://github.com/kevin-guille/ChiroTool/issues/5) (démarrage) et
 [#6](https://github.com/kevin-guille/ChiroTool/issues/6) (WAC).
 
-Surtout : **📊 Synthèse** et **🌊 ChiroSurf nuits** sont **complémentaires**.
-Tout le monde utilise la Synthèse (récap + niveaux d'activité, choix de nuit).
-ChiroSurf n'est utile que si vous validez avec la méthode 10 % → 75 %.
+**📊 Synthèse** est le récapitulatif ChiroTool (niveaux d'activité, choix
+de nuit). **🌊 ChiroSurf nuits** prépare un CSV pour ceux qui valident
+dans ChiroSurf. ChiroTool ne fait pas cette validation.
 
 ## 🧰 Ce qui arrive avec cette version
 
-- **Synthèse** : sélecteur de nuit biologique (coupure midi) ; `_Vu` lu s'il
-  existe ; pas besoin de ChiroSurf
-- **ChiroSurf nuits** : ▶ CSV brut, 📈 `_Vu` — optionnel, distinct de Synthèse
+- **Synthèse** : sélecteur de nuit biologique (coupure midi) ; un `_Vu`
+  déjà produit peut être lu ; ChiroSurf n'est pas requis pour ce récap
+- **ChiroSurf nuits** : ouvrir le CSV brut dans ChiroSurf, rouvrir un `_Vu`.
+  Optionnel. La validation se fait dans ChiroSurf.
 - **Titley** Anabat Swift / Ranger (noms usine `YYYY-MM-DD HH-MM-SS`)
 - **Valider** : tri des colonnes, filtres observateur / chiros, bilan `X / Y`
 - **Démarrage** : plus de scan auto du dernier dossier (SSD EXFAT)

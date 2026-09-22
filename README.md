@@ -4,7 +4,7 @@
 
 # ChiroTool
 
-### Le traitement de vos nuits chiroptères, automatisé de A à Z
+### Préparer, envoyer et suivre vos nuits chiroptères
 
 Outil libre pour le protocole **[Vigie-Chiro Point Fixe](https://www.vigienature.fr/fr/chauves-souris)** (MNHN)
 
@@ -29,15 +29,15 @@ Sur une nuit Point Fixe, le parcours manuel est long et fragile :
 
 > renommer → expansion TE×10 → créer la participation → uploader des centaines de WAV → attendre Tadarida → récupérer le xlsx → nettoyer dans un tableur → archiver.
 
-**ChiroTool regroupe toute la chaîne dans une seule application locale et portable**, pensée pour le terrain et le bureau d’études :
+**ChiroTool prépare, envoie et suit les nuits dans une application locale et portable**, pensée pour le terrain et le bureau d’études. La validation Vigie-Chiro se fait dans ChiroSurf.
 
 | Avant | Avec ChiroTool |
 |-------|----------------|
-| 5–6 logiciels / étapes | **1 application** de bout en bout |
+| 5–6 logiciels pour les fichiers | **1 application** pour préparer, envoyer, suivre |
 | Kaleidoscope pour le TE×10 | **TE×10 intégré** (Python, accélération Rust optionnelle) |
 | Upload manuel, fragile | **Upload parallèle + reprise** sur coupure |
 | Nettoyage « à la main » risqué | **Aperçu chiffré + garde-fous** avant toute suppression |
-| Suivi campagne dispersé | **Registre multi-sites**, graphes, carte, validation |
+| Suivi campagne dispersé | **Registre multi-sites**, graphes, carte |
 
 Idéal pour les **bureaux d’études**, **associations** et **observateurs** qui livrent des campagnes Vigie-Chiro fiables, traçables et plus rapides.
 
@@ -56,14 +56,15 @@ remplace la [v0.8.0](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8
 |---|-----------|------------------|
 | 🏷️ | **Participation Titley** | Série, type, micro, horaires et T° du `log_*.csv` envoyés à Vigie-Chiro ([#8](https://github.com/kevin-guille/ChiroTool/issues/8)) |
 | ☁️ | **Upload unitaire** | Assistant visible tout de suite, plus de fenêtre noire sur un gros Data_k ([#9](https://github.com/kevin-guille/ChiroTool/issues/9)) |
-| 📈 | **Activité** | Tableurs en mémoire ; MNHN / chiros sans rescan ; `_Vu` racine et Data_k ; les autres carrés restent ([#10](https://github.com/kevin-guille/ChiroTool/issues/10)) |
+| 📈 | **Activité** | Tableurs en mémoire ; relecture d'un `_Vu` et filtre chiros sans rescan ; `_Vu` racine et Data_k ; les autres carrés restent ([#10](https://github.com/kevin-guille/ChiroTool/issues/10)) |
 | 🔌 | **Suivi d'upload** | Fermer la fenêtre = arrière-plan ; recliquer Upload la rouvre (reste : [#11](https://github.com/kevin-guille/ChiroTool/issues/11)) |
-| 📊 | **Méthode MNHN 10 % / 75 %** (dès 0.8.0) | Bandes de **confiance Tadarida**, Synthèse et Activité ([#7](https://github.com/kevin-guille/ChiroTool/issues/7)) |
+| 📊 | **Relecture d'un `_Vu` ChiroSurf** (dès 0.8.0) | Case dans la Synthèse et l'Activité. Le fichier est produit dans ChiroSurf. Ce n'est pas la validation Vigie-Chiro ([#7](https://github.com/kevin-guille/ChiroTool/issues/7)) |
 | 🏷️ | **Titley TE×10** (dès 0.8.0) | WAV > 5 s découpé **en entier** ([#4](https://github.com/kevin-guille/ChiroTool/issues/4)) |
 
 Après un `_Vu`, « Identifications validées seulement » = contacts **écoutés**.
-« Méthode MNHN 10 % / 75 % » reconstitue l'interprétation (bandes de
-confiance Tadarida), dans la Synthèse **et** l'onglet Activité.
+« Interprétation _Vu (ChiroSurf) » relit ce fichier (bandes de confiance
+Tadarida), dans la Synthèse **et** l'onglet Activité. La validation
+Vigie-Chiro se fait dans ChiroSurf.
 
 Note : [`docs/RELEASE_v0.8.1.md`](docs/RELEASE_v0.8.1.md). Bilan des issues
 [#4](https://github.com/kevin-guille/ChiroTool/issues/4),
@@ -84,8 +85,8 @@ La **v0.7** sépare Synthèse et ChiroSurf, lit les noms Titley, et reprend
 
 | | Nouveauté | Bénéfice terrain |
 |---|-----------|------------------|
-| 📊 | **Synthèse** (xlsx, `_Vu` si présent) | Récap + activité **sans** ChiroSurf. Une pose qui passe minuit = **1** nuit ; menu Nuit seulement s’il y a **plusieurs soirs** |
-| 🌊 | **ChiroSurf nuits** optionnel (▶ brut / 📈 `_Vu`) | CSV pour valider **dans ChiroSurf**. **v0.7.1** : CSV à côté des WAV ; `_Vu` `Nuit_1_…`. **v0.7.2** : barre d’actions glissable |
+| 📊 | **Synthèse** (xlsx, `_Vu` si présent) | Récapitulatif ChiroTool. Une pose qui passe minuit = **1** nuit ; menu Nuit seulement s’il y a **plusieurs soirs** |
+| 🌊 | **ChiroSurf nuits** optionnel | CSV pour ouvrir la nuit **dans ChiroSurf**. La validation s'y fait. **v0.7.1** : CSV à côté des WAV ; `_Vu` `Nuit_1_…`. **v0.7.2** : barre d’actions glissable |
 | 🏷️ | **Titley** Anabat Swift / Ranger | Noms usine lus (la découpe 5 s intégrale est en v0.8) |
 | 🔍 | **Valider** : tri, filtres, bilan `X / Y` | Lecture plus rapide d’une nuit |
 | 📂 | Plus de **scan auto** au démarrage | SSD EXFAT endormi ne fige plus l’UI |
@@ -95,8 +96,8 @@ La **v0.7** sépare Synthèse et ChiroSurf, lit les noms Titley, et reprend
 Synthèse (plus de Nuit 1 / Nuit 2 à minuit). Note :
 [`docs/RELEASE_v0.7.2.md`](docs/RELEASE_v0.7.2.md).
 
-**v0.7.1** : ▶ ChiroSurf copie le CSV à côté des WAV ; `_Vu` `Nuit_1_…`
-reconnus. [`docs/RELEASE_v0.7.1.md`](docs/RELEASE_v0.7.1.md).
+**v0.7.1** : ouvrir le CSV dans ChiroSurf le copie à côté des WAV ; `_Vu`
+`Nuit_1_…` reconnus. [`docs/RELEASE_v0.7.1.md`](docs/RELEASE_v0.7.1.md).
 
 ### v0.6 (rappel)
 
@@ -141,11 +142,11 @@ Vérifier / Réparer, export USB, pick + FOCUS carte, ChiroSurf multi-nuits
 
 ### Après l’analyse
 
-- **Validation des contacts** (raccourcis, tri des colonnes, filtres observateur / chiros, ouverture WAV, envoi des identifications)
+- **Validation contact par contact** (optionnelle, distincte de la procédure ChiroSurf) : raccourcis, tri, filtres, écoute dans un logiciel externe, envoi des identifications
 - **Vue session** : bilan `X / Y` ; **Valider** · **Nettoyer** · **Synthèse**
-- **Synthèse** par espèce + niveaux d’activité (`_Vu` optionnel ; menu Nuit seulement si plusieurs soirs)
-- **ChiroSurf nuits** (optionnel) : scission lazy `chirosurf/Nuit{n}_…csv` ; ▶ brut / 📈 `_Vu`
-- **Graphes d’activité** (chiros seulement, taxons observateur, `_Vu`, méthode MNHN 10 % / 75 %)
+- **Synthèse** de campagne par espèce + classes d'activité ChiroTool (`_Vu` optionnel ; menu Nuit seulement si plusieurs soirs)
+- **ChiroSurf nuits** (optionnel) : CSV `chirosurf/Nuit{n}_…csv` pour l'ouvrir dans ChiroSurf
+- **Graphes d’activité** ChiroTool (chiros seulement, taxons observateur, relecture d'un `_Vu` ChiroSurf)
 - **Registre de campagne** multi-sites (SQLite, export CSV / xlsx)
 - **Export portable de sessions** (clé USB / partage : Data_k ± Data + métadonnées + `chirosurf/` si présent). Sur l'autre poste : ouvrir `ChiroTool_export_…` puis Scanner (pas un sous-dossier `Data_k/`)
 - **Carte OSM** : pick depuis les meta (5 km), FOCUS session, carrés STOC, create/reuse (y compris autre observateur)
