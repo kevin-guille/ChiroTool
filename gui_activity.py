@@ -63,7 +63,7 @@ class ActivityPanel(ctk.CTkFrame):
         # Cache d'agrégation : recalculé sur changement de filtres
         self._aggregated: dict = {}
         # Univers (sans MNHN / chiros / observateur) : listes de filtres
-        # stables quand on coche Méthode MNHN (les autres carrés restent).
+        # stables quand on coche la relecture _Vu (les autres carrés restent).
         self._universe: dict = {}
         self._all_xlsx: list[Path] = []
         self._table_cache = ObservationTableCache()
@@ -132,7 +132,7 @@ class ActivityPanel(ctk.CTkFrame):
         ).grid(row=0, column=3, padx=(0, 8))
         self.mnhn_var = ctk.BooleanVar(value=False)
         ctk.CTkCheckBox(
-            bar, text="Méthode MNHN 10 % / 75 %",
+            bar, text="Interprétation _Vu (ChiroSurf)",
             variable=self.mnhn_var,
             command=self._on_mnhn_toggle,
         ).grid(row=0, column=4, padx=(0, 8))
@@ -543,7 +543,7 @@ class ActivityPanel(ctk.CTkFrame):
         n_xlsx = len(xlsx_paths) - n_vu
         prefix = ""
         if self._use_mnhn:
-            prefix = "MNHN · " if n_vu else "MNHN (xlsx, pas un _Vu) · "
+            prefix = "_Vu ChiroSurf · " if n_vu else "Tableur, pas un _Vu · "
         src = f"{n_vu} _Vu + {n_xlsx} xlsx" if n_vu else f"{n_xlsx} xlsx"
         return (f"{prefix}{src} · {n_nights} nuits · {n_contacts:,} contacts")
 
@@ -1009,7 +1009,7 @@ class ActivityPanel(ctk.CTkFrame):
                 sub_parts.append(f"{len(nights)} nuits ({nights[0]} → {nights[-1]})")
         sub_parts.append(f"tranche : {self._bin_minutes} min")
         if self._use_mnhn:
-            sub_parts.append("méthode MNHN 10 % / 75 %")
+            sub_parts.append("relecture _Vu ChiroSurf")
         if self._only_validated:
             sub_parts.append("validés humains uniquement")
         if self._observer_taxon:

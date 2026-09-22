@@ -1571,9 +1571,9 @@ class ChiroToolApp(ctk.CTk):
         has_obs = find_observations_xlsx(s.path) is not None
         if has_obs:
             _btn("🔍 Valider", lambda: self._open_validation_view(s),
-                 "Validation contact par contact et envoi des identifications "
-                 "vers Vigie-Chiro. ChiroSurf n'est utilisé que pour écouter "
-                 "un WAV (optionnel).", accent="#1f6feb")
+                 "Validation contact par contact dans ChiroTool, distincte "
+                 "de la procédure ChiroSurf. Ouvrir le son lance le logiciel "
+                 "externe (écoute seulement).", accent="#1f6feb")
         # Nettoyer à droite de Valider (issue #4.5) : on identifie d'abord,
         # on purge ensuite. Le bouton reste grisé tant que Tadarida n'a pas
         # rendu le tableur.
@@ -1583,13 +1583,13 @@ class ChiroToolApp(ctk.CTk):
              is_primary=(next_step == "cleanup"), enabled=can_cleanup)
         if has_obs:
             _btn("📊 Synthèse", lambda: self._open_synthesis_view(s),
-                 "Récapitulatif par espèce et niveaux d'activité. "
-                 "Indépendant de ChiroSurf. Si plusieurs nuits, le choix "
-                 "se fait dans la fenêtre.")
+                 "Récapitulatif de campagne par espèce. Si un _Vu ChiroSurf "
+                 "existe, une case permet de le relire. Ce n'est pas la "
+                 "validation Vigie-Chiro.")
             _btn("🌊 ChiroSurf nuits",
                  lambda: self._open_chirosurf_nights_for_path(s.path, s.name),
-                 "Optionnel : CSV par nuit pour la méthode ChiroSurf "
-                 "10 %→75 %. ▶ ChiroSurf ouvre le CSV brut ; 📈 _Vu les graphes.")
+                 "Optionnel : préparer un CSV par nuit pour l'ouvrir dans "
+                 "ChiroSurf. La validation se fait dans ChiroSurf.")
 
         _btn("✎ Métadonnées", lambda: self._edit_meta(s),
              "Modifier les métadonnées de la session (site, point, passage, série…)")
@@ -2391,16 +2391,17 @@ class ChiroToolApp(ctk.CTk):
         dlg.minsize(520, 360)
         bind_modal(dlg, self)
         ctk.CTkLabel(
-            dlg, text="CSV pour ChiroSurf (méthode 10 % → 75 %, optionnel)",
+            dlg, text="Préparer un CSV par nuit pour ChiroSurf (optionnel)",
             font=ctk.CTkFont(size=14, weight="bold"), anchor="w",
         ).pack(fill="x", padx=14, pady=(12, 4))
         ctk.CTkLabel(
-            dlg, text="Coupure à midi (nuit biologique) : le matin du 17 reste "
-                      "la nuit du 16. ▶ ChiroSurf copie le CSV à côté des WAV "
-                      "(Data_k) — ChiroSurf 4.x cherche les sons dans le même "
-                      "dossier que le tableur. Un _Vu produit hors ChiroTool "
-                      "(Nuit_1_…, collé dans chirosurf/ ou Data_k/) est reconnu. "
-                      "Le récapitulatif par espèce, c'est 📊 Synthèse.",
+            dlg, text="La validation Vigie-Chiro se fait dans ChiroSurf, "
+                      "pas dans ChiroTool. Coupure à midi : le matin du 17 "
+                      "reste la nuit du 16. Ouvrir dans ChiroSurf copie le "
+                      "CSV à côté des WAV (Data_k) : ChiroSurf 4.x cherche "
+                      "les sons dans le même dossier que le tableur. Un _Vu "
+                      "déjà produit (Nuit_1_…, chirosurf/ ou Data_k/) est "
+                      "reconnu. Le récapitulatif ChiroTool, c'est Synthèse.",
             font=ctk.CTkFont(size=11), text_color=("gray40", "gray70"),
             wraplength=600, anchor="w", justify="left",
         ).pack(fill="x", padx=14, pady=(0, 8))
@@ -2474,9 +2475,9 @@ class ChiroToolApp(ctk.CTk):
                 if not has or not p.is_file():
                     messagebox.showinfo(
                         "Pas encore de _Vu",
-                        "Ouvrez d'abord le CSV brut dans ChiroSurf et "
-                        "validez (10 %→75 %). Le _Vu apparaît à côté "
-                        "du CSV (dans Data_k/ après ouverture depuis ChiroTool).",
+                        "Ouvrez d'abord le CSV dans ChiroSurf et faites-y "
+                        "la validation. Le _Vu apparaît à côté du CSV "
+                        "(dans Data_k/ après ouverture depuis ChiroTool).",
                         parent=dlg,
                     )
                     return
@@ -2487,7 +2488,7 @@ class ChiroToolApp(ctk.CTk):
             btns = ctk.CTkFrame(row, fg_color="transparent")
             btns.grid(row=1, column=0, sticky="w", padx=8, pady=(0, 8))
             ctk.CTkButton(
-                btns, text="▶ ChiroSurf", width=110, height=28,
+                btns, text="Ouvrir dans ChiroSurf", width=168, height=28,
                 command=_open_raw,
             ).pack(side="left", padx=(0, 4))
             ctk.CTkButton(

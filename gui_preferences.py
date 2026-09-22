@@ -5,7 +5,7 @@ Onglets :
   - Général       : thème, mémoriser le dossier, mises à jour
   - API           : token Vigie-Chiro (save/delete via keyring) + test de validité
   - Nettoyage     : 4 sliders seuils + politique silencieux / taxon inconnu
-  - Outils        : chemin ChiroSurf (ouverture directe depuis la validation)
+  - Outils        : logiciel externe pour écouter un WAV
 """
 
 from __future__ import annotations
@@ -1112,15 +1112,15 @@ class PreferencesDialog(ctk.CTkToplevel):
     def _build_tab_external(self, tab):
         tab.grid_columnconfigure(0, weight=1)
 
-        ctk.CTkLabel(tab, text="ChiroSurf (validation sonogrammes)",
+        ctk.CTkLabel(tab, text="Logiciel externe pour écouter",
                       font=ctk.CTkFont(size=14, weight="bold"),
                       anchor="w").grid(row=0, column=0, sticky="ew",
                                         padx=16, pady=(16, 4))
 
         ctk.CTkLabel(tab, text=(
-            "Logiciel portable recommandé pour la validation acoustique.\n"
-            "Dans « Valider la nuit… », double-clic (ou touche Espace) sur un "
-            "contact → ouverture directe du WAV dans ChiroSurf."),
+            "Chemin vers le programme qui ouvre un WAV, pour écouter un son.\n"
+            "ChiroSurf peut être indiqué ici. L'écoute n'est pas une validation. "
+            "La procédure Vigie-Chiro se fait dans ChiroSurf."),
                       font=ctk.CTkFont(size=11),
                       text_color=("gray30", "gray70"),
                       wraplength=640, justify="left", anchor="w").grid(
@@ -1146,7 +1146,7 @@ class PreferencesDialog(ctk.CTkToplevel):
 
     def _on_browse_chirosurf(self):
         p = filedialog.askopenfilename(
-            title="ChiroSurf.exe",
+            title="Choisir le logiciel externe",
             filetypes=[("Exécutable", "*.exe"), ("Tous fichiers", "*")],
         )
         if p:

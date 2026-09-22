@@ -138,7 +138,7 @@ class SynthesisView(ctk.CTkToplevel):
         ).grid(row=2, column=0, sticky="w", pady=(4, 0))
         self.mnhn_var = ctk.BooleanVar(value=False)
         ctk.CTkCheckBox(
-            header, text="Méthode MNHN 10 % / 75 %",
+            header, text="Interprétation _Vu (ChiroSurf)",
             variable=self.mnhn_var, command=self._on_mnhn_toggle,
             font=ctk.CTkFont(size=11), checkbox_width=18, checkbox_height=18,
         ).grid(row=3, column=0, sticky="w", pady=(4, 0))
@@ -197,7 +197,7 @@ class SynthesisView(ctk.CTkToplevel):
         self.tree.heading("groupe", text="Groupe")
         self.tree.heading("contacts", text="Contacts")
         self.tree.heading("fichiers", text="Fichiers")
-        self.tree.heading("seuil75", text="75 %")
+        self.tree.heading("seuil75", text="Seuil _Vu")
         self.tree.heading("activite", text="Activité")
         self.tree.column("taxon", width=180, anchor="w")
         self.tree.column("groupe", width=120, anchor="w")
@@ -390,7 +390,7 @@ class SynthesisView(ctk.CTkToplevel):
                         used_xlsx = True
                     parts.append(compute_mnhn_synthesis(h, r, chiros_only=chiros))
                 self.result = merge_night_syntheses(parts)
-                self._source_label = "MNHN · " + " · ".join(src_bits)
+                self._source_label = "_Vu ChiroSurf · " + " · ".join(src_bits)
                 self._mnhn_xlsx_warning = used_xlsx
             else:
                 self.result = compute_mnhn_synthesis(
@@ -507,7 +507,7 @@ class SynthesisView(ctk.CTkToplevel):
         val = res.get("validated_contacts", 0)
         src = getattr(self, "_source_label", "") or ""
         mnhn = res.get("method") == "mnhn"
-        contacts_lbl = ("contacts retenus (MNHN 10 % / 75 %)" if mnhn
+        contacts_lbl = ("contacts relus (_Vu ChiroSurf)" if mnhn
                         else "contacts détectés")
         self.count_lbl.configure(text=(
             f"{res.get('total_contacts', 0)} {contacts_lbl}  ·  "
@@ -521,37 +521,39 @@ class SynthesisView(ctk.CTkToplevel):
         mnhn_warn = ""
         if res.get("method") == "mnhn" and getattr(self, "_mnhn_xlsx_warning", False):
             mnhn_warn = (
-                " Source xlsx : la méthode suppose un échantillonnage ChiroSurf "
-                "(bandes de confiance). Une validation contact par contact n'est "
-                "pas le même protocole. "
+                " Source tableur : cette relecture vise un fichier _Vu produit "
+                "dans ChiroSurf. La validation contact par contact dans "
+                "ChiroTool n'est pas la procédure Vigie-Chiro. "
             )
         mnhn_empty = (
             res.get("method") == "mnhn" and not species
         )
         if mnhn_empty:
             self.note_lbl.configure(text=(
-                "Aucun contact écouté dans cette source. La méthode MNHN n'a "
-                "rien à reconstituer. Ouvrez d'abord le CSV dans ChiroSurf "
-                "pour produire un _Vu."
+                "Aucun contact écouté dans cette source. Rien à relire. "
+                "La validation Vigie-Chiro se fait dans ChiroSurf, qui "
+                "produit le _Vu."
                 + mnhn_warn))
         elif self._mixed_nights:
             extra = ""
             if res.get("method") == "mnhn":
-                extra = (" Méthode MNHN calculée nuit par nuit, puis cumulée "
+                extra = (" Relecture calculée nuit par nuit, puis cumulée "
                          "(pas de classe d'activité sur le cumul). Une ligne "
                          "verte = au moins un contact écouté."
                          + mnhn_warn)
             self.note_lbl.configure(text=(
                 "Cumul de plusieurs nuits biologiques : les classes d'activité "
                 "(contacts/nuit) ne s'appliquent pas. Choisissez une nuit dans le "
-                "menu pour l'interprétation. Indépendant de ChiroSurf."
+                "menu."
                 + extra))
         elif has_ref:
             prefix = ""
             if res.get("method") == "mnhn":
                 prefix = (
-                    "Méthode MNHN 10 % / 75 % : bandes de confiance Tadarida "
-                    "(pas le temps). Une ligne verte = au moins un contact écouté. "
+                    "Relecture d'un fichier _Vu produit dans ChiroSurf "
+                    "(bandes de confiance Tadarida). Ce n'est pas la "
+                    "procédure de validation Vigie-Chiro. Une ligne verte = "
+                    "au moins un contact écouté. "
                     + mnhn_warn
                 )
             self.note_lbl.configure(text=(
@@ -565,8 +567,10 @@ class SynthesisView(ctk.CTkToplevel):
             note = ""
             if res.get("method") == "mnhn":
                 note = (
-                    "Méthode MNHN 10 % / 75 % : bandes de confiance Tadarida "
-                    "(pas le temps). Une ligne verte = au moins un contact écouté."
+                    "Relecture d'un fichier _Vu produit dans ChiroSurf "
+                    "(bandes de confiance Tadarida). Ce n'est pas la "
+                    "procédure de validation Vigie-Chiro. Une ligne verte = "
+                    "au moins un contact écouté."
                     + mnhn_warn
                 )
             self.note_lbl.configure(text=note)
@@ -594,7 +598,7 @@ class SynthesisView(ctk.CTkToplevel):
                 # En-tête « propre » : contexte + rappels, avant les données.
                 w.writerow(["Synthèse de nuit", self.session_path.name])
                 if res.get("method") == "mnhn":
-                    w.writerow(["Methode", "MNHN 10 % / 75 % (bandes de confiance Tadarida)"])
+                    w.writerow(["Relecture", "Fichier _Vu produit dans ChiroSurf (bandes de confiance Tadarida)"])
                     w.writerow(["Contacts retenus", res.get("total_contacts", 0)])
                 else:
                     w.writerow(["Contacts détectés", res.get("total_contacts", 0)])
@@ -603,8 +607,8 @@ class SynthesisView(ctk.CTkToplevel):
                         self, "_mnhn_xlsx_warning", False):
                     w.writerow([
                         "Avertissement",
-                        "Source xlsx : la methode suppose un echantillonnage "
-                        "ChiroSurf (bandes de confiance).",
+                        "Source tableur : la relecture vise un fichier _Vu "
+                        "produit dans ChiroSurf.",
                     ])
                 w.writerow(["Identifiés (validés)", res.get("validated_contacts", 0)])
                 w.writerow(["Espèces de chiroptères", res.get("richesse_chiros", 0)])

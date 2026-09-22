@@ -1,9 +1,9 @@
 """
 gui_validation.py — Vue de validation d'une nuit d'enregistrement.
 
-Ouvre une fenêtre modale dédiée pour vérifier les contacts détectés par
-Tadarida sur une session : tableau filtrable, édition inline, ouverture
-directe dans ChiroSurf pour validation acoustique.
+Ouvre une fenêtre modale dédiée pour une validation contact par contact,
+distincte de la procédure ChiroSurf : tableau filtrable, édition inline,
+écoute du WAV dans le logiciel externe configuré.
 
 Fonctionnalités :
   - Chargement de ``participation-*-observations*.xlsx`` de la session
@@ -13,13 +13,13 @@ Fonctionnalités :
     taxon observateur renseigné, seulement patrimoniaux
   - Tri au clic sur les en-têtes (asc / desc / ordre d'origine)
   - Édition inline du contact sélectionné (taxon + confiance)
-  - Bouton "▶ ChiroSurf" par ligne (double-clic aussi)
+  - Bouton "Ouvrir le son" (double-clic aussi) : logiciel externe, écoute seulement
   - Raccourcis clavier :
       ↓/↑   : contact suivant / précédent
       O     : confiance POSSIBLE + taxon = tadarida → suivant
       P     : confiance PROBABLE + taxon = tadarida → suivant
       S     : confiance SUR + taxon = tadarida → suivant
-      Espace: relance ChiroSurf sur le contact courant
+      Espace: rouvre le son dans le logiciel externe
       Suppr : efface la validation du contact courant
       Ctrl+S: enregistre
   - Sauvegarde dans une copie ``*_<initiales>.xlsx`` pour préserver l'original
@@ -80,8 +80,8 @@ def launch_chirosurf(exe: str | None, target: Path, *, parent=None) -> bool:
         return False
     if not exe or not Path(exe).is_file():
         if messagebox.askyesno(
-            "ChiroSurf non configuré",
-            "Le chemin vers ChiroSurf.exe n'est pas configuré.\n"
+            "Logiciel externe non configuré",
+            "Le chemin du logiciel pour écouter un son n'est pas configuré.\n"
             "Ouvrir les préférences ?",
             parent=parent,
         ):
@@ -95,7 +95,7 @@ def launch_chirosurf(exe: str | None, target: Path, *, parent=None) -> bool:
         subprocess.Popen([exe, str(target)], shell=False, close_fds=True)
         return True
     except Exception as e:
-        messagebox.showerror("Échec ouverture ChiroSurf", str(e), parent=parent)
+        messagebox.showerror("Échec ouverture du logiciel", str(e), parent=parent)
         return False
 
 
@@ -554,7 +554,7 @@ class ValidationView(ctk.CTkToplevel):
         ).grid(row=1, column=6, padx=(16, 8), pady=8)
 
         ctk.CTkButton(
-            edit, text="▶ ChiroSurf", width=120, height=30,
+            edit, text="Ouvrir le son", width=120, height=30,
             command=self._open_in_chirosurf,
         ).grid(row=1, column=7, padx=(0, 6), pady=8, sticky="e")
         ctk.CTkButton(
