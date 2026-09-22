@@ -4,7 +4,7 @@ gui_about.py — fenêtre « À propos » de ChiroTool.
 Affiche :
   - Logo + nom + version
   - Description courte
-  - Crédits : auteur, soutien Acer Campestre, protocole Vigie-Chiro/MNHN
+  - Crédits : auteur, projet personnel, protocole Vigie-Chiro/MNHN
   - Licence MIT
   - Liens : GitHub repo, issues, LinkedIn auteur
   - Bouton « Vérifier les mises à jour » (interroge GitHub Releases,
@@ -25,7 +25,6 @@ import customtkinter as ctk
 
 from version import (
     AUTHOR_LINKEDIN, AUTHOR_NAME,
-    EMPLOYER_LINKEDIN, EMPLOYER_NAME, EMPLOYER_URL,
     GITHUB_ISSUES_URL, GITHUB_RELEASES_API, GITHUB_RELEASES_PAGE,
     GITHUB_REPO_URL,
     LICENSE_NAME, LICENSE_URL,
@@ -116,16 +115,14 @@ class AboutDialog(ctk.CTkToplevel):
             link_label="LinkedIn",
         )
 
-        self._section(body, 4, "🏢  Avec le soutien de")
-        self._linked_label(
-            body, 5,
-            text=EMPLOYER_NAME,
-            sub="Bureau d'études en écologie",
-            url=EMPLOYER_URL,
-            link_label="Site web",
-            url2=EMPLOYER_LINKEDIN,
-            link_label2="LinkedIn",
-        )
+        self._section(body, 4, "Projet")
+        ctk.CTkLabel(
+            body,
+            text="Personnel, développé sur temps personnel.",
+            font=ctk.CTkFont(size=11),
+            text_color=("gray25", "gray80"),
+            justify="left", anchor="w", wraplength=500,
+        ).grid(row=5, column=0, sticky="ew", pady=(0, 6))
 
         self._section(body, 6, "📡  Protocole & API")
         self._linked_label(

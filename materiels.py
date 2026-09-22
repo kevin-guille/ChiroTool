@@ -12,8 +12,8 @@ enregistreur / micro. Deux problèmes :
 
   1. Tous les BE ne maintiennent pas un Suivi Excel à jour — ou le Suivi peut
      être sur un partage non accessible au moment du traitement.
-  2. Le numéro 1..27 est un identifiant **interne** au bureau (convention
-     Acer Campestre). Il ne correspond pas à un identifiant Vigie-Chiro :
+  2. Le numéro 1..27 est un identifiant **interne** au parc matériel.
+     Il ne correspond pas à un identifiant Vigie-Chiro :
      seul ce qui finit dans ``configuration.micro0_modele`` côté API est
      "officiel". Il faut donc que le mapping numéro-interne → info-matérielle
      soit fiable et local à l'app.
@@ -63,7 +63,7 @@ class Materiel:
     """Un enregistreur du parc du BE.
 
     ``id`` correspond au numéro interne que l'utilisateur a l'habitude d'écrire
-    dans son Suivi. 1..27 est la plage historique Acer Campestre, mais rien
+    dans son Suivi. 1..27 est une plage historique, mais rien
     n'empêche d'aller au-delà (99 max raisonnable).
     """
 

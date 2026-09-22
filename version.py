@@ -33,12 +33,9 @@ GITHUB_RELEASES_API = "https://api.github.com/repos/kevin-guille/ChiroTool/relea
 GITHUB_RELEASES_PAGE = "https://github.com/kevin-guille/ChiroTool/releases"
 GITHUB_ISSUES_URL = "https://github.com/kevin-guille/ChiroTool/issues"
 
-# Liens contributeurs / soutien
+# Auteur
 AUTHOR_NAME = "GUILLE Kevin"
 AUTHOR_LINKEDIN = "https://fr.linkedin.com/in/kevin-guille-764b6a150"
-EMPLOYER_NAME = "Acer Campestre"
-EMPLOYER_URL = "https://www.acer-campestre.fr/"
-EMPLOYER_LINKEDIN = "https://fr.linkedin.com/company/acer-campestre"
 
 # Protocole et écosystème
 PROTOCOL_NAME = "Vigie-Chiro Point Fixe — MNHN"
