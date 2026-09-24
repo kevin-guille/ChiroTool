@@ -5027,6 +5027,67 @@ class TestPreRelease082:
         assert _pick_te10_mirror(session) == local
         assert analyze_session(session).flag_te10_done is True
 
+    def test_scan_lists_one_mirror_once(self, tmp_path, monkeypatch):
+        import wave
+        import chiro_core
+        from te10 import plan_file, write_segment
+        session = tmp_path / "nuit"
+        raw = session / "Data"
+        raw.mkdir(parents=True)
+        local = session / "Data_k"
+        local.mkdir()
+        wav = raw / "Car220505-2026-Pass2-Z2-669153_20260830_202905.wav"
+        with wave.open(str(wav), "wb") as w:
+            w.setnchannels(1)
+            w.setsampwidth(2)
+            w.setframerate(8000)
+            w.writeframes(b"\x00\x00" * (12 * 8000))
+        for plan in plan_file(wav, local, 10, 5.0):
+            write_segment(plan)
+        calls = []
+        real = chiro_core._top_wav_names
+
+        def wrapped(path):
+            calls.append(Path(path))
+            return real(path)
+
+        monkeypatch.setattr(chiro_core, "_top_wav_names", wrapped)
+        assert chiro_core.analyze_session(session).flag_te10_done is True
+        assert len(calls) == 1
+        assert calls[0] == local
+
+    def test_scan_lists_each_mirror_once_when_two_exist(self, tmp_path, monkeypatch):
+        import wave
+        import chiro_core
+        from te10 import plan_file, write_segment
+        session = tmp_path / "nuit"
+        raw = session / "Data"
+        raw.mkdir(parents=True)
+        local = session / "Data_k"
+        local.mkdir()
+        stub = tmp_path / "Data_k" / "nuit"
+        stub.mkdir(parents=True)
+        (stub / "seul.wav").write_bytes(b"RIFF")
+        wav = raw / "Car220505-2026-Pass2-Z2-669153_20260830_202905.wav"
+        with wave.open(str(wav), "wb") as w:
+            w.setnchannels(1)
+            w.setsampwidth(2)
+            w.setframerate(8000)
+            w.writeframes(b"\x00\x00" * (12 * 8000))
+        for plan in plan_file(wav, local, 10, 5.0):
+            write_segment(plan)
+        calls = []
+        real = chiro_core._top_wav_names
+
+        def wrapped(path):
+            calls.append(Path(path))
+            return real(path)
+
+        monkeypatch.setattr(chiro_core, "_top_wav_names", wrapped)
+        assert chiro_core.analyze_session(session).flag_te10_done is True
+        assert len(calls) == 2
+        assert set(calls) == {local, stub}
+
     def test_public_labels_drop_mnhn_method_name(self):
         root = Path(__file__).resolve().parents[1]
         activity = (root / "gui_activity.py").read_text(encoding="utf-8")

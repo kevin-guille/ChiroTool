@@ -10,6 +10,7 @@ Zéro dépendance hors stdlib (on utilisera openpyxl ailleurs uniquement pour le
 from __future__ import annotations
 
 import csv
+import os
 import re
 import wave
 from dataclasses import dataclass, field, asdict
@@ -1128,40 +1129,70 @@ def resolve_session_root(folder: Path | str) -> Path:
     return parent
 
 
-def _count_top_wavs(p: Path) -> int:
-    """Nombre de WAV directement dans ``p`` (pas les sous-dossiers)."""
-    n = 0
+def _top_wav_names(p: Path) -> set[str]:
+    """Noms de WAV (en minuscules) directement dans ``p``.
+
+    ``os.scandir`` : sur Windows, ``DirEntry.is_file`` ne refait pas un
+    ``stat`` par fichier. Un Data_k de plusieurs milliers de tranches
+    se liste une fois, pas deux.
+    """
+    names: set[str] = set()
     try:
-        for child in p.iterdir():
-            if child.is_file() and child.suffix.lower() == ".wav":
-                n += 1
+        with os.scandir(p) as it:
+            for entry in it:
+                try:
+                    is_file = entry.is_file(follow_symlinks=False)
+                except OSError:
+                    continue
+                if is_file and entry.name.lower().endswith(".wav"):
+                    names.add(entry.name.lower())
     except OSError:
-        return 0
-    return n
+        return set()
+    return names
 
 
-def _pick_te10_mirror(folder: Path) -> Path | None:
-    """Miroir TE×10 le plus fourni.
+def _select_te10_mirror(folder: Path) -> tuple[Path | None, set[str] | None]:
+    """Miroir TE×10 le plus fourni, et ses noms si plusieurs candidats.
 
-    Un dossier campagne ``Data_k/<session>/`` presque vide ne doit pas
-    masquer le ``Data_k/`` local complet. À nombre égal, le dossier local gagne.
+    Un seul dossier : on ne compte pas ici. Le contrôle des tranches
+    lira les noms une fois. Plusieurs dossiers : on compte chacun une
+    fois, et le gagnant est réutilisé sans second passage.
+    À nombre égal, le dossier local gagne.
     """
     candidates = [
         folder.parent / "Data_k" / folder.name,
         folder / "Data_k",
         folder / "1-K",
     ]
-    best: Path | None = None
-    best_key = (-1, -1)
+    present: list[Path] = []
     for mirror in candidates:
-        if not mirror.is_dir() or not _dir_has_wavs(mirror):
+        try:
+            if mirror.is_dir() and _dir_has_wavs(mirror):
+                present.append(mirror)
+        except OSError:
             continue
+    if not present:
+        return None, None
+    if len(present) == 1:
+        return present[0], None
+    best: Path | None = None
+    best_names: set[str] = set()
+    best_key = (-1, -1)
+    for mirror in present:
+        names = _top_wav_names(mirror)
         local = 1 if mirror.parent == folder else 0
-        key = (_count_top_wavs(mirror), local)
+        key = (len(names), local)
         if key > best_key:
             best_key = key
             best = mirror
-    return best
+            best_names = names
+    return best, best_names
+
+
+def _pick_te10_mirror(folder: Path) -> Path | None:
+    """Miroir TE×10 le plus fourni. À nombre égal, le dossier local gagne."""
+    mirror, _names = _select_te10_mirror(folder)
+    return mirror
 
 
 def _dir_has_wavs(p: Path) -> bool:
@@ -1299,21 +1330,27 @@ def _scan_wavs(wav_dir: Path, state: SessionState, sample_wav_for_sr: int = 3) -
         state.looks_time_expanded = te_hits > len(state.sr_samples) / 2
 
 
-def _te10_mirror_incomplete(wav_dir: Path, mirror: Path) -> bool:
+def _te10_mirror_incomplete(
+    wav_dir: Path,
+    mirror: Path,
+    mirror_names: set[str] | None = None,
+) -> bool:
     """True si Data_k n'a pas toutes les tranches de 5 s.
 
     Compare les dest de ``te10.plan_file`` (en-têtes seulement) aux WAV du
     miroir, pour les 3 plus gros bruts. Couvre le trou Titley 0.7.2 (1:1)
     et un découpage partiel (ex. 2/3 d'un WAV de 12 s).
+
+    ``mirror_names`` évite de relire un dossier déjà compté.
     """
     try:
         raws = [p for p in wav_dir.iterdir()
                 if p.is_file() and p.suffix.lower() == ".wav"]
         if not raws:
             return False
-        k_names = {p.name.lower() for p in mirror.iterdir()
-                   if p.is_file() and p.suffix.lower() == ".wav"}
-        if len(k_names) < len(raws):
+        if mirror_names is None:
+            mirror_names = _top_wav_names(mirror)
+        if len(mirror_names) < len(raws):
             return True
         from te10 import plan_file
         largest = sorted(raws, key=lambda p: p.stat().st_size, reverse=True)[:3]
@@ -1323,7 +1360,7 @@ def _te10_mirror_incomplete(wav_dir: Path, mirror: Path) -> bool:
             except (OSError, ValueError, EOFError, wave.Error):
                 return True
             for plan in plans:
-                if plan.dst.name.lower() not in k_names:
+                if plan.dst.name.lower() not in mirror_names:
                     return True
     except OSError:
         return True
@@ -1373,7 +1410,7 @@ def analyze_session(folder: Path, sample_wav_for_sr: int = 3) -> SessionState:
     # Détection du miroir TE×10 :
     #   - sibling au niveau campagne : <campagne>/Data_k/<nom>/
     #   - sous-dossier local         : <session>/Data_k/
-    te10_mirror = _pick_te10_mirror(folder)
+    te10_mirror, mirror_names = _select_te10_mirror(folder)
     if te10_mirror is not None:
         s.has_data_k_mirror = True
 
@@ -1390,7 +1427,7 @@ def analyze_session(folder: Path, sample_wav_for_sr: int = 3) -> SessionState:
     if (not s.flag_cleaned
             and wav_dir is not None and te10_mirror is not None
             and wav_dir.resolve() != te10_mirror.resolve()
-            and _te10_mirror_incomplete(wav_dir, te10_mirror)):
+            and _te10_mirror_incomplete(wav_dir, te10_mirror, mirror_names)):
         s.flag_te10_done = False
 
     # Détection "participation créée côté serveur mais xlsx local absent" :
