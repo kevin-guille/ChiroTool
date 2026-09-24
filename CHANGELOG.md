@@ -11,7 +11,7 @@ Rien en attente au-dessus de la pré-release 0.8.2.
 
 `version.py` = `0.8.2` (build 2026-09-24). **Pré-release** GitHub
 [v0.8.2](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.2)
-(SHA-256 `ED65E5CC9A967144EE5BF984AAE996165108C02CE3376067927FEFD9FACE57D4`).
+(SHA-256 `4BFEDD6DCCC3EAD0C2495C90F8143EB4E592E8F81E7AA7E34296D4A23E7F1114`).
 La Latest reste
 [v0.8.1](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.1)
 tant que cette pré-release n'est pas promue.
@@ -56,10 +56,10 @@ tant que cette pré-release n'est pas promue.
   Suivi. Le fichier Suivi n'est ouvert qu'une fois pour tout le lot.
   Une nuit déjà renommée et déjà expansée n'est pas retraitée.
   Une erreur de lecture du manifest ou du Suivi va dans `chirotool.log`.
-- **Scanner** : un dossier de travail avec un seul `Data_k` par nuit
-  n'est plus relu deux fois pour la pastille d'expansion. S'il y a
-  plusieurs miroirs, chacun est compté une fois. Le plus fourni reste
-  celui qui compte.
+- **Scanner** : la pastille d'expansion ne relit plus tous les fichiers
+  de `Data_k`. Elle contrôle les tranches des trois plus gros bruts.
+  S'il y a plusieurs miroirs, chacun est compté une fois, et le plus
+  fourni reste celui qui compte.
 - **Dossiers déjà en cours** : on remplace seulement l'exe. Manifest,
   registre (schéma inchangé), Suivi Excel, WAV et participations déjà
   créées restent. Un envoi coupé se reprend. Une nuit déjà analysée

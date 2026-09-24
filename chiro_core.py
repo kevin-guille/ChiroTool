@@ -1292,48 +1292,68 @@ def _collect_annexes(folder: Path, state: SessionState) -> None:
         pass
 
 
-def _scan_wavs(wav_dir: Path, state: SessionState, sample_wav_for_sr: int = 3) -> None:
-    wav_files: list[Path] = []
+def _scan_wavs(wav_dir: Path, state: SessionState, sample_wav_for_sr: int = 3) -> list[tuple[Path, int]]:
+    """Liste les WAV du dossier brut. Retourne (chemin, taille) pour le contrôle TE.
+
+    ``os.scandir`` : la taille est déjà dans l'entrée de répertoire Windows,
+    sans un second appel par fichier.
+    """
+    sized: list[tuple[Path, int]] = []
     try:
-        for child in wav_dir.iterdir():
-            if not child.is_file():
-                continue
-            low = child.name.lower()
-            if low.endswith(".wav"):
-                state.n_wav += 1
-                wav_files.append(child)
-                cls = classify_wav_name(child.name)
-                if cls == "vigiechiro":
-                    state.n_wav_vigiechiro += 1
-                    m = VIGIECHIRO_RE.match(child.name)
-                    if m and m.group("suffix"):
-                        state.n_wav_with_000_suffix += 1
-                elif cls == "raw":
-                    state.n_wav_raw += 1
-                else:
-                    state.n_wav_unknown += 1
+        with os.scandir(wav_dir) as it:
+            for entry in it:
                 try:
-                    state.total_bytes += child.stat().st_size
+                    is_file = entry.is_file(follow_symlinks=False)
                 except OSError:
-                    pass
-            elif low.endswith(".w4v"):
-                state.n_w4v += 1
+                    continue
+                if not is_file:
+                    continue
+                low = entry.name.lower()
+                if low.endswith(".wav"):
+                    state.n_wav += 1
+                    try:
+                        size = entry.stat(follow_symlinks=False).st_size
+                    except OSError:
+                        size = 0
+                    sized.append((Path(entry.path), size))
+                    state.total_bytes += size
+                    cls = classify_wav_name(entry.name)
+                    if cls == "vigiechiro":
+                        state.n_wav_vigiechiro += 1
+                        m = VIGIECHIRO_RE.match(entry.name)
+                        if m and m.group("suffix"):
+                            state.n_wav_with_000_suffix += 1
+                    elif cls == "raw":
+                        state.n_wav_raw += 1
+                    else:
+                        state.n_wav_unknown += 1
+                elif low.endswith(".w4v"):
+                    state.n_w4v += 1
     except (OSError, PermissionError):
         pass
 
-    for wav in wav_files[:sample_wav_for_sr]:
+    for wav, _size in sized[:sample_wav_for_sr]:
         info = read_wav_info(wav)
         if info:
             state.sr_samples.append(info.sample_rate)
     if state.sr_samples:
         te_hits = sum(1 for sr in state.sr_samples if sr <= 60_000)
         state.looks_time_expanded = te_hits > len(state.sr_samples) / 2
+    return sized
+
+
+def _mirror_has_slice(mirror: Path, name: str, mirror_names: set[str] | None) -> bool:
+    """Présence d'une tranche, sans relire Data_k si les noms sont déjà connus."""
+    if mirror_names is not None:
+        return name.lower() in mirror_names
+    return (mirror / name).is_file()
 
 
 def _te10_mirror_incomplete(
     wav_dir: Path,
     mirror: Path,
     mirror_names: set[str] | None = None,
+    sized_raws: list[tuple[Path, int]] | None = None,
 ) -> bool:
     """True si Data_k n'a pas toutes les tranches de 5 s.
 
@@ -1341,26 +1361,32 @@ def _te10_mirror_incomplete(
     miroir, pour les 3 plus gros bruts. Couvre le trou Titley 0.7.2 (1:1)
     et un découpage partiel (ex. 2/3 d'un WAV de 12 s).
 
-    ``mirror_names`` évite de relire un dossier déjà compté.
+    ``mirror_names`` évite de relire un dossier déjà compté. Sinon on
+    teste seulement les tranches prévues, pas les milliers de fichiers.
     """
     try:
-        raws = [p for p in wav_dir.iterdir()
-                if p.is_file() and p.suffix.lower() == ".wav"]
-        if not raws:
+        if sized_raws is None:
+            sized_raws = []
+            for child in wav_dir.iterdir():
+                if child.is_file() and child.suffix.lower() == ".wav":
+                    try:
+                        size = child.stat().st_size
+                    except OSError:
+                        size = 0
+                    sized_raws.append((child, size))
+        if not sized_raws:
             return False
-        if mirror_names is None:
-            mirror_names = _top_wav_names(mirror)
-        if len(mirror_names) < len(raws):
+        if mirror_names is not None and len(mirror_names) < len(sized_raws):
             return True
         from te10 import plan_file
-        largest = sorted(raws, key=lambda p: p.stat().st_size, reverse=True)[:3]
+        largest = [p for p, _sz in sorted(sized_raws, key=lambda t: t[1], reverse=True)[:3]]
         for source in largest:
             try:
                 plans = plan_file(source, mirror, 10, 5.0)
             except (OSError, ValueError, EOFError, wave.Error):
                 return True
             for plan in plans:
-                if plan.dst.name.lower() not in mirror_names:
+                if not _mirror_has_slice(mirror, plan.dst.name, mirror_names):
                     return True
     except OSError:
         return True
@@ -1399,8 +1425,9 @@ def analyze_session(folder: Path, sample_wav_for_sr: int = 3) -> SessionState:
     data_k_local = _find_data_k_subdir(folder)
     if wav_dir is None and data_k_local is not None:
         wav_dir = data_k_local
+    sized_raws: list[tuple[Path, int]] = []
     if wav_dir is not None:
-        _scan_wavs(wav_dir, s, sample_wav_for_sr=sample_wav_for_sr)
+        sized_raws = _scan_wavs(wav_dir, s, sample_wav_for_sr=sample_wav_for_sr)
 
     # Annexes : on regarde la racine de la session et le dossier WAV
     _collect_annexes(folder, s)
@@ -1427,7 +1454,8 @@ def analyze_session(folder: Path, sample_wav_for_sr: int = 3) -> SessionState:
     if (not s.flag_cleaned
             and wav_dir is not None and te10_mirror is not None
             and wav_dir.resolve() != te10_mirror.resolve()
-            and _te10_mirror_incomplete(wav_dir, te10_mirror, mirror_names)):
+            and _te10_mirror_incomplete(
+                wav_dir, te10_mirror, mirror_names, sized_raws)):
         s.flag_te10_done = False
 
     # Détection "participation créée côté serveur mais xlsx local absent" :

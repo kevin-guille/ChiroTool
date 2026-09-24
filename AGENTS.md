@@ -44,7 +44,7 @@ dans un texte lu par un humain. Voix « je » sur le contenu public.
 - Stable publiée : tag GitHub Latest `v0.8.1` (exe du 2026-09-19).
 - Pré-release locale : `version.py` = 0.8.2, build 2026-09-24, exe
   `dist/ChiroTool.exe` (SHA-256
-  `ED65E5CC9A967144EE5BF984AAE996165108C02CE3376067927FEFD9FACE57D4`).
+  `4BFEDD6DCCC3EAD0C2495C90F8143EB4E592E8F81E7AA7E34296D4A23E7F1114`).
   Ce n'est pas la Latest tant que Kevin ne promeut pas la pré-release.
 - Remplacer l'exe ne migre pas les dossiers déjà en cours. Schéma du
   registre : version 3, inchangé depuis 0.8.1. `feed_from_scan` met à jour

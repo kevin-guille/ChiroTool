@@ -5053,8 +5053,7 @@ class TestPreRelease082:
 
         monkeypatch.setattr(chiro_core, "_top_wav_names", wrapped)
         assert chiro_core.analyze_session(session).flag_te10_done is True
-        assert len(calls) == 1
-        assert calls[0] == local
+        assert calls == []
 
     def test_scan_lists_each_mirror_once_when_two_exist(self, tmp_path, monkeypatch):
         import wave
