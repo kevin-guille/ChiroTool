@@ -1083,10 +1083,11 @@ Ce n'est pas la peine de relancer l'analyse : les fichiers y sont déjà.
 
 **« Après un export ou un nettoyage, la pastille reste jaune et Préparer ressort, alors que Vérifier / Réparer dit que tout est bon. »**
 Les WAV bruts (souvent 384 kHz) sont encore dans le dossier, et `Data_k/`
-a été purgé. L'ancien contrôle Titley prenait ce sous-ensemble pour un
-TE×10 incomplet. À partir de **0.8.1**, si `_stats_before_cleanup.json`
-est là, TE×10 reste coché et la pastille passe au vert. **Scanner**
-suffit, sans relancer Préparer.
+a été purgé. À partir de **0.8.1**, si `_stats_before_cleanup.json`
+est là, TE×10 reste coché. À partir de **0.8.2**, un `Data_k` déjà
+rempli n'est plus affiché comme incomplet s'il manque des tranches
+de 5 s. La pastille, Upload, Vérifier / Réparer et Valider ne
+demandent pas de relancer Préparer pour ça. **Scanner** suffit.
 
 **« Vérifier / Réparer propose de tout re-uploader. »**
 Vérifiez d'abord le **token** (401 = expiré → Préférences → API). Avec un bon
@@ -1224,7 +1225,7 @@ ChiroTool couvre la grande majorité des cas, mais pas (encore) tout :
 | **Upload / Réparer** | Coupure réseau : code 409 = déjà enregistré, Tadarida peut partir. **Vérifier / Réparer** lance l'analyse si le listing portail échoue ; 0 contact → renvoyer Data_k. **v0.8.1** : wizard d'upload visible tout de suite (issue #9) ; fermer la fenêtre = arrière-plan, recliquer Upload la rouvre. **v0.8.2** : fermer cette fenêtre ne fige plus l'application ; fermer ChiroTool pendant un envoi demande confirmation ; si le portail dit la nuit déjà analysée, les WAV ne sont plus comparés un par un |
 | **Participation Titley** | **v0.8.1** (issue #8) : n° de série, type, micro, horaires et T° du `log_*.csv` envoyés à Vigie-Chiro |
 | **Export USB** | **v0.8.1** : un scan d'un paquet Data_k-only retrouve la session (plus le dossier `Data_k/` lui-même). Excel, Summary et ID participation réapparaissent. Ouvrir `ChiroTool_export_…`, pas `Data_k` |
-| **Pastille / TE×10** | **v0.8.1** : après nettoyage, Data_k plus petit que les bruts ne recule plus TE×10 (pastille verte, plus de Préparer en faux « next ») |
+| **Pastille / TE×10** | **v0.8.1** : après nettoyage, Data_k plus petit que les bruts ne recule plus TE×10. **v0.8.2** : un Data_k déjà rempli n'est plus « incomplet » s'il manque des tranches de 5 s. Upload, Vérifier / Réparer et Valider restent disponibles |
 | **Fenêtres** | Après **Afficher le bureau** (Win+D), recliquer ChiroTool ramène la progression. Plus besoin de tuer le process |
 | **Dates** | WAV font foi si Summary cumulé |
 | **SM2** | `.wac` / `.w4v` : conversion Kaleidoscope Lite en amont (issue #6) |

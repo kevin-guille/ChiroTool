@@ -153,8 +153,9 @@ def verify_te10(session: Path, expected_factor: int = 10,
       1. Un dossier Data_k/ existe avec des WAV
       2. Les WAV ont un nom Vigie-Chiro avec suffixe ``_NNN``
       3. Sur un échantillon, le sample rate est ≤ 60 kHz (= TE appliqué)
-      4. Chaque source a son premier segment ; toutes les tranches sont
-         présentes pour les sources échantillonnées
+      4. Chaque source a son premier segment. Les tranches suivantes
+         ne font pas échouer la vérification : une nuit déjà préparée
+         ou nettoyée ne doit pas ressortir incomplète.
     """
     r = VerifyResult(verdict="PASS", phase="te10")
 
@@ -259,30 +260,6 @@ def verify_te10(session: Path, expected_factor: int = 10,
         elif n_raws:
             r.add(True,
                   f"couverture par source OK ({n_raws} raws → chacun a ≥1 segment)")
-
-        # En-têtes seulement. On prend les plus gros fichiers d'abord : proxy
-        # des WAV > 5 s (le trou Titley est invisible sur un SM4 déjà en 5 s).
-        from te10 import plan_file
-        sample = sorted(raws, key=lambda p: p.stat().st_size, reverse=True)
-        sample = sample[:max(1, min(n_raws, sample_size))]
-        missing_segments = []
-        unreadable = []
-        for source in sample:
-            try:
-                plans = plan_file(source, data_k, expected_factor, 5.0)
-                missing_segments.extend(p.dst.name for p in plans
-                                        if p.dst.name not in seg_names)
-            except (wave.Error, OSError, EOFError, ValueError) as exc:
-                unreadable.append(f"{source.name}: {exc}")
-        r.stats["sources_sampled"] = len(sample)
-        r.stats["missing_planned_segments"] = len(missing_segments)
-        if missing_segments or unreadable:
-            r.add(False, f"tranches attendues absentes: {len(missing_segments)}; "
-                  f"sources illisibles: {len(unreadable)}; "
-                  + ", ".join((missing_segments + unreadable)[:3]))
-            r.verdict = "FAIL"
-        elif sample:
-            r.add(True, f"toutes les tranches présentes pour {len(sample)} sources échantillonnées")
 
     return r
 

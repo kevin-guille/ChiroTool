@@ -52,7 +52,7 @@ Idéal pour les **bureaux d’études**, **associations** et **observateurs** qu
 
 La **pré-release v0.8.2** (2026-09-24,
 [tag v0.8.2](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.2),
-SHA-256 `4BFEDD6DCCC3EAD0C2495C90F8143EB4E592E8F81E7AA7E34296D4A23E7F1114`)
+SHA-256 `5106C7F58CFE1741962454FF1EC1F218B123805328EC65002567E44BD5AB7CEB`)
 s'installe à la place de l'exe. La **Latest** reste la
 [v0.8.1](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.1)
 tant que cette pré-release n'est pas promue.

@@ -128,7 +128,7 @@ Pas de `trigger_compute` si l'état est PLANIFIE, EN_COURS, TERMINE ou FINI.
 | #14 Diagnostic long | Si le portail dit la nuit déjà analysée, pas de listing des WAV : téléchargement du tableur s'il manque. Sinon le statut affiche la page. « à reprendre » = tableur absent. Le miroir TE retenu est le dossier le plus fourni. |
 | #12 Graphe Activité vide | Si les taxons cochés ne sont pas dans la vue, les plus présents de cette vue sont cochés (Top 5 compris). Case « Interprétation _Vu ». Même libellé « Identifications validées seulement » qu'en Synthèse. |
 | Libellés | Plus de case « Méthode MNHN ». Le message sans WAV ne dit plus « ChiroSurf exige ». |
-| Dossiers déjà en cours | Pas de migration. Manifest, registre (schéma 3), Suivi Excel, WAV et participations restent. Scan : mêmes pastilles qu'en 0.8.1. Nuit déjà renommée et expansée : non refaite. État TERMINE ou FINI : pas de listing WAV, pas de `trigger_compute`. |
+| Dossiers déjà en cours | Pas de migration. Manifest, registre (schéma 3), Suivi Excel, WAV et participations restent. Un `Data_k` déjà présent ne ressort pas « incomplet » s'il manque des tranches de 5 s. Nuit déjà renommée et expansée : non refaite. État TERMINE ou FINI : pas de listing WAV, pas de `trigger_compute`. |
 
 ---
 

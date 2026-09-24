@@ -2127,7 +2127,7 @@ class TestTitleyNaming:
             assert {p.name for p in dst.glob("*.wav")} == expected
 
     @pytest.mark.parametrize("duration", [5, 12, 15])
-    def test_verify_te10_requires_later_segments(self, tmp_path, duration):
+    def test_verify_te10_first_segment_is_enough(self, tmp_path, duration):
         from te10 import plan_file, write_segment
         from verify import verify_te10
         raw = tmp_path / "Data"
@@ -2139,11 +2139,8 @@ class TestTitleyNaming:
         plans = plan_file(wav, dst, 10, 5.0)
         write_segment(plans[0])
         result = verify_te10(tmp_path)
-        assert result.verdict == ("PASS" if duration == 5 else "FAIL")
-        assert result.stats["missing_planned_segments"] == len(plans) - 1
-        for plan in plans[1:]:
-            write_segment(plan)
-        assert verify_te10(tmp_path).ok
+        assert result.ok
+        assert result.stats["sources_sans_segment"] == 0
 
     @pytest.mark.parametrize("raw_subdir", ["", "Data", "wavs"])
     def test_session_te10_mirror_coverage(self, tmp_path, raw_subdir):
@@ -2158,10 +2155,6 @@ class TestTitleyNaming:
         plans = plan_file(wav, dst, 10, 5.0)
         assert len(plans) == 3
         write_segment(plans[0])
-        assert analyze_session(tmp_path).flag_te10_done is False
-        write_segment(plans[1])
-        assert analyze_session(tmp_path).flag_te10_done is False
-        write_segment(plans[2])
         state = analyze_session(tmp_path)
         assert state.has_data_k_mirror
         assert state.flag_te10_done is True
@@ -2202,9 +2195,10 @@ class TestTitleyNaming:
             calls.append(Path(src).name)
             return real(src, out, factor, segment_s)
         monkeypatch.setattr("te10.plan_file", wrapped)
-        assert not chiro_core.analyze_session(tmp_path, sample_wav_for_sr=0).flag_te10_done
-        assert 1 <= len(calls) <= 3
-        assert calls[0] == "raw9.wav"
+        state = chiro_core.analyze_session(tmp_path, sample_wav_for_sr=0)
+        assert state.has_data_k_mirror
+        assert state.flag_te10_done is True
+        assert calls == []
 
     def test_plan_file_titley_15s_distinct_names(self, tmp_path):
         """Défense TE×10 : même sans rename, les 3 tranches ont des noms distincts."""

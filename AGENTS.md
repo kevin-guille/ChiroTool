@@ -44,7 +44,7 @@ dans un texte lu par un humain. Voix « je » sur le contenu public.
 - Stable publiée : tag GitHub Latest `v0.8.1` (exe du 2026-09-19).
 - Pré-release locale : `version.py` = 0.8.2, build 2026-09-24, exe
   `dist/ChiroTool.exe` (SHA-256
-  `4BFEDD6DCCC3EAD0C2495C90F8143EB4E592E8F81E7AA7E34296D4A23E7F1114`).
+  `5106C7F58CFE1741962454FF1EC1F218B123805328EC65002567E44BD5AB7CEB`).
   Ce n'est pas la Latest tant que Kevin ne promeut pas la pré-release.
 - Remplacer l'exe ne migre pas les dossiers déjà en cours. Schéma du
   registre : version 3, inchangé depuis 0.8.1. `feed_from_scan` met à jour
@@ -73,7 +73,7 @@ Ouvertes au 2026-09-24, sans opposition au cadre ChiroSurf :
 | #11 | Suivi d'upload. Après fermeture du suivi batch, l'interface ne recevait plus les clics. | **0.8.2** : `grab_release`, dialogue batch enregistré, confirmation à la fermeture de l'exe, historique rafraîchi toutes les 4 s. |
 | #12 | Activité : graphe vide alors que les fichiers sont lus. Case « Méthode MNHN » dans l'exe 0.8.1. | **0.8.2** : message si les taxons cochés ne sont pas dans la sélection. Calcul inchangé. Case « Interprétation _Vu ». |
 | #13 | « Choisir sur la carte » disait « Onglet Carte indisponible ». | **0.8.2** : le wizard remonte jusqu'à la fenêtre qui a `map_panel`. |
-| #14 | Vérifier / Réparer listait tous les WAV sur une nuit déjà analysée. | **0.8.2** : si l'état est TERMINE ou FINI, pas de listing portail. Tableur manquant téléchargé. Miroir le plus fourni. Contrôle des 3 plus gros bruts inchangé. Pas de `trigger_compute` si déjà analysé. |
+| #14 | Vérifier / Réparer listait tous les WAV sur une nuit déjà analysée. | **0.8.2** : si l'état est TERMINE ou FINI, pas de listing portail. Tableur manquant téléchargé. Miroir le plus fourni. Un Data_k déjà rempli n'est plus « incomplet » s'il manque des tranches de 5 s. Pas de `trigger_compute` si déjà analysé. |
 
 Batch Préparer (SPEC §0.6, pas d'issue GitHub, exe 0.8.2) : une nuit
 ignorée n'est pas un succès. Log Titley : pas de listing WAV, horaire

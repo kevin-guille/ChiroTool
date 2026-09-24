@@ -3,7 +3,7 @@
 > **Pré-release GitHub** (2026-09-24) :
 > [v0.8.2](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.2).
 > SHA-256 de l'asset `ChiroTool.exe` :
-> `4BFEDD6DCCC3EAD0C2495C90F8143EB4E592E8F81E7AA7E34296D4A23E7F1114`.
+> `5106C7F58CFE1741962454FF1EC1F218B123805328EC65002567E44BD5AB7CEB`.
 > La Latest reste
 > [v0.8.1](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.1)
 > tant que cette pré-release n'est pas promue.
@@ -60,6 +60,9 @@ et les participations Vigie-Chiro déjà créées restent tels quels.
 - **📈 Activité** (issue #12) : une nuit dont les espèces ne sont pas
   dans la sélection globale affiche ces espèces. La case s'appelle
   « Interprétation _Vu ». Le calcul de relecture ne change pas.
+- **Pastille** : un `Data_k` déjà rempli n'est plus « incomplet »
+  parce qu'il manque des tranches de 5 s. Upload, Vérifier / Réparer
+  et Valider ne demandent pas de relancer Préparer pour ça.
 - **▶ Batch Préparer** : une nuit ignorée (métadonnées incomplètes) n'est
   plus comptée comme un succès. Un log Titley donne l'horaire sans
   lister tous les WAV. Une nuit déjà préparée n'est pas refaite.

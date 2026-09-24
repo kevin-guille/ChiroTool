@@ -1342,57 +1342,6 @@ def _scan_wavs(wav_dir: Path, state: SessionState, sample_wav_for_sr: int = 3) -
     return sized
 
 
-def _mirror_has_slice(mirror: Path, name: str, mirror_names: set[str] | None) -> bool:
-    """Présence d'une tranche, sans relire Data_k si les noms sont déjà connus."""
-    if mirror_names is not None:
-        return name.lower() in mirror_names
-    return (mirror / name).is_file()
-
-
-def _te10_mirror_incomplete(
-    wav_dir: Path,
-    mirror: Path,
-    mirror_names: set[str] | None = None,
-    sized_raws: list[tuple[Path, int]] | None = None,
-) -> bool:
-    """True si Data_k n'a pas toutes les tranches de 5 s.
-
-    Compare les dest de ``te10.plan_file`` (en-têtes seulement) aux WAV du
-    miroir, pour les 3 plus gros bruts. Couvre le trou Titley 0.7.2 (1:1)
-    et un découpage partiel (ex. 2/3 d'un WAV de 12 s).
-
-    ``mirror_names`` évite de relire un dossier déjà compté. Sinon on
-    teste seulement les tranches prévues, pas les milliers de fichiers.
-    """
-    try:
-        if sized_raws is None:
-            sized_raws = []
-            for child in wav_dir.iterdir():
-                if child.is_file() and child.suffix.lower() == ".wav":
-                    try:
-                        size = child.stat().st_size
-                    except OSError:
-                        size = 0
-                    sized_raws.append((child, size))
-        if not sized_raws:
-            return False
-        if mirror_names is not None and len(mirror_names) < len(sized_raws):
-            return True
-        from te10 import plan_file
-        largest = [p for p, _sz in sorted(sized_raws, key=lambda t: t[1], reverse=True)[:3]]
-        for source in largest:
-            try:
-                plans = plan_file(source, mirror, 10, 5.0)
-            except (OSError, ValueError, EOFError, wave.Error):
-                return True
-            for plan in plans:
-                if not _mirror_has_slice(mirror, plan.dst.name, mirror_names):
-                    return True
-    except OSError:
-        return True
-    return False
-
-
 def analyze_session(folder: Path, sample_wav_for_sr: int = 3) -> SessionState:
     """
     Inspecte un dossier de session et renvoie son état.
@@ -1425,9 +1374,8 @@ def analyze_session(folder: Path, sample_wav_for_sr: int = 3) -> SessionState:
     data_k_local = _find_data_k_subdir(folder)
     if wav_dir is None and data_k_local is not None:
         wav_dir = data_k_local
-    sized_raws: list[tuple[Path, int]] = []
     if wav_dir is not None:
-        sized_raws = _scan_wavs(wav_dir, s, sample_wav_for_sr=sample_wav_for_sr)
+        _scan_wavs(wav_dir, s, sample_wav_for_sr=sample_wav_for_sr)
 
     # Annexes : on regarde la racine de la session et le dossier WAV
     _collect_annexes(folder, s)
@@ -1437,26 +1385,20 @@ def analyze_session(folder: Path, sample_wav_for_sr: int = 3) -> SessionState:
     # Détection du miroir TE×10 :
     #   - sibling au niveau campagne : <campagne>/Data_k/<nom>/
     #   - sous-dossier local         : <session>/Data_k/
-    te10_mirror, mirror_names = _select_te10_mirror(folder)
+    te10_mirror, _mirror_names = _select_te10_mirror(folder)
     if te10_mirror is not None:
         s.has_data_k_mirror = True
 
-    # Drapeaux haut niveau
+    # Drapeaux haut niveau.
+    # Un Data_k déjà présent compte comme expansion faite. On ne recule
+    # pas la pastille si des tranches de 5 s manquent : une nuit nettoyée
+    # ou préparée avec l'ancienne expansion ne doit pas ressortir
+    # « Data_k incomplet », ni bloquer Upload, Vérifier / Réparer ou Valider.
     s.flag_renamed = s.n_wav > 0 and s.n_wav_vigiechiro >= s.n_wav_raw and s.n_wav_vigiechiro > 0
     s.flag_te10_done = s.looks_time_expanded is True or s.has_data_k_mirror or s.n_wav_with_000_suffix > 0
     s.flag_analyzed = s.has_observations_xlsx
     s.flag_cleaned = s.has_stats_snapshot
     s.flag_uploaded_hint = s.flag_analyzed
-    # Contrôle Titley (Data_k incomplet vs bruts) : seulement tant que le
-    # nettoyage n'a pas eu lieu. Après cleanup, Data_k est un sous-ensemble
-    # volontaire (contacts sous seuil purgés) : 783 k vs 895 bruts n'est
-    # PAS un TE×10 raté, sinon la pastille reste jaune et Préparer ressort.
-    if (not s.flag_cleaned
-            and wav_dir is not None and te10_mirror is not None
-            and wav_dir.resolve() != te10_mirror.resolve()
-            and _te10_mirror_incomplete(
-                wav_dir, te10_mirror, mirror_names, sized_raws)):
-        s.flag_te10_done = False
 
     # Détection "participation créée côté serveur mais xlsx local absent" :
     # le manifest a un vigiechiro_participation_id mais on n'a pas trouvé
