@@ -3318,6 +3318,7 @@ class _FakeRepairClient:
         self.probe_calls = []
         self.trigger_calls = 0
         self.fetch_calls = 0
+        self.list_calls = 0
         self.edit_calls = []
 
     def participation_status(self, participation_id: str) -> dict:
@@ -3325,7 +3326,8 @@ class _FakeRepairClient:
             raise RuntimeError("status boom")
         return {"id": participation_id, "etat": self.etat, "date": None, "has_bilan": False}
 
-    def list_participation_files(self, participation_id: str) -> list[str]:
+    def list_participation_files(self, participation_id: str, progress=None) -> list[str]:
+        self.list_calls += 1
         if self.fail_list:
             raise RuntimeError("list boom")
         return list(self.files)
@@ -3410,10 +3412,10 @@ class TestDiagnoseAndRepairSession:
         report = diagnose_and_repair_session(
             session, token=None, apply=False, client=client,
         )
-        assert report["listing_ok"] is False
+        assert client.list_calls == 0
+        assert report["coverage_skipped"] is True
         assert ACTION_RESUME_UPLOAD not in report["suggested_actions"]
-        assert any("re-uploader" in n or "listing" in n.lower()
-                   for n in (report.get("notes") or []))
+        assert any("déjà analysée" in n for n in (report.get("notes") or []))
 
     def test_dry_run_no_file_modification(self, tmp_path):
         from repair import diagnose_and_repair_session
@@ -3523,6 +3525,7 @@ class TestDiagnoseAndRepairSession:
         assert "fetch_xlsx" in report["suggested_actions"]
         assert "fetch_xlsx" in report["applied_actions"]
         assert client.fetch_calls == 1
+        assert client.list_calls == 0
         assert report["has_xlsx"] is True
         xlsx = session / "participation-pid123-observations.xlsx"
         assert xlsx.is_file()
@@ -4825,6 +4828,35 @@ class TestPreRelease082:
         )
         assert "taxons cochés" in msg
         assert "liste à gauche" in msg
+
+    def test_align_taxon_selection_fills_empty_view(self):
+        from activity_graph import align_taxon_selection
+        ranked = [("(4996)", 4000), ("Pipip", 4)]
+        assert align_taxon_selection({"Nyctal", "Pippip"}, ranked) == {"(4996)", "Pipip"}
+        assert align_taxon_selection({"Pipip"}, ranked) == {"Pipip"}
+
+    def test_pick_fuller_local_mirror(self, tmp_path):
+        import wave
+        from chiro_core import _pick_te10_mirror, analyze_session
+        from te10 import plan_file, write_segment
+        session = tmp_path / "nuit"
+        raw = session / "Data"
+        raw.mkdir(parents=True)
+        local = session / "Data_k"
+        local.mkdir()
+        stub = tmp_path / "Data_k" / "nuit"
+        stub.mkdir(parents=True)
+        (stub / "seul.wav").write_bytes(b"RIFF")
+        wav = raw / "Car220505-2026-Pass2-Z2-669153_20260830_202905.wav"
+        with wave.open(str(wav), "wb") as w:
+            w.setnchannels(1)
+            w.setsampwidth(2)
+            w.setframerate(8000)
+            w.writeframes(b"\x00\x00" * (12 * 8000))
+        for plan in plan_file(wav, local, 10, 5.0):
+            write_segment(plan)
+        assert _pick_te10_mirror(session) == local
+        assert analyze_session(session).flag_te10_done is True
 
     def test_public_labels_drop_mnhn_method_name(self):
         root = Path(__file__).resolve().parents[1]

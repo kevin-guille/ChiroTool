@@ -14,7 +14,7 @@ qui ouvre encore le Suivi à chaque nuit du batch (SPEC §0.6, points 3 et 4).
 
 `version.py` = `0.8.2` (build 2026-09-24). **Pré-release** GitHub
 [v0.8.2](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.2)
-(SHA-256 `4A21E1917AEC850D668F35E690FC29CA94BB23208821A84D3DF67E2DF4350B20`).
+(SHA-256 `8A42783ED0F8AC87FB455BB5C082728074D606DDA1970BD58264346761C587D3`).
 La Latest reste
 [v0.8.1](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.1)
 tant que cette pré-release n'est pas promue.
@@ -30,20 +30,25 @@ tant que cette pré-release n'est pas promue.
   [#11](https://github.com/kevin-guille/ChiroTool/issues/11)) :
   fermer la fenêtre de suivi rend les clics à la fenêtre principale.
   Un batch en cours se rouvre en recliquant Upload (sur une session du
-  lot, ou sur le bouton batch). Fermer l'exe entier et l'historique en
-  direct restent ouverts.
+  lot, ou sur le bouton batch).
 - **Vérifier / Réparer** (issue
   [#14](https://github.com/kevin-guille/ChiroTool/issues/14)) :
-  le statut indique l'étape (WAV locaux, puis page du portail) au lieu
-  de rester sur « Préparation… ». « à reprendre » veut toujours dire :
-  participation connue, tableur absent du dossier. Si Data_k est là mais
-  que les tranches des plus gros bruts manquent, la ligne de session dit
-  « Data_k incomplet » (le contrôle TE×10 ne change pas, et Tadarida
-  n'est pas relancée si la nuit est déjà analysée).
+  si le portail dit la nuit déjà analysée, on ne compare plus les WAV
+  un par un. Le tableur manquant est téléchargé. « à reprendre » veut
+  dire : participation connue, tableur absent. Si plusieurs dossiers
+  miroir existent, c'est le plus fourni qui compte. Le contrôle des
+  tranches des plus gros bruts ne change pas. Tadarida n'est pas
+  relancée si la nuit est déjà analysée.
+- **Fermeture et historique** (issue
+  [#11](https://github.com/kevin-guille/ChiroTool/issues/11)) :
+  fermer ChiroTool pendant un traitement demande confirmation.
+  L'onglet Historique se met à jour tout seul tant que le traitement
+  tourne.
 - **Activité** (issue
   [#12](https://github.com/kevin-guille/ChiroTool/issues/12)) :
-  si les taxons cochés ne sont pas dans la nuit affichée, le graphe le
-  dit. Le calcul de relecture du `_Vu` ne change pas. La case s'appelle
+  si les taxons cochés ne sont pas dans la nuit affichée, les plus
+  présents de cette nuit sont cochés (le bouton Top 5 aussi).
+  Le calcul de relecture du `_Vu` ne change pas. La case s'appelle
   « Interprétation _Vu ». « Identifications validées seulement » est le
   même libellé en Synthèse et en Activité.
 - **CSV par nuit** : le bouton dit « Ouvrir le dossier des CSV ». Le

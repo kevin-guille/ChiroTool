@@ -1128,6 +1128,42 @@ def resolve_session_root(folder: Path | str) -> Path:
     return parent
 
 
+def _count_top_wavs(p: Path) -> int:
+    """Nombre de WAV directement dans ``p`` (pas les sous-dossiers)."""
+    n = 0
+    try:
+        for child in p.iterdir():
+            if child.is_file() and child.suffix.lower() == ".wav":
+                n += 1
+    except OSError:
+        return 0
+    return n
+
+
+def _pick_te10_mirror(folder: Path) -> Path | None:
+    """Miroir TE×10 le plus fourni.
+
+    Un dossier campagne ``Data_k/<session>/`` presque vide ne doit pas
+    masquer le ``Data_k/`` local complet. À nombre égal, le dossier local gagne.
+    """
+    candidates = [
+        folder.parent / "Data_k" / folder.name,
+        folder / "Data_k",
+        folder / "1-K",
+    ]
+    best: Path | None = None
+    best_key = (-1, -1)
+    for mirror in candidates:
+        if not mirror.is_dir() or not _dir_has_wavs(mirror):
+            continue
+        local = 1 if mirror.parent == folder else 0
+        key = (_count_top_wavs(mirror), local)
+        if key > best_key:
+            best_key = key
+            best = mirror
+    return best
+
+
 def _dir_has_wavs(p: Path) -> bool:
     try:
         for child in p.iterdir():
@@ -1337,17 +1373,9 @@ def analyze_session(folder: Path, sample_wav_for_sr: int = 3) -> SessionState:
     # Détection du miroir TE×10 :
     #   - sibling au niveau campagne : <campagne>/Data_k/<nom>/
     #   - sous-dossier local         : <session>/Data_k/
-    mirror_candidates = [
-        folder.parent / "Data_k" / folder.name,
-        folder / "Data_k",
-        folder / "1-K",
-    ]
-    te10_mirror = None
-    for m in mirror_candidates:
-        if m.is_dir() and _dir_has_wavs(m):
-            s.has_data_k_mirror = True
-            te10_mirror = m
-            break
+    te10_mirror = _pick_te10_mirror(folder)
+    if te10_mirror is not None:
+        s.has_data_k_mirror = True
 
     # Drapeaux haut niveau
     s.flag_renamed = s.n_wav > 0 and s.n_wav_vigiechiro >= s.n_wav_raw and s.n_wav_vigiechiro > 0

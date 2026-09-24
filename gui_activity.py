@@ -37,6 +37,7 @@ from activity_graph import (
     list_sites,
     list_taxons,
     empty_activity_message,
+    align_taxon_selection,
 )
 
 
@@ -575,6 +576,7 @@ class ActivityPanel(ctk.CTkFrame):
             top = list_taxons(aggregated)[:5] or list_taxons(src)[:5]
             self._sel_taxons = {t for t, _n in top}
             self._filters_initialized = True
+        self._align_taxons_to_view()
         self._refresh_filters_ui()
         self._redraw()
         # Un toggle pendant le scan a été ignoré (_disk_loading) : recaler.
@@ -595,6 +597,7 @@ class ActivityPanel(ctk.CTkFrame):
         if not self._sel_taxons:
             top = list_taxons(aggregated)[:5]
             self._sel_taxons = {t for t, _n in top}
+        self._align_taxons_to_view()
         self._refresh_filters_ui()
         self._redraw()
 
@@ -765,6 +768,11 @@ class ActivityPanel(ctk.CTkFrame):
         self._refresh_filters_ui()
         self._redraw()
 
+    def _align_taxons_to_view(self) -> None:
+        ranked = list_taxons(
+            self._filtered_aggregated(skip_taxon=True), min_total=1)
+        self._sel_taxons = align_taxon_selection(self._sel_taxons, ranked)
+
     def _on_site_toggle(self, site: str, var: ctk.BooleanVar):
         if var.get():
             self._sel_sites.add(site)
@@ -775,6 +783,7 @@ class ActivityPanel(ctk.CTkFrame):
         self._render_points()
         self._render_passages()
         self._render_nights()
+        self._align_taxons_to_view()
         self._render_taxons()
         self._sync_headers()
         self._redraw()
@@ -786,6 +795,7 @@ class ActivityPanel(ctk.CTkFrame):
             self._sel_points.discard(point)
         self._render_passages()
         self._render_nights()
+        self._align_taxons_to_view()
         self._render_taxons()
         self._sync_headers()
         self._redraw()
@@ -796,6 +806,7 @@ class ActivityPanel(ctk.CTkFrame):
         else:
             self._sel_passages.discard(passage)
         self._render_nights()
+        self._align_taxons_to_view()
         self._render_taxons()
         self._sync_headers()
         self._redraw()
@@ -842,7 +853,9 @@ class ActivityPanel(ctk.CTkFrame):
         return out
 
     def _select_top_taxons(self, n: int):
-        self._sel_taxons = {t for t, _ in list_taxons(self._aggregated)[:n]}
+        ranked = list_taxons(
+            self._filtered_aggregated(skip_taxon=True), min_total=1)
+        self._sel_taxons = {t for t, _ in ranked[:n]}
         self._refresh_filters_ui()
         self._redraw()
 
@@ -851,6 +864,7 @@ class ActivityPanel(ctk.CTkFrame):
             self._sel_nights.add(night)
         else:
             self._sel_nights.discard(night)
+        self._align_taxons_to_view()
         self._render_taxons()   # les compteurs de taxons dépendent des nuits
         self._sync_headers()
         self._redraw()

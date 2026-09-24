@@ -84,9 +84,9 @@ si on ferme ChiroTool, historique en direct, moins de Vérifier / Réparer.
 | # | Demande | 0.8.1 |
 |---|---------|-----------|
 | 1 | Réouvrir la fenêtre de suivi | **0.8.1** : fermer = arrière-plan. **0.8.2** : `grab_release` avant de cacher (sinon l'interface ne reçoit plus les clics) ; le batch est enregistré et se rouvre. |
-| 2 | Fermer ChiroTool pendant l'upload | **Pas encore.** `_on_close` n'avertit pas. Le worker est `daemon=True` : tuer l'exe arrête l'envoi local. Tadarida déjà lancée côté serveur continue. |
-| 3 | Historique en temps réel | **Pas encore.** Bouton ⟳ / changement de session / entrée d'onglet. Pas de polling. |
-| 4 | Éviter Vérifier / Réparer | **Partiel.** Recliquer Upload reprend si l'app est restée ouverte. Après kill de l'exe : Upload (reprise 409) ou Vérifier / Réparer. |
+| 2 | Fermer ChiroTool pendant l'upload | **0.8.2** : confirmation. L'envoi local s'arrête. Tadarida déjà lancée côté serveur continue. |
+| 3 | Historique en temps réel | **0.8.2** : tant que l'onglet Historique est ouvert et qu'un traitement tourne, rafraîchissement toutes les 4 s. |
+| 4 | Éviter Vérifier / Réparer | Recliquer Upload reprend si l'app est restée ouverte. Après fermeture : Upload (reprise). Si la nuit est déjà analysée, Vérifier / Réparer ne reliste plus les WAV : il récupère le tableur. |
 
 Rester **ouverte**. Pas un reliquat de #9.
 
@@ -122,7 +122,7 @@ Pas de `trigger_compute` si l'état est PLANIFIE, EN_COURS, TERMINE ou FINI.
 |---|---|
 | #13 Choix sur la carte | Le wizard remonte jusqu'à la fenêtre qui a `map_panel`. Plus de « Onglet Carte indisponible » alors que l'onglet existe. |
 | #11 Gel après fermeture du suivi batch | `grab_release` avant de cacher la fenêtre. Le dialogue batch est enregistré : recliquer Upload le rouvre. |
-| #14 Diagnostic long | Le statut affiche « WAV locaux » puis « portail, page N ». « à reprendre » = participation connue et tableur absent. Data_k présent mais tranches manquantes : la ligne dit « Data_k incomplet ». |
+| #14 Diagnostic long | Si le portail dit la nuit déjà analysée, pas de listing des WAV : téléchargement du tableur s'il manque. Sinon le statut affiche la page. « à reprendre » = tableur absent. Le miroir TE retenu est le dossier le plus fourni. |
 | #12 Graphe Activité vide | Si les taxons cochés ne sont pas dans la sélection, le message le dit. Case « Interprétation _Vu ». Même libellé « Identifications validées seulement » qu'en Synthèse. |
 | Libellés | Plus de case « Méthode MNHN ». Le message sans WAV ne dit plus « ChiroSurf exige ». |
 

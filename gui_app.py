@@ -357,6 +357,7 @@ class ChiroToolApp(ctk.CTk):
         # de la fenêtre, exécutée dans un thread daemon avec timeout réseau court
         # → aucun impact sur le temps de lancement. Throttle 1×/jour + réglage on/off.
         self.after(3000, self._auto_update_check)
+        self.after(4000, self._poll_history_while_busy)
 
     def _auto_update_check(self):
         """Lance (si activé) une vérification de mise à jour en arrière-plan.
@@ -1207,11 +1208,54 @@ class ChiroToolApp(ctk.CTk):
         # gui_preferences. Rien d'autre à faire pour l'instant.
         self.settings = new_settings
 
+    def _busy_run_dialogs(self) -> list:
+        """Fenêtres de traitement encore ouvertes (une fois chacune)."""
+        seen: set[int] = set()
+        alive = []
+        for dlg in self._run_dialogs.values():
+            if id(dlg) in seen:
+                continue
+            seen.add(id(dlg))
+            try:
+                if dlg.winfo_exists() and not getattr(dlg, "_done", False):
+                    alive.append(dlg)
+            except Exception:
+                continue
+        return alive
+
     def _on_close(self):
+        if self._busy_run_dialogs():
+            if not messagebox.askyesno(
+                "Fermer pendant un traitement ?",
+                "Un traitement est encore en cours.\n\n"
+                "Fermer ChiroTool arrête l'envoi local des fichiers. "
+                "Si Tadarida a déjà démarré sur Vigie-Chiro, elle continue.\n\n"
+                "Au prochain lancement, Upload reprend l'envoi. "
+                "Si la nuit est déjà analysée, Vérifier / Réparer "
+                "récupère le tableur sans relister les WAV.\n\n"
+                "Fermer quand même ?",
+            ):
+                return
         try:
             save_settings(self.settings)
         finally:
             self.destroy()
+
+    def _poll_history_while_busy(self):
+        """Rafraîchit l'historique tant qu'un traitement tourne (issue #11)."""
+        try:
+            on_history = self.detail_tabs.get() == "Historique"
+        except Exception:
+            on_history = False
+        if on_history and self._busy_run_dialogs():
+            try:
+                self.history_panel.refresh()
+            except Exception:
+                pass
+        try:
+            self.after(4000, self._poll_history_while_busy)
+        except Exception:
+            pass
 
     # -- Scan ---------------------------------------------------------------
 
@@ -1836,8 +1880,9 @@ class ChiroToolApp(ctk.CTk):
         except Exception:
             pass
         worker = run_prep(s.path, meta, dry_run=False, force=False)
-        RunDialog(self, title=f"Préparation — {s.name}",
-                  worker=worker, on_done=self._after_phase_done)
+        dlg = RunDialog(self, title=f"Préparation — {s.name}",
+                        worker=worker, on_done=self._after_phase_done)
+        self._run_dialogs[f"prep:{s.path}"] = dlg
 
     @staticmethod
     def _session_has_participation_id(s: SessionState) -> bool:
@@ -1880,6 +1925,7 @@ class ChiroToolApp(ctk.CTk):
             worker=dry,
             on_done=_after_diag,
         )
+        self._run_dialogs[f"repair-diag:{s.path}"] = dry_dialog
 
     def _confirm_and_apply_repair(
         self, s: SessionState, token: str, diag: dict,
@@ -2130,12 +2176,13 @@ class ChiroToolApp(ctk.CTk):
             registry=registry,
             registry_session_id=s.name,
         )
-        RunDialog(
+        dlg = RunDialog(
             self,
             title=f"Réparation — {s.name}",
             worker=worker,
             on_done=self._after_phase_done,
         )
+        self._run_dialogs[f"repair:{s.path}"] = dlg
 
     def _reveal_run_dialog(self, key: str) -> bool:
         """True si une fenêtre de suivi existe encore (même en arrière-plan)."""
@@ -2262,6 +2309,7 @@ class ChiroToolApp(ctk.CTk):
 
         dry_dialog = RunDialog(self, title=f"Analyse du nettoyage — {s.name}",
                                worker=dry, on_done=_after_dry)
+        self._run_dialogs[f"cleanup-dry:{s.path}"] = dry_dialog
 
     def _confirm_and_run_cleanup(self, s: SessionState, meta, stats: dict):
         """Aperçu chiffré (issu de la simulation) puis confirmation AVANT la
@@ -2317,12 +2365,17 @@ class ChiroToolApp(ctk.CTk):
                 except Exception:
                     pass
 
-        RunDialog(self, title=f"Nettoyage — {s.name}",
-                  worker=worker, on_done=_on_cleanup_done)
+        dlg = RunDialog(self, title=f"Nettoyage — {s.name}",
+                        worker=worker, on_done=_on_cleanup_done)
+        self._run_dialogs[f"cleanup:{s.path}"] = dlg
 
     def _after_phase_done(self, result: dict):
         """Callback appelé après la fin d'une phase : on rafraîchit la liste."""
-        # Re-scan du workspace pour refléter les nouveaux états
+        try:
+            if self.detail_tabs.get() == "Historique":
+                self.history_panel.refresh()
+        except Exception:
+            pass
         path = self.workspace_var.get().strip()
         if path and Path(path).is_dir():
             self.after(200, lambda: self._scan_workspace(path))

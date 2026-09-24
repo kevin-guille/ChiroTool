@@ -606,6 +606,23 @@ def aggregate_multi_xlsx(paths: Iterable[Path], **kwargs
     return aggregate_loaded_tables(loaded, **kwargs)
 
 
+def align_taxon_selection(
+    selected: set[str],
+    visible_ranked: list[tuple[str, int]],
+) -> set[str]:
+    """Si aucun taxon coché n'est dans la vue, coche les plus présents.
+
+    Une sélection globale (top 5 de la campagne) laisse sinon un graphe vide
+    dès qu'on isole une nuit dont les espèces sont ailleurs.
+    """
+    visible = [t for t, n in visible_ranked if n > 0]
+    if not visible:
+        return set(selected)
+    if set(selected) & set(visible):
+        return set(selected)
+    return set(visible[:5])
+
+
 def empty_activity_message(
     *,
     has_rows: bool,

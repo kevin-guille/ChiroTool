@@ -349,6 +349,7 @@ class RepairReport:
     missing_on_server: list[str] = field(default_factory=list)
     extra_on_server: list[str] = field(default_factory=list)
     coverage_ok: bool = False
+    coverage_skipped: bool = False
     listing_ok: bool = True
     listing_error: str | None = None
     files_registered: bool = False
@@ -649,21 +650,10 @@ def diagnose_and_repair_session(
         "cleaned": bool(flags.get("cleaned")),
     }
 
-    # -- Disque local ------------------------------------------------------
-    if progress:
-        try:
-            progress(0, 0, "WAV locaux")
-        except Exception:
-            pass
-    local_wavs = list_local_data_k_wavs(session)
-    if progress:
-        try:
-            progress(len(local_wavs), len(local_wavs) or 1,
-                     f"{len(local_wavs)} WAV locaux")
-        except Exception:
-            pass
-    report.local_wav_count = len(local_wavs)
+    # -- Tableur et noms locaux (pas d'appel réseau) ------------------------
     xlsx = find_local_observations_xlsx(session)
+    local_wavs = list_local_data_k_wavs(session)
+    report.local_wav_count = len(local_wavs)
     report.has_xlsx = xlsx is not None
     report.xlsx_path = str(xlsx) if xlsx else None
 
@@ -732,55 +722,87 @@ def diagnose_and_repair_session(
         report.errors.append(f"participation_status : {e}")
         # On continue si possible pour lister les fichiers
 
-    # -- Listing fichiers serveur ------------------------------------------
+    etat_u = (etat or "").strip().upper()
+    # Nuit déjà analysée : le tableur suffit. Lister des milliers de WAV
+    # (pages de 99) prend un quart d'heure et ne change pas l'action.
+    skip_listing = etat_u in _ETAT_DONE
     server_names: list[str] = []
     listing_ok = True
-    try:
+    if skip_listing:
+        report.coverage_skipped = True
+        report.listing_ok = True
+        report.coverage_ok = True
+        report.files_registered = True
+        report.registration_via = "etat_terminal"
+        if report.has_xlsx:
+            report.notes.append(
+                "Nuit déjà analysée sur le portail, tableur déjà dans le "
+                "dossier : pas de comparaison des WAV."
+            )
+        else:
+            report.notes.append(
+                "Nuit déjà analysée sur le portail : le tableur manque "
+                "en local. Pas de comparaison des WAV, téléchargement proposé."
+            )
+        if progress:
+            try:
+                progress(1, 1, "nuit déjà analysée")
+            except Exception:
+                pass
+    elif progress:
         try:
-            server_names = list(api.list_participation_files(
-                report.participation_id, progress=progress) or [])
-        except TypeError:
-            server_names = list(
-                api.list_participation_files(report.participation_id) or [])
-    except Exception as e:
-        listing_ok = False
-        report.listing_error = str(e)
-        report.errors.append(f"list_participation_files : {e}")
+            progress(len(local_wavs), len(local_wavs) or 1,
+                     f"{len(local_wavs)} WAV locaux")
+        except Exception:
+            pass
 
-    # Listing vide + beaucoup de locaux + xlsx déjà là → suspect (souvent
-    # bug API / max_results / filtre), PAS « 0 WAV uploadés ».
-    # On refuse alors de proposer un re-upload massif de tout Data_k.
-    empty_listing_suspect = (
-        listing_ok
-        and not server_names
-        and len(local_wavs) >= 20
-        and (report.has_xlsx or report.local_flags.get("cleaned")
-             or report.local_flags.get("uploaded")
-             or (etat or "").strip().upper() in _ETAT_DONE)
-    )
-    if empty_listing_suspect:
-        listing_ok = False
-        report.listing_error = (
-            report.listing_error
-            or "listing serveur vide alors que la session a déjà un xlsx / "
-               "flag uploadé-nettoyé — listing jugé non fiable"
-        )
-        report.notes.append(
-            "⚠ Listing serveur = 0 fichier alors que Data_k en contient "
-            f"{len(local_wavs)} et qu'un xlsx/flag indique un traitement déjà "
-            "avancé. On ne propose PAS de re-uploader tout Data_k. "
-            "Vérifie la participation sur le portail Vigie-Chiro."
-        )
-        server_names = []  # coverage with listing_ok=False
+    # -- Listing fichiers serveur (sauf nuit déjà analysée) ----------------
+    if not skip_listing:
+        try:
+            try:
+                server_names = list(api.list_participation_files(
+                    report.participation_id, progress=progress) or [])
+            except TypeError:
+                server_names = list(
+                    api.list_participation_files(report.participation_id) or [])
+        except Exception as e:
+            listing_ok = False
+            report.listing_error = str(e)
+            report.errors.append(f"list_participation_files : {e}")
 
-    cov = compute_coverage(local_wavs, server_names, listing_ok=listing_ok)
-    report.server_wav_count = cov["server_wav_count"]
-    report.missing_on_server = list(cov["missing_on_server"])
-    report.extra_on_server = list(cov["extra_on_server"])
-    report.coverage_ok = bool(cov["coverage_ok"])
-    report.listing_ok = bool(cov["listing_ok"])
-    report.files_registered = bool(report.coverage_ok)
-    report.registration_via = "listing" if report.coverage_ok else None
+        # Listing vide + beaucoup de locaux + xlsx déjà là → suspect.
+        # On refuse alors de proposer un re-upload massif de tout Data_k.
+        empty_listing_suspect = (
+            listing_ok
+            and not server_names
+            and len(local_wavs) >= 20
+            and (report.has_xlsx or report.local_flags.get("cleaned")
+                 or report.local_flags.get("uploaded")
+                 or etat_u in _ETAT_DONE)
+        )
+        if empty_listing_suspect:
+            listing_ok = False
+            report.listing_error = (
+                report.listing_error
+                or "listing serveur vide alors que la session a déjà un xlsx / "
+                   "flag uploadé-nettoyé : listing jugé non fiable"
+            )
+            report.notes.append(
+                "Listing serveur = 0 fichier alors que Data_k en contient "
+                f"{len(local_wavs)} et qu'un xlsx ou un flag indique un "
+                "traitement déjà avancé. Pas de re-upload de tout Data_k. "
+                "Vérifie la participation sur le portail Vigie-Chiro."
+            )
+            server_names = []
+
+        cov = compute_coverage(local_wavs, server_names, listing_ok=listing_ok)
+        report.server_wav_count = cov["server_wav_count"]
+        report.missing_on_server = list(cov["missing_on_server"])
+        report.extra_on_server = list(cov["extra_on_server"])
+        report.coverage_ok = bool(cov["coverage_ok"])
+        report.listing_ok = bool(cov["listing_ok"])
+        report.files_registered = bool(report.coverage_ok)
+        report.registration_via = "listing" if report.coverage_ok else None
 
     # Listing vide ou 403 (GET /fichiers → S3 AccessDenied) alors que Data_k
     # a des WAV et que Tadarida n'a jamais produit de /donnees : sonder un
@@ -834,8 +856,9 @@ def diagnose_and_repair_session(
                 f"seront sautés, les manquants renvoyés, puis Tadarida part."
             )
 
-    if not local_wavs:
-        report.notes.append("Data_k/ absent ou vide — couverture locale non évaluable.")
+    if not skip_listing and not local_wavs:
+        report.notes.append(
+            "Data_k/ absent ou vide : couverture locale non évaluable.")
 
     # Post-nettoyage : beaucoup d'extras serveur est attendu
     if report.local_flags.get("cleaned") and report.extra_on_server:
