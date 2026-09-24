@@ -36,6 +36,7 @@ from activity_graph import (
     list_points,
     list_sites,
     list_taxons,
+    empty_activity_message,
 )
 
 
@@ -126,7 +127,7 @@ class ActivityPanel(ctk.CTkFrame):
         # Identification humaine : validateur_taxon OU observateur_taxon
         self.validated_var = ctk.BooleanVar(value=False)
         ctk.CTkCheckBox(
-            bar, text="Validés humains seulement",
+            bar, text="Identifications validées seulement",
             variable=self.validated_var,
             command=self._on_validated_toggle,
         ).grid(row=0, column=3, padx=(0, 8))
@@ -1136,23 +1137,22 @@ class ActivityPanel(ctk.CTkFrame):
     # =========================================================================
 
     def _empty_reason(self) -> str:
-        """Message contextuel quand le graphe est vide : nomme la 1re dimension
-        de filtre vide (au lieu du générique « nuit et taxon » trompeur quand
-        c'est en fait Points/Sites qui a été vidé via « Aucun »)."""
-        if not self._aggregated:
-            return "Aucune donnée d'observation trouvée dans l'espace de travail."
-        for sel, label in (
-            (self._sel_sites, "site"),
-            (self._sel_points, "point"),
-            (self._sel_passages, "passage"),
-            (self._sel_nights, "nuit"),
-            (self._sel_taxons, "taxon"),
-        ):
-            if not sel:
-                return (f"Aucun {label} sélectionné.\n"
-                        f"Coche au moins un {label} dans la colonne de gauche.")
-        return ("Aucun contact pour cette combinaison de filtres.\n"
-                "Élargis la sélection (colonne de gauche).")
+        """Message contextuel quand le graphe est vide."""
+        visible = {
+            key[-1] for key in self._filtered_aggregated(skip_taxon=True)
+        }
+        return empty_activity_message(
+            has_rows=bool(self._aggregated),
+            selections=[
+                (self._sel_sites, "site"),
+                (self._sel_points, "point"),
+                (self._sel_passages, "passage"),
+                (self._sel_nights, "nuit"),
+                (self._sel_taxons, "taxon"),
+            ],
+            visible_taxons=visible,
+            selected_taxons=set(self._sel_taxons),
+        )
 
     def _redraw(self):
         c = self.canvas

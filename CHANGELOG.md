@@ -5,23 +5,59 @@ Les versions publiées suivent le SemVer du fichier `version.py` / tags GitHub.
 
 ## [Unreleased]
 
-Cible **0.8.2**. Pas dans l'exe Latest v0.8.1.
-Suivi **interne** (SPEC §0.6), pas d'issue GitHub.
+Rien en attente au-dessus de la pré-release 0.8.2.
+Toujours ouvert, hors de cet exe : fermer ChiroTool pendant un upload
+(avertissement), historique en direct (SPEC §0.5), et `try_auto_meta`
+qui ouvre encore le Suivi à chaque nuit du batch (SPEC §0.6, points 3 et 4).
+
+## [0.8.2] - 2026-09-24
+
+`version.py` = `0.8.2` (build 2026-09-24). **Pré-release** GitHub
+[v0.8.2](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.2)
+(SHA-256 `C431B224DD3EF135F6964B8CF94A0703CDB70072E1CF45C1343281584C21130A`).
+La Latest reste
+[v0.8.1](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.1)
+tant que cette pré-release n'est pas promue.
+
+### Corrigé
+
+- **Carte depuis les métadonnées** (issue
+  [#13](https://github.com/kevin-guille/ChiroTool/issues/13)) :
+  « Choisir sur la carte » cherchait la carte sur la fenêtre du formulaire,
+  d'où « Onglet Carte indisponible » alors que l'onglet marche. Le bouton
+  remonte maintenant jusqu'à la fenêtre principale.
+- **Suivi d'upload** (issue
+  [#11](https://github.com/kevin-guille/ChiroTool/issues/11)) :
+  fermer la fenêtre de suivi rend les clics à la fenêtre principale.
+  Un batch en cours se rouvre en recliquant Upload (sur une session du
+  lot, ou sur le bouton batch). Fermer l'exe entier et l'historique en
+  direct restent ouverts.
+- **Vérifier / Réparer** (issue
+  [#14](https://github.com/kevin-guille/ChiroTool/issues/14)) :
+  le statut indique l'étape (WAV locaux, puis page du portail) au lieu
+  de rester sur « Préparation… ». « à reprendre » veut toujours dire :
+  participation connue, tableur absent du dossier. Si Data_k est là mais
+  que les tranches des plus gros bruts manquent, la ligne de session dit
+  « Data_k incomplet » (le contrôle TE×10 ne change pas, et Tadarida
+  n'est pas relancée si la nuit est déjà analysée).
+- **Activité** (issue
+  [#12](https://github.com/kevin-guille/ChiroTool/issues/12)) :
+  si les taxons cochés ne sont pas dans la nuit affichée, le graphe le
+  dit. Le calcul de relecture du `_Vu` ne change pas. La case s'appelle
+  « Interprétation _Vu ». « Identifications validées seulement » est le
+  même libellé en Synthèse et en Activité.
+- **Batch Préparer** (interne, SPEC §0.6) : une nuit ignorée n'est plus
+  comptée dans les OK. Log Titley présent : plus de listing Data_k à
+  chaque nuit.
 
 ### Documentation
 
-- Capture de validation retirée du tutoriel (`14-validation.png`). À reprendre plus tard depuis l'interface réelle.
-- Le badge GitHub des téléchargements ne compte que les fichiers encore joints aux releases. Le PDF du tutoriel n'est plus joint.
-
-### Corrigé (code `main`, pas encore d'exe)
-
-- **Batch Préparer** : une nuit **ignorée** (métadonnées incomplètes, pas
-  d'assistant en batch) n'apparaît plus dans les OK. Bilan :
-  `OK / ignorée(s) / erreur(s)`. Log Titley présent : plus de listing
-  Data_k à chaque nuit (même règle que l'upload unitaire, issue #9).
-  Retour terrain : ~15 nuits, 10-12 premières OK, les dernières sans
-  renommage. Reste à vérifier : `try_auto_meta` + Suivi Excel après
-  beaucoup de nuits (SPEC §0.6).
+- Textes visibles : plus de « Méthode MNHN » comme nom de case, plus de
+  « ChiroSurf exige » dans le message d'ouverture d'une nuit sans WAV.
+  Une phrase reste pour la relecture fine : « Pour ce type d'analyse,
+  se reporter à ChiroSurf. »
+- Capture de validation retirée du tutoriel (`14-validation.png`).
+  À reprendre plus tard depuis l'interface réelle.
 
 ## [0.8.1] - 2026-09-19
 

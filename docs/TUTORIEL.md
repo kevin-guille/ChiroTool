@@ -8,7 +8,7 @@
 
 ![Icône ChiroTool](captures/icon_256.png)
 
-**Version 0.8.1** · Tutoriel utilisateur. Release GitHub : [v0.8.1](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.1).
+**Version 0.8.2** · Tutoriel utilisateur. Pré-release GitHub : [v0.8.2](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.2). La version stable reste [v0.8.1](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.1) tant que cette pré-release n'est pas promue.
 
 </div>
 
@@ -103,7 +103,7 @@ ChiroTool est un **logiciel portable** : pas d'installation, pas de droits
 administrateur requis.
 
 1. Récupérez le fichier **`ChiroTool.exe`** (≈ 36 Mo) auprès de votre référent ou
-   sur la [release v0.8.1](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.1).
+   sur la [pré-release v0.8.2](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.2).
 2. Placez-le où vous voulez (Bureau, clé USB, disque dur externe…).
 3. Double-cliquez pour le lancer.
 
@@ -801,11 +801,11 @@ de ChiroTool. Ils ne remplacent pas l'évaluation d'activité du logiciel extern
 - **Chiros seulement** : masquer orthoptères, bruit, oiseaux
 - **Taxons observateur** : ne garder que les lignes où vous avez renseigné
   l'espèce (ex. un Nyclas que Tadarida avait mis en Nycnoc).
-- **Validés humains seulement** : lignes avec identification observateur ou
+- **Identifications validées seulement** : lignes avec identification observateur ou
   validateur.
 - **Interprétation _Vu** : même relecture que la Synthèse
-  (bandes de confiance Tadarida, `_Vu` nuit par nuit). Distinct de « validés
-  humains ». Les deux cases s'excluent. Sans `_Vu`, un rappel s'affiche :
+  (bandes de confiance Tadarida, `_Vu` nuit par nuit). Distinct de
+  « identifications validées seulement ». Les deux cases s'excluent. Sans `_Vu`, un rappel s'affiche :
   la relecture vise un fichier produit dans le logiciel externe.
 - Un `_Vu` dans `chirosurf/`, `Data_k/` **ou à la racine de la session**
   **remplace le tableur pour cette nuit seulement**. Les autres nuits de
@@ -1236,7 +1236,7 @@ Conception / dev : [`SPEC_v06_parcours.md`](SPEC_v06_parcours.md) · issues
 [#10](https://github.com/kevin-guille/ChiroTool/issues/10),
 [#11](https://github.com/kevin-guille/ChiroTool/issues/11).
 
-### Suite (hors 0.8.1)
+### Suite (hors 0.8.2)
 
 Ne pas relire le 1er message des issues
 [#4](https://github.com/kevin-guille/ChiroTool/issues/4),
@@ -1245,15 +1245,13 @@ Ne pas relire le 1er message des issues
 [#9](https://github.com/kevin-guille/ChiroTool/issues/9) et
 [#10](https://github.com/kevin-guille/ChiroTool/issues/10) comme une todo
 (SPEC §0.1 à §0.4). Issue
-[#11](https://github.com/kevin-guille/ChiroTool/issues/11) : réouverture
-du suivi livrée ; fermeture de l'exe et historique live restent ouverts
-(SPEC §0.5).
+[#11](https://github.com/kevin-guille/ChiroTool/issues/11) : la fenêtre
+de suivi batch se rouvre, et la fermer ne fige plus l'interface.
+Fermeture de l'exe et historique live restent ouverts (SPEC §0.5).
 
-- Robustesse / UX du **mode batch**, journal d'upload (issue #11).
-- **Batch Préparer** (interne, SPEC §0.6, pas d'issue GitHub) : dernières
-  nuits d'une série (~15) parfois sans renommage alors que le bilan disait
-  OK. Cible 0.8.2. En 0.8.1 : préparer ces nuits **une par une**, puis le
-  batch.
+- **Batch Préparer** (interne, SPEC §0.6) : le bilan ne compte plus une
+  nuit ignorée comme un succès (exe 0.8.2). Reste : `try_auto_meta` ouvre
+  encore le Suivi à chaque nuit.
 - Export compilé espèces × nuits ; fusion `_Vu` → xlsx (choix produit).
 - Pas plusieurs exe : le Batch enchaîne les nuits (SPEC D14).
 

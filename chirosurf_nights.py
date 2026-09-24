@@ -293,9 +293,9 @@ def prepare_chirosurf_launch(
         raise ChiroSurfLaunchError(
             "Aucun fichier WAV/MP3 dans Data_k/, Data/ ni à la racine "
             "de la session.\n\n"
-            "ChiroSurf exige que le tableur et les sons soient dans le "
-            "même dossier. Si la nuit a déjà été nettoyée, les WAV ne "
-            "sont plus là — impossible d'ouvrir cette nuit dans ChiroSurf."
+            "Le logiciel externe (version 4.x) exige que le tableur et les "
+            "sons soient dans le même dossier. Si la nuit a déjà été "
+            "nettoyée, les WAV ne sont plus là : impossible d'ouvrir cette nuit."
         )
     return stage_csv_beside_audio(csv_path, audio)
 

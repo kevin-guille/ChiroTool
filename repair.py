@@ -650,7 +650,18 @@ def diagnose_and_repair_session(
     }
 
     # -- Disque local ------------------------------------------------------
+    if progress:
+        try:
+            progress(0, 0, "WAV locaux")
+        except Exception:
+            pass
     local_wavs = list_local_data_k_wavs(session)
+    if progress:
+        try:
+            progress(len(local_wavs), len(local_wavs) or 1,
+                     f"{len(local_wavs)} WAV locaux")
+        except Exception:
+            pass
     report.local_wav_count = len(local_wavs)
     xlsx = find_local_observations_xlsx(session)
     report.has_xlsx = xlsx is not None
@@ -725,7 +736,12 @@ def diagnose_and_repair_session(
     server_names: list[str] = []
     listing_ok = True
     try:
-        server_names = list(api.list_participation_files(report.participation_id) or [])
+        try:
+            server_names = list(api.list_participation_files(
+                report.participation_id, progress=progress) or [])
+        except TypeError:
+            server_names = list(
+                api.list_participation_files(report.participation_id) or [])
     except Exception as e:
         listing_ok = False
         report.listing_error = str(e)

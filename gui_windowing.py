@@ -23,6 +23,22 @@ from typing import Any, Callable
 
 _WATCH_MS = 400
 _TOPMOST_MS = 250
+
+
+def find_ancestor_with(widget: Any, attr: str) -> Any | None:
+    """Remonte ``master`` jusqu'au widget qui porte ``attr`` (valeur non None).
+
+    Un ``Toplevel`` a ``winfo_toplevel()`` égal à lui-même. Le wizard
+    métadonnées ne doit pas s'en servir pour trouver la carte de l'application.
+    """
+    w = getattr(widget, "master", None)
+    seen: set[int] = set()
+    while w is not None and id(w) not in seen:
+        seen.add(id(w))
+        if getattr(w, attr, None) is not None:
+            return w
+        w = getattr(w, "master", None)
+    return None
 _DEBOUNCE_MS = 50
 
 

@@ -2,9 +2,9 @@
 
 | | |
 |--|--|
-| **Statut** | **Livré** : v0.6.0 (2026-08-07, vagues A à C) + **v0.7.0** (2026-08-30, Synthèse autonome, Titley, issues #4 à #6) + **v0.7.1** (2026-08-31, issue #7 CSV+WAV) + **v0.7.2** (2026-09-01, D12 nuit bio + barre d'actions) + **v0.8.0** (2026-09-06, P8 relecture du `_Vu` dans la Synthèse ; 2026-09-09 Activité + Titley TE×10, pre-release GitHub) + **v0.8.1** (2026-09-19, #8 participation Titley, #9 wizard upload, #10 Activité cache, Latest GitHub). |
-| **Ouvert** | Issues [#4](https://github.com/kevin-guille/ChiroTool/issues/4) et [#7](https://github.com/kevin-guille/ChiroTool/issues/7) close côté v0.8 (confirmation terrain), voir §0.1 et §0.2. Issues [#8](https://github.com/kevin-guille/ChiroTool/issues/8), [#9](https://github.com/kevin-guille/ChiroTool/issues/9), [#10](https://github.com/kevin-guille/ChiroTool/issues/10) livrées en 0.8.1, voir §0.3 et §0.4. Issue [#11](https://github.com/kevin-guille/ChiroTool/issues/11) partielle, voir §0.5. Batch Préparer (interne, pas d'issue GitHub), voir §0.6 (0.8.2). Vague D (export compilé, fusion `_Vu` → xlsx) plus tard. |
-| **Date** | 2026-08-04 (conception) · 2026-08-07 (v0.6) · 2026-08-30 (v0.7) · 2026-09-03 (D13) · 2026-09-06 (P8) · 2026-09-08 (exe 0.8.0 : 409 + Win+D) · 2026-09-09 (Titley TE×10, Activité avec relecture du `_Vu`, pre-release GitHub [v0.8.0](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.0)) · 2026-09-10 (0.8.1 : scan export + pastille TE + #8) · 2026-09-16 (0.8.1 : #9 wizard, #10 Activité) · 2026-09-19 (Latest GitHub [v0.8.1](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.1)) |
+| **Statut** | **Livré** : v0.6.0 à **v0.8.1** (Latest GitHub, 2026-09-19). **Pré-release v0.8.2** (2026-09-24) : #11 gel du suivi batch, #13 choix sur la carte, #14 avancement du diagnostic, message Activité #12, libellés. |
+| **Ouvert** | Issues #4, #7, #8, #9, #10 : ne pas relire le premier message (SPEC §0.1 à §0.4). #11 : gel du suivi batch traité en 0.8.2, fermeture de l'exe et historique live encore ouverts (§0.5). #12, #13, #14 : pré-release 0.8.2 (§0.7). Batch Préparer : bilan corrigé dans l'exe 0.8.2, `try_auto_meta` encore ouvert (§0.6). |
+| **Date** | 2026-08-04 (conception) · 2026-08-07 (v0.6) · 2026-08-30 (v0.7) · 2026-09-03 (D13) · 2026-09-06 (P8) · 2026-09-08 (exe 0.8.0 : 409 + Win+D) · 2026-09-09 (Titley TE×10, Activité avec relecture du `_Vu`, pre-release GitHub [v0.8.0](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.0)) · 2026-09-10 (0.8.1 : scan export + pastille TE + #8) · 2026-09-16 (0.8.1 : #9 wizard, #10 Activité) · 2026-09-19 (Latest GitHub [v0.8.1](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.1)) · 2026-09-24 (pré-release [v0.8.2](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.2)) |
 | **Contexte** | Issue [#3](https://github.com/kevin-guille/ChiroTool/issues/3) (retours terrain) + retours carte / meta + issues [#4](https://github.com/kevin-guille/ChiroTool/issues/4) / [#7](https://github.com/kevin-guille/ChiroTool/issues/7) / [#8](https://github.com/kevin-guille/ChiroTool/issues/8) / [#9](https://github.com/kevin-guille/ChiroTool/issues/9) / [#10](https://github.com/kevin-guille/ChiroTool/issues/10) / [#11](https://github.com/kevin-guille/ChiroTool/issues/11) |
 | **Principe** | Pragmatisme — une vérité disque, peu de fichiers, parcours unifiés, libellés humains d’abord |
 
@@ -83,7 +83,7 @@ si on ferme ChiroTool, historique en direct, moins de Vérifier / Réparer.
 
 | # | Demande | 0.8.1 |
 |---|---------|-----------|
-| 1 | Réouvrir la fenêtre de suivi | **Livré** : fermer = arrière-plan (`withdraw`) ; recliquer Upload = `reveal`. |
+| 1 | Réouvrir la fenêtre de suivi | **0.8.1** : fermer = arrière-plan. **0.8.2** : `grab_release` avant de cacher (sinon l'interface ne reçoit plus les clics) ; le batch est enregistré et se rouvre. |
 | 2 | Fermer ChiroTool pendant l'upload | **Pas encore.** `_on_close` n'avertit pas. Le worker est `daemon=True` : tuer l'exe arrête l'envoi local. Tadarida déjà lancée côté serveur continue. |
 | 3 | Historique en temps réel | **Pas encore.** Bouton ⟳ / changement de session / entrée d'onglet. Pas de polling. |
 | 4 | Éviter Vérifier / Réparer | **Partiel.** Recliquer Upload reprend si l'app est restée ouverte. Après kill de l'exe : Upload (reprise 409) ou Vérifier / Réparer. |
@@ -98,20 +98,33 @@ Retour collègue (2026-09-19) : ~15 nuits en **batch ▶ Préparer**. Les 10–1
 premières passent. Les dernières **ne sont pas renommées** mais le bilan
 affiche **OK**.
 
-Vérifié dans le code 0.8.1 (correctifs 1–2 sur `main`, pas dans l'exe Latest) :
+Correctifs 1 et 2 : dans l'exe **0.8.2** (ils étaient sur `main`, pas dans l'exe 0.8.1).
 
-| # | Cause | 0.8.1 | Prochaine |
-|---|-------|-------|-----------|
-| 1 | Bilan `n_ok` : une ligne `skipped` (meta incomplète, pas de wizard en batch) compte comme succès | Bug | **Corrigé** : `classify_batch_row` → OK / ignorée / erreur |
-| 2 | Batch listait tous les WAV (`inspect_summary_vs_wav`) même avec un log Titley, × N nuits | Même piège que #9 | **Corrigé** : log Titley → pas de listing Data_k |
-| 3 | `try_auto_meta` liste encore les WAV + ouvre le Suivi Excel à chaque nuit | Ouvert | À vérifier (verrou Excel / I/O USB après 10 nuits) |
-| 4 | `rename` déjà marqué fait : warning, pas d'erreur, TE×10 continue | Ouvert | Distinguer « déjà renommé » d'un skip réel |
+| # | Cause | 0.8.2 |
+|---|-------|-------|
+| 1 | Bilan `n_ok` : une ligne `skipped` (meta incomplète, pas de wizard en batch) compte comme succès | **Corrigé** : `classify_batch_row` → OK / ignorée / erreur |
+| 2 | Batch listait tous les WAV (`inspect_summary_vs_wav`) même avec un log Titley, × N nuits | **Corrigé** : log Titley → pas de listing Data_k |
+| 3 | `try_auto_meta` liste encore les WAV + ouvre le Suivi Excel à chaque nuit | **Ouvert** (verrou Excel / I/O USB après 10 nuits) |
+| 4 | `rename` déjà marqué fait : warning, pas d'erreur, TE×10 continue | **Ouvert** : distinguer « déjà renommé » d'un skip réel |
 
 Le batch n'ouvre **pas** l'assistant meta (thread). Une nuit sans carré /
 point / Suivi est **ignorée**, ce n'est pas un succès.
 
-Contournement 0.8.1 : préparer d'abord les nuits sans carré / point **une
-par une** (assistant), puis le batch.
+Contournement tant que les points 3 et 4 sont ouverts : préparer d'abord
+les nuits sans carré / point **une par une** (assistant), puis le batch.
+
+### 0.7 Pré-release 0.8.2 (24 septembre 2026)
+
+Issues de Benjamin. Le calcul de relecture d'un `_Vu` ne change pas.
+Pas de `trigger_compute` si l'état est PLANIFIE, EN_COURS, TERMINE ou FINI.
+
+| Sujet | 0.8.2 |
+|---|---|
+| #13 Choix sur la carte | Le wizard remonte jusqu'à la fenêtre qui a `map_panel`. Plus de « Onglet Carte indisponible » alors que l'onglet existe. |
+| #11 Gel après fermeture du suivi batch | `grab_release` avant de cacher la fenêtre. Le dialogue batch est enregistré : recliquer Upload le rouvre. |
+| #14 Diagnostic long | Le statut affiche « WAV locaux » puis « portail, page N ». « à reprendre » = participation connue et tableur absent. Data_k présent mais tranches manquantes : la ligne dit « Data_k incomplet ». |
+| #12 Graphe Activité vide | Si les taxons cochés ne sont pas dans la sélection, le message le dit. Case « Interprétation _Vu ». Même libellé « Identifications validées seulement » qu'en Synthèse. |
+| Libellés | Plus de case « Méthode MNHN ». Le message sans WAV ne dit plus « ChiroSurf exige ». |
 
 ---
 

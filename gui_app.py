@@ -138,7 +138,10 @@ class SessionCard(ctk.CTkFrame):
 
         flags_parts = []
         if state.flag_renamed: flags_parts.append("renommé")
-        if state.flag_te10_done: flags_parts.append("TE×10")
+        if state.flag_te10_done:
+            flags_parts.append("TE×10")
+        elif getattr(state, "has_data_k_mirror", False):
+            flags_parts.append("Data_k incomplet")
         if state.flag_analyzed: flags_parts.append("analysé")
         if state.flag_cleaned: flags_parts.append("nettoyé")
         if getattr(state, "flag_pending_fetch", False):
@@ -677,6 +680,8 @@ class ChiroToolApp(ctk.CTk):
         En série, c'est simple, robuste, et le throughput reste correct grâce
         à l'upload parallèle déjà en place dans la phase upload elle-même.
         """
+        if self._reveal_run_dialog(f"batch:{phase}"):
+            return
         sessions = self._selected_batch_states()
         if not sessions:
             messagebox.showinfo(
@@ -783,7 +788,10 @@ class ChiroToolApp(ctk.CTk):
             return {"batch": True, "results": results,
                      "n_ok": n_ok, "n_skipped": n_skip, "n_err": n_err}
 
-        RunDialog(self, title=title, worker=worker)
+        dlg = RunDialog(self, title=title, worker=worker)
+        self._run_dialogs[f"batch:{phase}"] = dlg
+        for s in sessions:
+            self._run_dialogs[str(s.path)] = dlg
 
     def _run_waits_in_parallel(self, pending, log, progress, _log):
         """Pour chaque session dont l'upload est OK, lance wait + fetch en
@@ -1585,7 +1593,7 @@ class ChiroToolApp(ctk.CTk):
             _btn("📊 Synthèse", lambda: self._open_synthesis_view(s),
                  "Récapitulatif de campagne par espèce. Si un _Vu "
                  "existe, la case Interprétation _Vu permet de le relire. "
-                 "Pour cette analyse, se reporter à ChiroSurf.")
+                 "Pour ce type d'analyse, se reporter à ChiroSurf.")
             _btn("🌊 CSV nuits",
                  lambda: self._open_chirosurf_nights_for_path(s.path, s.name),
                  "Optionnel : préparer un CSV par nuit pour le logiciel externe.")

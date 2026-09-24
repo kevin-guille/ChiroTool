@@ -4795,6 +4795,50 @@ class TestTitleyLog:
         assert pre["_dates_from_titley"] is True
 
 
+class TestPreRelease082:
+    def test_wizard_finds_map_on_ancestor_not_on_itself(self):
+        from gui_windowing import find_ancestor_with
+
+        class W:
+            def __init__(self, master=None, map_panel=None):
+                self.master = master
+                self.map_panel = map_panel
+
+        app = W(map_panel=object())
+        wizard = W(master=app)
+        assert find_ancestor_with(wizard, "map_panel") is app
+        assert find_ancestor_with(app, "map_panel") is None
+
+    def test_empty_activity_names_unchecked_taxon(self):
+        from activity_graph import empty_activity_message
+        msg = empty_activity_message(
+            has_rows=True,
+            selections=[
+                ({"381079"}, "site"),
+                ({"Z1"}, "point"),
+                ({2}, "passage"),
+                ({"2025-09-16"}, "nuit"),
+                ({"Pipip"}, "taxon"),
+            ],
+            visible_taxons={"(4996)"},
+            selected_taxons={"Pipip"},
+        )
+        assert "taxons cochés" in msg
+        assert "liste à gauche" in msg
+
+    def test_public_labels_drop_mnhn_method_name(self):
+        root = Path(__file__).resolve().parents[1]
+        activity = (root / "gui_activity.py").read_text(encoding="utf-8")
+        synthesis = (root / "gui_synthesis.py").read_text(encoding="utf-8")
+        nights = (root / "chirosurf_nights.py").read_text(encoding="utf-8")
+        app = (root / "gui_app.py").read_text(encoding="utf-8")
+        assert 'text="Identifications validées seulement"' in activity
+        assert 'text="Identifications validées seulement"' in synthesis
+        assert "Méthode MNHN" not in activity
+        assert "ChiroSurf exige" not in nights
+        assert "Pour ce type d'analyse, se reporter à ChiroSurf." in app
+
+
 if __name__ == "__main__":
     # Permet de lancer directement : python tests/test_core.py
     import sys

@@ -606,6 +606,33 @@ def aggregate_multi_xlsx(paths: Iterable[Path], **kwargs
     return aggregate_loaded_tables(loaded, **kwargs)
 
 
+def empty_activity_message(
+    *,
+    has_rows: bool,
+    selections: list[tuple],
+    visible_taxons: set[str],
+    selected_taxons: set[str],
+) -> str:
+    """Texte du graphe vide. Nomme le filtre vide, ou les taxons hors sélection."""
+    if not has_rows:
+        return "Aucune donnée d'observation trouvée dans l'espace de travail."
+    for sel, label in selections:
+        if not sel:
+            return (
+                f"Aucun {label} sélectionné.\n"
+                f"Coche au moins un {label} dans la colonne de gauche."
+            )
+    if visible_taxons and not (set(visible_taxons) & set(selected_taxons)):
+        return (
+            "Les taxons cochés ne sont pas dans cette sélection.\n"
+            "Coche un taxon de la liste à gauche."
+        )
+    return (
+        "Aucun contact pour cette combinaison de filtres.\n"
+        "Élargis la sélection (colonne de gauche)."
+    )
+
+
 def list_taxons(aggregated: dict, *, min_total: int = 1
                   ) -> list[tuple[str, int]]:
     """Liste des taxons avec nb total de contacts, triée décroissant."""

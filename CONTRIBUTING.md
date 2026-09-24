@@ -64,18 +64,24 @@ Vigie-Chiro) ; CSV pour ouvrir une nuit dans le logiciel externe déjà en 0.7.1
   sans relancer Tadarida si la nuit est déjà analysée. **Publiée** GitHub
   le 2026-09-19 en Latest
   ([v0.8.1](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.1)).
-  Issue #11 (suivi) : réouverture livrée, le reste reste ouvert.
+- **v0.8.2** (2026-09-24, pré-release) : #13 choix sur la carte, #11 la
+  fenêtre de suivi batch ne fige plus l'interface, #14 avancement du
+  diagnostic, message Activité #12, libellés. Le calcul de relecture d'un
+  `_Vu` ne change pas. Latest reste 0.8.1 tant que la pré-release n'est
+  pas promue
+  ([v0.8.2](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.2)).
 
 | Document | Rôle |
 |----------|------|
-| [`docs/SPEC_v06_parcours.md`](docs/SPEC_v06_parcours.md) | **Source de vérité** (v0.8 livrée ; §0.1 #4 ; §0.2 #7 ; §0.3 #8 ; §0.4 #9/#10 ; §0.5 #11 partielle ; §0.6 batch Préparer interne 0.8.2 ; D14 Batch) |
+| [`docs/SPEC_v06_parcours.md`](docs/SPEC_v06_parcours.md) | **Source de vérité** (v0.8.1 Latest ; pré-release 0.8.2 §0.7 ; §0.1 #4 ; §0.2 #7 ; §0.3 #8 ; §0.4 #9/#10 ; §0.5 #11 ; §0.6 batch Préparer ; D14 Batch) |
 | [`CHANGELOG.md`](CHANGELOG.md) | Versions publiées + *Suite possible* |
 | [`docs/RELEASE_v0.6.0.md`](docs/RELEASE_v0.6.0.md) | Note de release GitHub v0.6 |
 | [`docs/RELEASE_v0.7.0.md`](docs/RELEASE_v0.7.0.md) | Note de release GitHub v0.7 |
 | [`docs/RELEASE_v0.7.1.md`](docs/RELEASE_v0.7.1.md) | Note de pre-release GitHub v0.7.1 (issue #7, remplacée) |
 | [`docs/RELEASE_v0.7.2.md`](docs/RELEASE_v0.7.2.md) | Note de release GitHub v0.7.2 (remplacée par 0.8.1) |
 | [`docs/RELEASE_v0.8.0.md`](docs/RELEASE_v0.8.0.md) | Note de pre-release GitHub v0.8.0 (2026-09-09, remplacée par 0.8.1) |
-| [`docs/RELEASE_v0.8.1.md`](docs/RELEASE_v0.8.1.md) | Note de release GitHub v0.8.1 (Latest, 2026-09-19, SHA exe) |
+| [`docs/RELEASE_v0.8.1.md`](docs/RELEASE_v0.8.1.md) | Note de release GitHub v0.8.1 (Latest stable, 2026-09-19, SHA exe) |
+| [`docs/RELEASE_v0.8.2.md`](docs/RELEASE_v0.8.2.md) | Note de pré-release GitHub v0.8.2 (2026-09-24, SHA exe) |
 | [`docs/TUTORIEL.md`](docs/TUTORIEL.md) | Guide utilisateur (pick, Synthèse, CSV optionnel pour le logiciel externe, repair) |
 | [`docs/ChiroTool-Tutoriel.pdf`](docs/ChiroTool-Tutoriel.pdf) | PDF généré via `python docs/build_pdf.py` |
 | [`samples/issue3_benjamin/`](samples/issue3_benjamin/) | Fixtures CSV multi-nuits + `_Vu` (issue #3) |

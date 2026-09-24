@@ -15,7 +15,8 @@ Outil libre pour le protocole **[Vigie-Chiro Point Fixe](https://www.vigienature
 [![Python](https://img.shields.io/badge/Python-3.11%2B-3776ab.svg)](https://www.python.org/)
 [![Windows](https://img.shields.io/badge/Windows-portable-0d419d.svg)](#installation)
 
-**[⬇ Télécharger l’exe](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.1)** ·
+**[⬇ Pré-release v0.8.2](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.2)** ·
+stable [v0.8.1](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.1) ·
 **[📖 Tutoriel PDF](docs/ChiroTool-Tutoriel.pdf)** ·
 **[💬 Ouvrir une issue](https://github.com/kevin-guille/ChiroTool/issues)**
 

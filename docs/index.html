@@ -36,10 +36,10 @@
       "operatingSystem": "Windows",
       "applicationCategory": "ScientificApplication",
       "applicationSubCategory": "Bioacoustique / traitement Vigie-Chiro",
-      "softwareVersion": "0.8.1",
+      "softwareVersion": "0.8.2",
       "description": "Logiciel libre qui prépare, envoie et suit les enregistrements ultrason du protocole Vigie-Chiro Point Fixe (MNHN) : renommage, expansion temporelle TE×10, participation et upload API, suivi Tadarida, synthèse de campagne, CSV optionnel pour ouvrir une nuit dans le logiciel externe, Titley Swift/Ranger, Vérifier/Réparer, carte, nettoyage, registre. ChiroTool n'est pas un outil officiel du MNHN.",
       "url": "https://kevin-guille.github.io/ChiroTool/",
-      "downloadUrl": "https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.1",
+      "downloadUrl": "https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.2",
       "softwareHelp": "https://kevin-guille.github.io/ChiroTool/ChiroTool-Tutoriel.pdf",
       "license": "https://opensource.org/licenses/MIT",
       "inLanguage": "fr",
@@ -393,7 +393,7 @@
 <header class="hero">
   <div class="wrap hero-grid">
     <div>
-      <div class="pill"><span class="dot"></span> v0.8.1 : Titley, upload unitaire, Activité</div>
+      <div class="pill"><span class="dot"></span> pré-release v0.8.2 : carte, suivi, diagnostic</div>
       <h1>Préparer, envoyer et suivre vos nuits chiroptères.</h1>
       <p class="tag">Logiciel libre pour le protocole Vigie-Chiro Point Fixe (MNHN).</p>
       <p class="lead">
@@ -501,8 +501,8 @@
   <div class="wrap">
     <div class="banner-v">
       <div>
-        <strong>Nouveautés v0.8.1</strong>
-        <span> : participation Titley (série, log, T°, issue #8) ; wizard d’upload visible tout de suite (issue #9) ; Activité en cache, les autres carrés restent dans les filtres (issue #10). Conservé depuis 0.8.0 : relecture d’un fichier _Vu produit dans le logiciel externe (Synthèse et Activité, issue #7) ; WAV Titley &gt; 5&nbsp;s découpé en entier (issue #4).</span>
+        <strong>Pré-release v0.8.2</strong>
+        <span> : choix sur la carte depuis les métadonnées (issue #13) ; fermer le suivi d’upload ne fige plus l’interface (issue #11) ; Vérifier / Réparer affiche l’étape en cours (issue #14) ; le graphe Activité dit quand aucun taxon affiché n’est coché (issue #12). Stable : v0.8.1. La relecture d’un fichier _Vu ne change pas.</span>
       </div>
       <a class="btn outline sm" href="https://github.com/kevin-guille/ChiroTool/releases">Voir les releases →</a>
     </div>
@@ -732,14 +732,14 @@
 
 <section id="telecharger" class="dl">
   <div class="wrap">
-    <div class="pill" style="margin:0 auto 18px"><span class="dot"></span> v0.8.1 · 19 septembre 2026</div>
-    <h2>Téléchargez ChiroTool v0.8.1</h2>
+    <div class="pill" style="margin:0 auto 18px"><span class="dot"></span> pré-release v0.8.2 · 24 septembre 2026</div>
+    <h2>Téléchargez ChiroTool v0.8.2</h2>
     <p>
       Logiciel portable Windows (≈&nbsp;36&nbsp;Mo). Aucune installation,
       aucun droit administrateur. Traitez une nuit test dès ce soir.
     </p>
     <div class="cta">
-      <a class="btn lg" href="https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.1">⬇ Dernière version (.exe)</a>
+      <a class="btn lg" href="https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.2">⬇ Pré-release v0.8.2 (.exe)</a>
       <a class="btn lg ghost" href="ChiroTool-Tutoriel.pdf">📖 Tutoriel complet (PDF)</a>
       <a class="btn lg ghost" href="https://github.com/kevin-guille/ChiroTool">Code source</a>
     </div>
@@ -773,7 +773,7 @@
       <h4>Le projet</h4>
       <p>
         <a href="https://github.com/kevin-guille/ChiroTool">Code source (GitHub)</a><br>
-        <a href="https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.1">Télécharger</a><br>
+        <a href="https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.2">Télécharger la pré-release</a><br>
         <a href="ChiroTool-Tutoriel.pdf">Tutoriel PDF</a><br>
         <a href="https://github.com/kevin-guille/ChiroTool/blob/main/README.md">README</a><br>
         <a href="https://github.com/kevin-guille/ChiroTool/blob/main/CHANGELOG.md">Changelog</a><br>

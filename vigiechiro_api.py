@@ -1197,7 +1197,8 @@ class VigieChiroClient:
             return d["s3_signed_url"]
         raise ApiError(f"réponse inattendue pour /fichiers/{file_id}/acces : {d!r}")
 
-    def list_participation_files(self, participation_id: str) -> list[str]:
+    def list_participation_files(self, participation_id: str,
+                                 progress=None) -> list[str]:
         """Retourne la liste des **noms** (``titre``) des fichiers WAV déjà
         uploadés pour une participation donnée.
 
@@ -1226,6 +1227,11 @@ class VigieChiroClient:
                 page = 1
                 names: list[str] = []
                 while page <= 500:
+                    if progress is not None:
+                        try:
+                            progress(len(names), 0, f"portail, page {page}")
+                        except Exception:
+                            pass
                     params = {
                         "where": json.dumps({field: participation_id}),
                         "max_results": page_size, "page": page,
@@ -1241,6 +1247,13 @@ class VigieChiroClient:
                         if name:
                             names.append(str(name))
                     meta = (resp or {}).get("_meta") or {}
+                    if progress is not None:
+                        try:
+                            total_meta = int(meta.get("total") or 0)
+                            progress(len(names), total_meta or len(names),
+                                     f"portail, page {page}")
+                        except Exception:
+                            pass
                     if fichiers_listing_page_done(
                             n_page_items=len(items),
                             n_names_so_far=len(names),

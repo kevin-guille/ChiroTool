@@ -583,8 +583,9 @@ class SessionMetaWizard(ctk.CTkToplevel):
 
     def _on_pick_on_map(self):
         """Mode PICK carte (SPEC P2) : masque le wizard, retourne un PointSelection."""
-        app = self.winfo_toplevel()
-        map_panel = getattr(app, "map_panel", None)
+        from gui_windowing import find_ancestor_with
+        app = find_ancestor_with(self, "map_panel")
+        map_panel = getattr(app, "map_panel", None) if app is not None else None
         if map_panel is None:
             messagebox.showinfo(
                 "Carte",
@@ -613,7 +614,7 @@ class SessionMetaWizard(ctk.CTkToplevel):
                 pass
             try:
                 self.err_lbl.configure(
-                    text="Choix carte annulé — saisie manuelle ou points récents.",
+                    text="Choix carte annulé. Saisie manuelle ou points récents.",
                     text_color=("gray40", "gray70"))
             except Exception:
                 pass

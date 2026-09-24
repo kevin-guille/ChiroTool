@@ -325,8 +325,16 @@ class RunDialog(ctk.CTkToplevel):
             self._withdraw_to_background()
 
     def _withdraw_to_background(self):
-        """Cache la fenêtre, le worker continue. Recliquer Upload la rouvre."""
+        """Cache la fenêtre, le worker continue. Recliquer Upload la rouvre.
+
+        Sans ``grab_release``, la modale invisible garde les clics : plus
+        aucun bouton de la fenêtre principale ne répond.
+        """
         self._backgrounded = True
+        try:
+            self.grab_release()
+        except Exception:
+            pass
         try:
             self.withdraw()
         except Exception:
@@ -342,6 +350,7 @@ class RunDialog(ctk.CTkToplevel):
             self.deiconify()
             self.lift()
             self.focus_force()
+            self.grab_set()
         except Exception:
             pass
 
@@ -544,10 +553,14 @@ def run_repair_diagnose(session_path: Path, token: str):
     def worker(log, progress=None):
         log(f"Session : {session_path}")
         log("")
-        log("=== Diagnostic (dry-run) — aucune modification ===")
+        log("=== Diagnostic (dry-run) : aucune modification ===")
+        log("Lecture des WAV locaux, puis comparaison avec le portail.")
+        log("Le statut en bas indique l'étape. Plusieurs minutes sur un gros Data_k.")
         log("")
+        if progress:
+            progress(0, 0, "WAV locaux")
         report = diagnose_and_repair_session(
-            session_path, token=token, apply=False,
+            session_path, token=token, apply=False, progress=progress,
         )
         text = format_repair_report(report)
         for line in text.splitlines():
