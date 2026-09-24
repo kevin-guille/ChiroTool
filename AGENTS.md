@@ -46,6 +46,12 @@ dans un texte lu par un humain. Voix « je » sur le contenu public.
   `dist/ChiroTool.exe` (SHA-256
   `12395A07E4D0904BAE03458A082865B7368B3A2A7599B18D279479B48D8A63B8`).
   Ce n'est pas la Latest tant que Kevin ne promeut pas la pré-release.
+- Remplacer l'exe ne migre pas les dossiers déjà en cours. Schéma du
+  registre : version 3, inchangé depuis 0.8.1. `feed_from_scan` met à jour
+  les pastilles. Il ne réécrit pas l'identifiant de participation, l'état
+  portail ni le compteur d'identifications. L'historique live ne touche
+  pas le registre. Une nuit dont le manifest a `renamed` et `te10_done`
+  n'est pas retraitée.
 - Vérifier `git status` et les tags avant d'affirmer qu'un correctif est
   en ligne. `origin/main` peut être en retard sur le commit de pré-release.
 - Ne pas pousser, taguer, publier une release, ni reconstruire l'exe

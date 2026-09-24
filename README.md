@@ -50,6 +50,29 @@ Idéal pour les **bureaux d’études**, **associations** et **observateurs** qu
 
 ## Nouveautés v0.8
 
+La **pré-release v0.8.2** (2026-09-24,
+[tag v0.8.2](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.2),
+SHA-256 `12395A07E4D0904BAE03458A082865B7368B3A2A7599B18D279479B48D8A63B8`)
+s'installe à la place de l'exe. La **Latest** reste la
+[v0.8.1](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.1)
+tant que cette pré-release n'est pas promue.
+
+| | Nouveauté | Bénéfice terrain |
+|---|-----------|------------------|
+| 🗺️ | **Carte depuis les métadonnées** | « Choisir sur la carte » ouvre l'onglet Carte ([#13](https://github.com/kevin-guille/ChiroTool/issues/13)) |
+| ☁️ | **Suivi d'upload** | Fermer la fenêtre de suivi rend les clics. Recliquer Upload rouvre aussi un lot. Fermer l'application pendant un traitement demande confirmation. L'historique se met à jour pendant l'envoi ([#11](https://github.com/kevin-guille/ChiroTool/issues/11)) |
+| 🔧 | **Vérifier / Réparer** | Si le portail dit la nuit déjà analysée, les WAV ne sont plus comparés un par un. Le tableur manquant est téléchargé. Tadarida n'est pas relancée ([#14](https://github.com/kevin-guille/ChiroTool/issues/14)) |
+| 📈 | **Activité** | Si les espèces cochées ne sont pas dans la nuit affichée, les plus présentes de cette nuit sont cochées. La case s'appelle « Interprétation _Vu » ([#12](https://github.com/kevin-guille/ChiroTool/issues/12)) |
+| ▶ | **Batch Préparer** | Une nuit sans carré ou point est ignorée, pas comptée comme un succès. Une nuit déjà préparée n'est pas refaite |
+
+Les dossiers de nuits déjà en cours restent utilisables. On remplace
+seulement `ChiroTool.exe`. Manifests, registre (`registry.db`, même
+schéma), fichier Suivi, WAV, tableurs et participations déjà créées
+ne sont pas migrés ni renvoyés. Un envoi coupé se reprend avec Upload.
+Une nuit déjà analysée sur le portail n'est pas relancée.
+
+Note : [`docs/RELEASE_v0.8.2.md`](docs/RELEASE_v0.8.2.md).
+
 La **v0.8.1** (release GitHub du 2026-09-19, **Latest**,
 [tag v0.8.1](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.1),
 SHA-256 `14C620BC40BC1E2DB9059653B6830E5B107A1726DCF0107DB3D16BD4123B19AE`)
@@ -60,7 +83,7 @@ remplace la [v0.8.0](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8
 | 🏷️ | **Participation Titley** | Série, type, micro, horaires et T° du `log_*.csv` envoyés à Vigie-Chiro ([#8](https://github.com/kevin-guille/ChiroTool/issues/8)) |
 | ☁️ | **Upload unitaire** | Assistant visible tout de suite, plus de fenêtre noire sur un gros Data_k ([#9](https://github.com/kevin-guille/ChiroTool/issues/9)) |
 | 📈 | **Activité** | Tableurs en mémoire ; relecture d'un `_Vu` et filtre chiros sans rescan ; `_Vu` racine et Data_k ; les autres carrés restent ([#10](https://github.com/kevin-guille/ChiroTool/issues/10)) |
-| 🔌 | **Suivi d'upload** | Fermer la fenêtre = arrière-plan ; recliquer Upload la rouvre (reste : [#11](https://github.com/kevin-guille/ChiroTool/issues/11)) |
+| 🔌 | **Suivi d'upload** | Fermer la fenêtre = arrière-plan ; recliquer Upload la rouvre. Fermeture de l'exe et historique pendant l'envoi : pré-release 0.8.2 ([#11](https://github.com/kevin-guille/ChiroTool/issues/11)) |
 | 📊 | **Relecture d'un `_Vu`** (dès 0.8.0) | Case dans la Synthèse et l'Activité. Le fichier est produit dans le logiciel externe. Ce n'est pas la validation Vigie-Chiro ([#7](https://github.com/kevin-guille/ChiroTool/issues/7)) |
 | 🏷️ | **Titley TE×10** (dès 0.8.0) | WAV > 5 s découpé **en entier** ([#4](https://github.com/kevin-guille/ChiroTool/issues/4)) |
 
@@ -319,7 +342,7 @@ Tests : `pytest tests/` (également en [CI GitHub Actions](https://github.com/ke
 
 Vous avez une saison Point Fixe devant vous ? **ChiroTool est fait pour ça.**
 
-1. **[Téléchargez la v0.8.1](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.1)** (exe ou sources)
+1. **[Téléchargez la pré-release v0.8.2](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.2)** (exe ou sources). La stable reste la [v0.8.1](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.1)
 2. Traitez une nuit test de bout en bout
 3. Envoyez un retour — bug, idée, besoin de formation —
    via une [**issue GitHub**](https://github.com/kevin-guille/ChiroTool/issues)
@@ -357,7 +380,7 @@ Distribué sous licence **[MIT](LICENSE)** — usage, modification et redistribu
 
 🦇 **Bon traitement, et bonnes chauves-souris !**
 
-[⬆ Télécharger](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.1)
+[⬆ Télécharger](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.2)
 ·
 [📖 Tutoriel](docs/ChiroTool-Tutoriel.pdf)
 ·

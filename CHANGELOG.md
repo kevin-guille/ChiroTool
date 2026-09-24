@@ -56,6 +56,10 @@ tant que cette pré-release n'est pas promue.
   Suivi. Le fichier Suivi n'est ouvert qu'une fois pour tout le lot.
   Une nuit déjà renommée et déjà expansée n'est pas retraitée.
   Une erreur de lecture du manifest ou du Suivi va dans `chirotool.log`.
+- **Dossiers déjà en cours** : on remplace seulement l'exe. Manifest,
+  registre (schéma inchangé), Suivi Excel, WAV et participations déjà
+  créées restent. Un envoi coupé se reprend. Une nuit déjà analysée
+  n'est pas relancée. L'historique en direct n'écrit pas dans le registre.
 
 ### Documentation
 

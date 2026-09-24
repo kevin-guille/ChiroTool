@@ -115,6 +115,11 @@ administrateur requis.
 > complémentaires »** puis **« Exécuter quand même »**. C'est normal pour un
 > logiciel libre non distribué via le Microsoft Store.
 
+> **Nuits déjà en cours** : remplacez seulement l'exe. Les dossiers de nuits,
+> le registre, le fichier Suivi et les participations déjà créées restent.
+> Un envoi coupé se reprend avec **Upload**. Une nuit déjà analysée sur le
+> portail n'est pas renvoyée ni relancée.
+
 ### Deux modes de fonctionnement
 
 - **Mode installé** (par défaut) : la configuration est stockée dans votre profil
@@ -496,11 +501,14 @@ côté serveur. Au retour, relancez « Upload » sur les nuits concernées (ou u
 « 🔄 Sync API » dans le Registre) pour récupérer les résultats.
 
 Le batch **n'ouvre pas** l'assistant métadonnées. Une nuit sans carré / point
-(jamais préparée à la main) est **ignorée**. En **0.8.1**, le bilan pouvait
-quand même afficher OK alors que les fichiers n'avaient pas été renommés
-(surtout vers la fin d'une série d'une quinzaine). Contrôle : les noms dans
-le dossier. Si rien n'a bougé, **▶ Préparer** cette nuit **seule** (l'assistant
-peut saisir le carré / point), puis relancer le batch.
+(jamais préparée à la main) est **ignorée**, et le bilan ne la compte plus
+comme un succès (exe 0.8.2). Une nuit déjà renommée et déjà expansée n'est
+pas refaite : les fichiers restent. S'il ne manque que l'expansion, elle
+continue. Avec un log Titley, les horaires sont lus dans ce log.
+
+Si une nuit n'a pas bougé parce que le carré ou le point manquait,
+**▶ Préparer** cette nuit **seule** (l'assistant peut les saisir), puis
+relancer le batch.
 
 ---
 
@@ -1205,7 +1213,7 @@ ChiroTool couvre la grande majorité des cas, mais pas (encore) tout :
 | Zone | Ce qui change |
 |------|----------------|
 | **Synthèse** | **v0.8.0** : case **Interprétation _Vu** (relecture d'un fichier produit dans le logiciel externe, colonne Seuil _Vu, issue #7). `_Vu` lu s'il existe. Menu Nuit **seulement** s'il y a plusieurs soirs (v0.7.2 : une pose minuit = 1 nuit) |
-| **Activité** | Un `_Vu` remplace le tableur **pour cette nuit seulement** (`chirosurf/`, `Data_k/`, racine de session). Même case de relecture que la Synthèse. **v0.8.1** : cache mémoire, plus de rescan à chaque case, les autres carrés restent dans les filtres |
+| **Activité** | Un `_Vu` remplace le tableur **pour cette nuit seulement** (`chirosurf/`, `Data_k/`, racine de session). Même case de relecture que la Synthèse. **v0.8.1** : cache mémoire, plus de rescan à chaque case, les autres carrés restent dans les filtres. **v0.8.2** : si les espèces cochées ne sont pas dans la nuit affichée, les plus présentes de cette nuit sont cochées |
 | **CSV nuits** | Optionnel : CSV pour ouvrir la nuit dans le logiciel externe. La validation se fait dans le logiciel externe, pas dans ChiroTool. Coupure **midi**. **v0.7.1** : CSV à côté des WAV ; `_Vu` `Nuit_1_…`. **v0.7.2** : boutons sous le libellé (écran classique) |
 | **Barre d'actions** | **v0.7.2** : une ligne, glissement horizontal si l'écran est étroit |
 | **Valider** | Tri des colonnes, filtres observateur / chiros, bilan `X / Y` (issue #4) |
@@ -1213,7 +1221,7 @@ ChiroTool couvre la grande majorité des cas, mais pas (encore) tout :
 | **Batch** | Plusieurs nuits dans **une** instance (case ☐ Batch). Pas plusieurs exe. |
 | **Titley** | Swift / Ranger : noms usine lus ; un WAV > 5 s est découpé **en entier** (plus seulement les 5 premières secondes, issue #4) |
 | **Démarrage** | Plus de scan auto du dernier dossier (issue #5) |
-| **Upload / Réparer** | Coupure réseau : code 409 = déjà enregistré, Tadarida peut partir. **Vérifier / Réparer** lance l'analyse si le listing portail échoue ; 0 contact → renvoyer Data_k. **v0.8.1** : wizard d'upload visible tout de suite (issue #9) ; fermer la fenêtre = arrière-plan, recliquer Upload la rouvre |
+| **Upload / Réparer** | Coupure réseau : code 409 = déjà enregistré, Tadarida peut partir. **Vérifier / Réparer** lance l'analyse si le listing portail échoue ; 0 contact → renvoyer Data_k. **v0.8.1** : wizard d'upload visible tout de suite (issue #9) ; fermer la fenêtre = arrière-plan, recliquer Upload la rouvre. **v0.8.2** : fermer cette fenêtre ne fige plus l'application ; fermer ChiroTool pendant un envoi demande confirmation ; si le portail dit la nuit déjà analysée, les WAV ne sont plus comparés un par un |
 | **Participation Titley** | **v0.8.1** (issue #8) : n° de série, type, micro, horaires et T° du `log_*.csv` envoyés à Vigie-Chiro |
 | **Export USB** | **v0.8.1** : un scan d'un paquet Data_k-only retrouve la session (plus le dossier `Data_k/` lui-même). Excel, Summary et ID participation réapparaissent. Ouvrir `ChiroTool_export_…`, pas `Data_k` |
 | **Pastille / TE×10** | **v0.8.1** : après nettoyage, Data_k plus petit que les bruts ne recule plus TE×10 (pastille verte, plus de Préparer en faux « next ») |

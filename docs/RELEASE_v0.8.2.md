@@ -20,6 +20,29 @@ La relecture d'un `_Vu` dans ChiroTool ne change pas de calcul.
 
 Les sessions déjà préparées restent utilisables. Remplacez seulement l'exe.
 
+## Dossiers déjà en cours
+
+Rien n'est migré. Le manifeste de chaque nuit (`_session_manifest.json`),
+le registre (`_chirotool/registry.db` ou l'ancien `registry.db` à la
+racine, schéma version 3), le fichier Suivi Excel, les WAV, les tableurs
+et les participations Vigie-Chiro déjà créées restent tels quels.
+
+- Ouvrir le même dossier ne relance pas Tadarida et ne renvoie pas les WAV.
+- Un envoi coupé se reprend avec Upload. Si l'analyse est déjà lancée ou
+  terminée, elle n'est pas relancée.
+- Une nuit déjà renommée et déjà expansée n'est pas refaite. Les fichiers
+  ne sont ni renommés ni régénérés.
+- Si le portail dit la nuit déjà analysée, Vérifier / Réparer ne liste
+  plus les WAV. Il télécharge le tableur s'il manque. Il ne reprend pas
+  un envoi et ne relance pas l'analyse. Une nuit encore en cours sur le
+  portail est toujours comparée fichier par fichier.
+- L'historique en direct lit le journal de la nuit. Il n'écrit pas dans
+  le registre.
+- Un nouveau scan met à jour les pastilles du registre à partir des
+  fichiers, comme avec l'exe 0.8.1. L'identifiant de participation, l'état
+  portail et le compteur d'identifications envoyées ne sont pas effacés
+  par ce scan.
+
 ## Ce qui change
 
 - **🗺️ Carte** (issue #13) : « Choisir sur la carte » dans les métadonnées

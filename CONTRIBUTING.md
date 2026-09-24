@@ -42,9 +42,10 @@ décrivant :
 [#10](https://github.com/kevin-guille/ChiroTool/issues/10) (SPEC
 [`§0.4`](docs/SPEC_v06_parcours.md)) et
 [#11](https://github.com/kevin-guille/ChiroTool/issues/11) (SPEC
-[`§0.5`](docs/SPEC_v06_parcours.md), partielle) comme une todo.
-Le batch Préparer (dernières nuits « OK » sans rename) reste **interne** :
-SPEC [`§0.6`](docs/SPEC_v06_parcours.md), pas d'issue GitHub, cible 0.8.2.
+[`§0.5`](docs/SPEC_v06_parcours.md), code dans la pré-release 0.8.2)
+comme une todo.
+Le batch Préparer est **interne** :
+SPEC [`§0.6`](docs/SPEC_v06_parcours.md), pas d'issue GitHub, dans l'exe 0.8.2.
 En particulier : **pas plusieurs exe** (mode Batch, D14) ; **Valider puis
 Nettoyer** déjà en 0.7 ; relecture d'un `_Vu` produit dans le logiciel externe dans
 la **Synthèse et Activité** (v0.8, P8, pas la procédure de validation
@@ -64,11 +65,13 @@ Vigie-Chiro) ; CSV pour ouvrir une nuit dans le logiciel externe déjà en 0.7.1
   sans relancer Tadarida si la nuit est déjà analysée. **Publiée** GitHub
   le 2026-09-19 en Latest
   ([v0.8.1](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.1)).
-- **v0.8.2** (2026-09-24, pré-release) : #13 choix sur la carte, #11 la
-  fenêtre de suivi batch ne fige plus l'interface, #14 avancement du
-  diagnostic, message Activité #12, libellés. Le calcul de relecture d'un
-  `_Vu` ne change pas. Latest reste 0.8.1 tant que la pré-release n'est
-  pas promue
+- **v0.8.2** (2026-09-24, pré-release) : #13 choix sur la carte, #11
+  suivi d'upload (clics, confirmation à la fermeture, historique pendant
+  l'envoi), #14 nuit déjà analysée sans comparer les WAV, #12 espèces de
+  la nuit affichée, libellés, batch Préparer (§0.6). Le calcul de relecture
+  d'un `_Vu` ne change pas. Dossiers, manifests et registre existants
+  restent en place (schéma du registre inchangé). Latest reste 0.8.1 tant
+  que la pré-release n'est pas promue
   ([v0.8.2](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.2)).
 
 | Document | Rôle |
