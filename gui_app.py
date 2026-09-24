@@ -737,11 +737,17 @@ class ChiroToolApp(ctk.CTk):
                     results.append({"session": s.name, "session_obj": s,
                                      "result": r})
                     if isinstance(r, dict) and (r.get("error") or r.get("errors")):
-                        _log.warning("Batch %s : session %d/%d %s erreur(s) — %s",
+                        _log.warning("Batch %s : session %d/%d %s erreur(s) : %s",
                                       phase, i, total, s.name,
                                       r.get("error") or r.get("errors"))
+                    elif isinstance(r, dict) and r.get("skipped") and not r.get("already_done"):
+                        _log.warning("Batch %s : session %d/%d %s ignorée : %s",
+                                      phase, i, total, s.name, r.get("skipped"))
+                    elif isinstance(r, dict) and r.get("already_done"):
+                        _log.info("Batch %s : session %d/%d déjà préparée : %s",
+                                  phase, i, total, s.name)
                     else:
-                        _log.info("Batch %s : session %d/%d OK — %s",
+                        _log.info("Batch %s : session %d/%d OK : %s",
                                   phase, i, total, s.name)
                 except Exception as e:
                     log(f"⚠ Erreur sur {s.name} : {e}")
@@ -918,7 +924,9 @@ class ChiroToolApp(ctk.CTk):
                         and meta.n_passage is not None:
                     return meta
         except Exception:
-            pass
+            import logging
+            logging.getLogger("chirotool.batch").exception(
+                "manifest illisible pour le batch : %s", s.path)
         # 2. Auto-résolution heuristique — uniquement si elle est COMPLÈTE.
         # Une meta partielle (carré/point manquants) ne peut pas être renommée
         # en batch (pas de wizard dans un thread) → on renvoie None pour que le
@@ -929,7 +937,9 @@ class ChiroToolApp(ctk.CTk):
             if self._meta_is_complete(auto):
                 return auto
         except Exception:
-            pass
+            import logging
+            logging.getLogger("chirotool.batch").exception(
+                "auto-métadonnées en échec pour le batch : %s", s.path)
         return None
 
     def _run_phase_for(self, s, phase: str, log, progress):
@@ -961,7 +971,9 @@ class ChiroToolApp(ctk.CTk):
                     if info.get("prefer_wav") and info.get("wav_min"):
                         meta.date_debut = info["wav_min"]
             except Exception:
-                pass
+                import logging
+                logging.getLogger("chirotool.batch").exception(
+                    "contrôle Summary/WAV en échec : %s", s.path)
             return _capture_stdout(
                 lambda: run_phase_prep(s.path, meta, dry_run=False,
                                          force=False, progress=progress),

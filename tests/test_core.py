@@ -661,6 +661,10 @@ class TestBatchRowClassify:
         assert classify_batch_row({
             "session": "n4", "result": {"errors": ["aucun WAV"]},
         }) == "error"
+        assert classify_batch_row({
+            "session": "n5",
+            "result": {"skipped": "déjà préparée", "already_done": True},
+        }) == "ok"
 
 
 class TestFinishUploadWithTrigger:
@@ -4828,6 +4832,171 @@ class TestPreRelease082:
         )
         assert "taxons cochés" in msg
         assert "liste à gauche" in msg
+
+    def test_titley_log_skips_wav_listing(self, tmp_path, monkeypatch):
+        import shutil
+        from chiro_core import list_session_wav_names
+        from rename import try_auto_meta
+        sess = tmp_path / "nuit_titley"
+        sess.mkdir()
+        shutil.copyfile(_TITLEY_LOG, sess / "log_2026-08-21.csv")
+
+        def boom(session):
+            raise AssertionError("ne doit pas lister les WAV si le log Titley suffit")
+
+        monkeypatch.setattr("chiro_core.list_session_wav_names", boom)
+        meta, msgs = try_auto_meta(sess)
+        assert meta is not None
+        assert meta.date_debut is not None
+        assert meta.date_debut.date().isoformat() == "2026-08-21"
+        assert meta.n_serie == "669178"
+        assert any("log_2026-08-21.csv" in m for m in msgs)
+        list_session_wav_names  # référence gardée pour le monkeypatch
+
+    def _patch_suivi(self, monkeypatch, tmp_path, rows):
+        from suivi import Suivi
+        xlsx = tmp_path / "Suivi.xlsx"
+        xlsx.write_bytes(b"x")
+
+        class Fake:
+            def __init__(self):
+                self.rows = rows
+
+            find_row_for_session = Suivi.find_row_for_session
+
+        monkeypatch.setattr("suivi._default_path", lambda year=None: xlsx)
+        monkeypatch.setattr("suivi.load_suivi_cached", lambda path: Fake())
+
+    def test_titley_hour_survives_other_suivi_night(self, tmp_path, monkeypatch):
+        import shutil
+        from suivi import SuiviRow
+        from rename import try_auto_meta
+        sess = tmp_path / "nuit_titley"
+        sess.mkdir()
+        shutil.copyfile(_TITLEY_LOG, sess / "log_2026-08-21.csv")
+        self._patch_suivi(monkeypatch, tmp_path, [
+            SuiviRow(
+                row_index=2,
+                nom_contrat="Autre",
+                date_debut=datetime(2026, 7, 1, 21, 0, 0),
+                n_site_tadarida="111111",
+                n_point_fixe="Z9",
+                n_passage=1,
+                n_enregistreur=3,
+                n_serie="669178",
+            ),
+        ])
+        meta, msgs = try_auto_meta(sess)
+        assert meta is not None
+        assert meta.date_debut == datetime(2026, 8, 21, 20, 39, 5)
+        assert meta.n_serie == "669178"
+        assert meta.n_site_tadarida is None
+        assert meta.n_point_fixe is None
+        assert any("autre nuit" in m for m in msgs)
+
+    def test_titley_hour_kept_when_suivi_same_day(self, tmp_path, monkeypatch):
+        import shutil
+        from suivi import SuiviRow
+        from rename import try_auto_meta
+        sess = tmp_path / "nuit_titley"
+        sess.mkdir()
+        shutil.copyfile(_TITLEY_LOG, sess / "log_2026-08-21.csv")
+        self._patch_suivi(monkeypatch, tmp_path, [
+            SuiviRow(
+                row_index=4,
+                nom_contrat="Campagne",
+                date_debut=datetime(2026, 8, 21),
+                n_site_tadarida="381079",
+                n_point_fixe="Z1",
+                n_passage=2,
+                n_enregistreur=1,
+                n_serie="669178",
+            ),
+        ])
+        meta, msgs = try_auto_meta(sess)
+        assert meta.date_debut == datetime(2026, 8, 21, 20, 39, 5)
+        assert meta.n_site_tadarida == "381079"
+        assert meta.n_point_fixe == "Z1"
+        assert meta.n_passage == 2
+        assert any("match unique" in m for m in msgs)
+
+    def test_suivi_read_error_is_logged(self, tmp_path, monkeypatch, caplog):
+        import logging
+        import shutil
+        from rename import try_auto_meta
+        sess = tmp_path / "nuit_titley"
+        sess.mkdir()
+        shutil.copyfile(_TITLEY_LOG, sess / "log_2026-08-21.csv")
+        xlsx = tmp_path / "Suivi.xlsx"
+        xlsx.write_bytes(b"x")
+
+        def boom(path):
+            raise OSError("fichier verrouillé")
+
+        monkeypatch.setattr("suivi._default_path", lambda year=None: xlsx)
+        monkeypatch.setattr("suivi.load_suivi_cached", boom)
+        with caplog.at_level(logging.ERROR, logger="chirotool.rename"):
+            meta, msgs = try_auto_meta(sess)
+        assert meta is not None
+        assert meta.date_debut == datetime(2026, 8, 21, 20, 39, 5)
+        assert meta.n_site_tadarida is None
+        assert any("Suivi illisible" in r.message for r in caplog.records)
+
+    def test_manifest_load_logs_bad_json(self, tmp_path, caplog):
+        import logging
+        from manifest import MANIFEST_FILENAME, Manifest
+        sess = tmp_path / "nuit"
+        sess.mkdir()
+        (sess / MANIFEST_FILENAME).write_text("{pas du json", encoding="utf-8")
+        with caplog.at_level(logging.ERROR, logger="chirotool.manifest"):
+            assert Manifest.load(sess) is None
+            loaded = Manifest.load_or_create(sess)
+        assert loaded.is_done("rename") is False
+        assert any("manifest illisible" in r.message for r in caplog.records)
+
+    def test_suivi_cache_opens_workbook_once(self, tmp_path, monkeypatch):
+        import openpyxl
+        from suivi import Suivi, clear_suivi_cache, load_suivi_cached
+        clear_suivi_cache()
+        path = tmp_path / "Suivi analyse Chiros 2026.xlsx"
+        wb = openpyxl.Workbook()
+        wb.active.title = "2026"
+        wb.active.append(["contrat"])
+        wb.save(path)
+        calls = {"n": 0}
+        real = Suivi._load
+
+        def wrapped(self):
+            calls["n"] += 1
+            return real(self)
+
+        monkeypatch.setattr(Suivi, "_load", wrapped)
+        load_suivi_cached(path)
+        load_suivi_cached(path)
+        assert calls["n"] == 1
+        clear_suivi_cache()
+
+    def test_prep_skips_when_already_expanded(self, tmp_path):
+        from manifest import Manifest
+        from naming import SessionMeta
+        from pipeline import run_phase_prep
+        sess = tmp_path / "nuit"
+        sess.mkdir()
+        m = Manifest.load_or_create(sess)
+        m.flags["renamed"] = True
+        m.flags["te10_done"] = True
+        m.save(sess)
+        meta = SessionMeta(
+            date_debut=datetime(2026, 8, 21),
+            n_site_tadarida="381079",
+            n_point_fixe="Z1",
+            n_passage=2,
+            n_enregistreur=1,
+            n_serie="669178",
+        )
+        out = run_phase_prep(sess, meta, dry_run=False, force=False)
+        assert out.get("already_done") is True
+        assert out.get("steps") in (None, [])
 
     def test_align_taxon_selection_fills_empty_view(self):
         from activity_graph import align_taxon_selection

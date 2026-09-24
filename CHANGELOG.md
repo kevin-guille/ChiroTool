@@ -6,15 +6,12 @@ Les versions publiées suivent le SemVer du fichier `version.py` / tags GitHub.
 ## [Unreleased]
 
 Rien en attente au-dessus de la pré-release 0.8.2.
-Toujours ouvert, hors de cet exe : fermer ChiroTool pendant un upload
-(avertissement), historique en direct (SPEC §0.5), et `try_auto_meta`
-qui ouvre encore le Suivi à chaque nuit du batch (SPEC §0.6, points 3 et 4).
 
 ## [0.8.2] - 2026-09-24
 
 `version.py` = `0.8.2` (build 2026-09-24). **Pré-release** GitHub
 [v0.8.2](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.2)
-(SHA-256 `8A42783ED0F8AC87FB455BB5C082728074D606DDA1970BD58264346761C587D3`).
+(SHA-256 `12395A07E4D0904BAE03458A082865B7368B3A2A7599B18D279479B48D8A63B8`).
 La Latest reste
 [v0.8.1](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.1)
 tant que cette pré-release n'est pas promue.
@@ -54,8 +51,11 @@ tant que cette pré-release n'est pas promue.
 - **CSV par nuit** : le bouton dit « Ouvrir le dossier des CSV ». Le
   dialogue et le récap d'export ne citent plus le nom du dossier.
 - **Batch Préparer** (interne, SPEC §0.6) : une nuit ignorée n'est plus
-  comptée dans les OK. Log Titley présent : plus de listing Data_k à
-  chaque nuit.
+  comptée dans les OK. Log Titley : pas de listing des WAV, ni dans
+  l'auto-détection. L'horaire du log n'est pas remplacé par une ligne
+  Suivi. Le fichier Suivi n'est ouvert qu'une fois pour tout le lot.
+  Une nuit déjà renommée et déjà expansée n'est pas retraitée.
+  Une erreur de lecture du manifest ou du Suivi va dans `chirotool.log`.
 
 ### Documentation
 

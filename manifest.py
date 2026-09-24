@@ -17,6 +17,7 @@ Objectifs :
 from __future__ import annotations
 
 import json
+import logging
 from dataclasses import dataclass, field, asdict
 from datetime import datetime
 from pathlib import Path
@@ -25,6 +26,8 @@ from typing import Any
 
 SCHEMA_VERSION = 1
 MANIFEST_FILENAME = "_session_manifest.json"
+
+_log = logging.getLogger("chirotool.manifest")
 
 
 def _now_iso() -> str:
@@ -92,6 +95,7 @@ class Manifest:
             with p.open("r", encoding="utf-8") as f:
                 data = json.load(f)
         except (OSError, json.JSONDecodeError):
+            _log.exception("manifest illisible : %s", p)
             return None
         # Reconstruit proprement. Filtre les clés inconnues des actions aussi
         # (forward-compat : une version future peut ajouter un champ à Action ;
@@ -105,6 +109,7 @@ class Manifest:
                     actions.append(Action(**{k: v for k, v in a.items()
                                              if k in action_fields}))
                 except (TypeError, ValueError):
+                    _log.warning("action de manifest ignorée : %s", p)
                     continue
         data["actions"] = actions
         # Tolère les clés inconnues (forward-compat)

@@ -3,7 +3,7 @@
 | | |
 |--|--|
 | **Statut** | **Livré** : v0.6.0 à **v0.8.1** (Latest GitHub, 2026-09-19). **Pré-release v0.8.2** (2026-09-24) : #11 gel du suivi batch, #13 choix sur la carte, #14 avancement du diagnostic, message Activité #12, libellés. |
-| **Ouvert** | Issues #4, #7, #8, #9, #10 : ne pas relire le premier message (SPEC §0.1 à §0.4). #11 : gel du suivi batch traité en 0.8.2, fermeture de l'exe et historique live encore ouverts (§0.5). #12, #13, #14 : pré-release 0.8.2 (§0.7). Batch Préparer : bilan corrigé dans l'exe 0.8.2, `try_auto_meta` encore ouvert (§0.6). |
+| **Ouvert** | Issues #4, #7, #8, #9, #10 : ne pas relire le premier message (SPEC §0.1 à §0.4). #11 à #14 : code dans la pré-release 0.8.2 (§0.5, §0.7), réponses GitHub encore à poster. Batch Préparer : §0.6 dans le même exe. |
 | **Date** | 2026-08-04 (conception) · 2026-08-07 (v0.6) · 2026-08-30 (v0.7) · 2026-09-03 (D13) · 2026-09-06 (P8) · 2026-09-08 (exe 0.8.0 : 409 + Win+D) · 2026-09-09 (Titley TE×10, Activité avec relecture du `_Vu`, pre-release GitHub [v0.8.0](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.0)) · 2026-09-10 (0.8.1 : scan export + pastille TE + #8) · 2026-09-16 (0.8.1 : #9 wizard, #10 Activité) · 2026-09-19 (Latest GitHub [v0.8.1](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.1)) · 2026-09-24 (pré-release [v0.8.2](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.2)) |
 | **Contexte** | Issue [#3](https://github.com/kevin-guille/ChiroTool/issues/3) (retours terrain) + retours carte / meta + issues [#4](https://github.com/kevin-guille/ChiroTool/issues/4) / [#7](https://github.com/kevin-guille/ChiroTool/issues/7) / [#8](https://github.com/kevin-guille/ChiroTool/issues/8) / [#9](https://github.com/kevin-guille/ChiroTool/issues/9) / [#10](https://github.com/kevin-guille/ChiroTool/issues/10) / [#11](https://github.com/kevin-guille/ChiroTool/issues/11) |
 | **Principe** | Pragmatisme — une vérité disque, peu de fichiers, parcours unifiés, libellés humains d’abord |
@@ -104,14 +104,17 @@ Correctifs 1 et 2 : dans l'exe **0.8.2** (ils étaient sur `main`, pas dans l'ex
 |---|-------|-------|
 | 1 | Bilan `n_ok` : une ligne `skipped` (meta incomplète, pas de wizard en batch) compte comme succès | **Corrigé** : `classify_batch_row` → OK / ignorée / erreur |
 | 2 | Batch listait tous les WAV (`inspect_summary_vs_wav`) même avec un log Titley, × N nuits | **Corrigé** : log Titley → pas de listing Data_k |
-| 3 | `try_auto_meta` liste encore les WAV + ouvre le Suivi Excel à chaque nuit | **Ouvert** (verrou Excel / I/O USB après 10 nuits) |
-| 4 | `rename` déjà marqué fait : warning, pas d'erreur, TE×10 continue | **Ouvert** : distinguer « déjà renommé » d'un skip réel |
+| 3 | `try_auto_meta` liste encore les WAV + ouvre le Suivi Excel à chaque nuit | **Corrigé** : log Titley → pas de listing. Suivi parsé une fois (cache). L'horaire du log n'est pas remplacé par une ligne Suivi. |
+| 4 | `rename` déjà marqué fait : warning, pas d'erreur, TE×10 continue | **Corrigé** : renommage et expansion déjà faits → nuit non retraitée, comptée OK. Renommage seul → expansion seulement. |
 
 Le batch n'ouvre **pas** l'assistant meta (thread). Une nuit sans carré /
 point / Suivi est **ignorée**, ce n'est pas un succès.
 
-Contournement tant que les points 3 et 4 sont ouverts : préparer d'abord
-les nuits sans carré / point **une par une** (assistant), puis le batch.
+Une nuit sans carré / point reste ignorée (pas de succès). Les erreurs
+de lecture du manifest ou du Suivi sont écrites dans `chirotool.log`.
+L'horaire lu dans un log Titley reste celui du log : une ligne Suivi
+d'un autre jour ne donne pas son carré, et une ligne du même jour ne
+remplace pas l'heure.
 
 ### 0.7 Pré-release 0.8.2 (24 septembre 2026)
 
@@ -594,6 +597,7 @@ Le tutoriel **ne décrit pas** les features non livrées comme déjà disponible
 | 2026-09-16 | v0.8.1 | §0.4 : issue #9 wizard upload (paint d'abord, Titley sans listing WAV) ; issue #10 Activité cache + `_Vu` racine/Data_k + filtres de relecture du `_Vu` stables. Suivi upload rouvert. |
 | 2026-09-19 | v0.8.1 | Tag GitHub Latest `v0.8.1` (SHA exe vérifié). Fixture Titley `tests/fixtures/titley_log_overnight.csv` pour la CI. §0.5 : issue #11 partielle. |
 | 2026-09-19 | batch | §0.6 interne (pas d'issue GitHub) : ~15 Préparer, dernières nuits sans rename mais OK. Bilan skipped ≠ succès ; pas de listing WAV Titley en batch. Reste : `try_auto_meta` / Suivi. |
+| 2026-09-24 | v0.8.2 | §0.5 : fermeture de l'exe et historique live. §0.6 : cache Suivi, horaire Titley conservé, nuit déjà préparée non retraitée, erreurs de lecture dans `chirotool.log`. §0.7 : #12, #13, #14. |
 
 ---
 

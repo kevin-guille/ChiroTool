@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import argparse
 import gc
+import logging
 import os
 import shutil
 import sys
@@ -39,6 +40,8 @@ from datetime import datetime
 from pathlib import Path
 
 warnings.filterwarnings("ignore", category=UserWarning, module="openpyxl")
+
+_log = logging.getLogger("chirotool.rename")
 
 # PyInstaller --windowed : sys.stdout peut être None (pas de console).
 # On guard pour éviter AttributeError au démarrage du .exe.
@@ -518,48 +521,74 @@ def try_auto_meta(session: Path) -> tuple[SessionMeta | None, list[str]]:
 
     Retourne (meta, messages). meta=None si impossible avec les infos dispo.
     """
-    from suivi import Suivi, _default_path
+    from suivi import _default_path, load_suivi_cached
     msgs: list[str] = []
+    date_from_titley = False
 
-    # Série dominante dans les WAV
-    wav_dir = session if _dir_has_wavs(session) else _find_raw_wav_subdir(session)
-    if wav_dir is None:
-        msgs.append("pas de WAV trouvés, impossible de détecter la série")
-        return None, msgs
-    wav_names = [p.name for p in wav_dir.iterdir() if p.suffix.lower() == ".wav"]
-    serials: dict[str, int] = {}
-    for n in wav_names:
-        s = extract_serial_from_name(n)
-        if s:
-            serials[s] = serials.get(s, 0) + 1
-    dominant_serial = max(serials, key=serials.get) if serials else None
-    if dominant_serial:
-        msgs.append(f"série dominante détectée : {dominant_serial} ({serials[dominant_serial]} fichiers)")
+    # Log Titley : série et horaires sans lister les milliers de WAV.
+    titley = None
+    try:
+        from chiro_core import find_titley_log, parse_titley_log
+        log_path = find_titley_log(session)
+        if log_path is not None:
+            titley = parse_titley_log(log_path)
+    except Exception:
+        _log.exception("log Titley illisible : %s", session)
+        titley = None
+        log_path = None
+
+    if titley is not None and titley.rec_start is not None:
+        date_from_titley = True
+        date_debut = titley.rec_start
+        dominant_serial = titley.device_id or None
+        msgs.append(
+            f"série et horaires lus dans {log_path.name}"
+            + (f" ({dominant_serial})" if dominant_serial else "")
+        )
+        wav_names = []
     else:
-        msgs.append("aucune série détectable dans les WAV")
-
-    info = inspect_summary_vs_wav(session)
-    date_debut = None
-    wav_min = info.get("wav_min")
-    summary_info = info.get("summary")
-    if info.get("prefer_wav") and wav_min:
-        date_debut = wav_min
-        if info.get("warning"):
+        date_debut = None
+        dominant_serial = None
+        wav_dir = session if _dir_has_wavs(session) else _find_raw_wav_subdir(session)
+        if wav_dir is None:
+            msgs.append("pas de WAV trouvés, impossible de détecter la série")
+            return None, msgs
+        wav_names = [p.name for p in wav_dir.iterdir() if p.suffix.lower() == ".wav"]
+        serials: dict[str, int] = {}
+        for n in wav_names:
+            s = extract_serial_from_name(n)
+            if s:
+                serials[s] = serials.get(s, 0) + 1
+        dominant_serial = max(serials, key=serials.get) if serials else None
+        if dominant_serial:
             msgs.append(
-                "⚠ Summary ≠ WAV (carte SD souvent non formatée) — "
-                f"date prise sur les fichiers : {date_debut:%Y-%m-%d}"
+                f"série dominante détectée : {dominant_serial} "
+                f"({serials[dominant_serial]} fichiers)"
             )
         else:
+            msgs.append("aucune série détectable dans les WAV")
+
+        info = inspect_summary_vs_wav(session)
+        wav_min = info.get("wav_min")
+        summary_info = info.get("summary")
+        if info.get("prefer_wav") and wav_min:
+            date_debut = wav_min
+            if info.get("warning"):
+                msgs.append(
+                    "Summary différent des WAV (carte SD souvent non formatée). "
+                    f"Date prise sur les fichiers : {date_debut:%Y-%m-%d}"
+                )
+            else:
+                msgs.append(f"date début détectée via noms WAV : {date_debut:%Y-%m-%d}")
+        elif summary_info and summary_info.start_dt:
+            date_debut = summary_info.start_dt
+            summ_name = Path(info["summary_path"]).name if info.get("summary_path") else "Summary"
+            msgs.append(
+                f"date début détectée via {summ_name} : {date_debut:%Y-%m-%d}"
+            )
+        elif wav_min is not None:
+            date_debut = wav_min
             msgs.append(f"date début détectée via noms WAV : {date_debut:%Y-%m-%d}")
-    elif summary_info and summary_info.start_dt:
-        date_debut = summary_info.start_dt
-        summ_name = Path(info["summary_path"]).name if info.get("summary_path") else "Summary"
-        msgs.append(
-            f"date début détectée via {summ_name} : {date_debut:%Y-%m-%d}"
-        )
-    elif wav_min is not None:
-        date_debut = wav_min
-        msgs.append(f"date début détectée via noms WAV : {date_debut:%Y-%m-%d}")
 
     # Lookup Suivi avec ce qu'on a
     # Méta PARTIELLE à partir de ce qu'on a détecté, sans dépendre d'aucun
@@ -580,19 +609,23 @@ def try_auto_meta(session: Path) -> tuple[SessionMeta | None, list[str]]:
     try:
         suivi_path = _default_path(year=date_debut.year if date_debut else None)
     except Exception:
+        _log.exception("recherche du fichier Suivi en échec : %s", session)
         suivi_path = None
     if not suivi_path or not suivi_path.is_file():
         msgs.append(todo)
         return partial, msgs
     try:
-        suivi = Suivi(suivi_path)
+        suivi = load_suivi_cached(suivi_path)
     except Exception:
+        _log.exception("Suivi illisible : %s", suivi_path)
         msgs.append(todo)
         return partial, msgs
 
     matches = suivi.find_row_for_session(date_debut=date_debut, serial=dominant_serial)
+    serial_only = False
     if not matches and dominant_serial:
         matches = suivi.find_row_for_session(serial=dominant_serial)
+        serial_only = bool(matches)
         if matches:
             msgs.append(f"{len(matches)} ligne(s) Suivi pour cette série (date différente)")
     elif matches:
@@ -600,8 +633,17 @@ def try_auto_meta(session: Path) -> tuple[SessionMeta | None, list[str]]:
 
     if len(matches) == 1:
         row = matches[0]
+        known_day = date_debut.date() if date_debut is not None else None
+        row_day = row.date_debut.date() if row.date_debut is not None else None
+        # Une recherche par série seule ne doit pas coller le carré d'une autre nuit.
+        # L'horaire Titley reste celui du log, même si la ligne du même jour n'a qu'une date.
+        if serial_only and known_day is not None and row_day != known_day:
+            msgs.append("ligne Suivi d'une autre nuit : point non repris")
+            msgs.append(todo)
+            return partial, msgs
+        chosen_date = date_debut if date_from_titley else (row.date_debut or date_debut)
         meta = SessionMeta(
-            date_debut=row.date_debut or date_debut,
+            date_debut=chosen_date,
             n_site_tadarida=row.n_site_tadarida,
             n_point_fixe=row.n_point_fixe,
             n_passage=row.n_passage,

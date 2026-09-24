@@ -44,7 +44,7 @@ dans un texte lu par un humain. Voix « je » sur le contenu public.
 - Stable publiée : tag GitHub Latest `v0.8.1` (exe du 2026-09-19).
 - Pré-release locale : `version.py` = 0.8.2, build 2026-09-24, exe
   `dist/ChiroTool.exe` (SHA-256
-  `8A42783ED0F8AC87FB455BB5C082728074D606DDA1970BD58264346761C587D3`).
+  `12395A07E4D0904BAE03458A082865B7368B3A2A7599B18D279479B48D8A63B8`).
   Ce n'est pas la Latest tant que Kevin ne promeut pas la pré-release.
 - Vérifier `git status` et les tags avant d'affirmer qu'un correctif est
   en ligne. `origin/main` peut être en retard sur le commit de pré-release.
@@ -64,14 +64,16 @@ Ouvertes au 2026-09-24, sans opposition au cadre ChiroSurf :
 
 | Issue | Sujet | Piste |
 |---|---|---|
-| #11 | Suivi d'upload. Après fermeture du suivi batch, l'interface ne recevait plus les clics. | **0.8.2** : `grab_release` puis enregistrement du dialogue batch. Fermeture de l'exe et historique live : toujours ouverts (SPEC §0.5). |
+| #11 | Suivi d'upload. Après fermeture du suivi batch, l'interface ne recevait plus les clics. | **0.8.2** : `grab_release`, dialogue batch enregistré, confirmation à la fermeture de l'exe, historique rafraîchi toutes les 4 s. |
 | #12 | Activité : graphe vide alors que les fichiers sont lus. Case « Méthode MNHN » dans l'exe 0.8.1. | **0.8.2** : message si les taxons cochés ne sont pas dans la sélection. Calcul inchangé. Case « Interprétation _Vu ». |
 | #13 | « Choisir sur la carte » disait « Onglet Carte indisponible ». | **0.8.2** : le wizard remonte jusqu'à la fenêtre qui a `map_panel`. |
-| #14 | Vérifier / Réparer restait sur « Préparation… ». Pastille d'expansion. « à reprendre ». | **0.8.2** : statut page par page. « à reprendre » = tableur absent. « Data_k incomplet » si le miroir n'a pas les tranches. Pas de `trigger_compute` si déjà analysé. |
+| #14 | Vérifier / Réparer listait tous les WAV sur une nuit déjà analysée. | **0.8.2** : si l'état est TERMINE ou FINI, pas de listing portail. Tableur manquant téléchargé. Miroir le plus fourni. Contrôle des 3 plus gros bruts inchangé. Pas de `trigger_compute` si déjà analysé. |
 
-Batch Préparer : le bilan ne compte plus une nuit ignorée comme un succès
-(exe 0.8.2). `try_auto_meta` ouvre encore le Suivi à chaque nuit
-(SPEC §0.6, points 3 et 4). Pas d'issue GitHub.
+Batch Préparer (SPEC §0.6, pas d'issue GitHub, exe 0.8.2) : une nuit
+ignorée n'est pas un succès. Log Titley : pas de listing WAV, horaire
+du log conservé même si le Suivi a une autre nuit pour la même série.
+Suivi ouvert une fois. Nuit déjà renommée et expansée : non retraitée,
+comptée OK. Erreur de lecture du manifest ou du Suivi : `chirotool.log`.
 
 ## Astra (Codex)
 

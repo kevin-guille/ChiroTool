@@ -101,6 +101,8 @@ def classify_batch_row(row: dict) -> str:
         errs = result.get("errors")
         if errs:
             return "error"
+        if result.get("already_done"):
+            return "ok"
         if result.get("skipped"):
             return "skipped"
     return "ok"
@@ -392,6 +394,16 @@ def run_phase_prep(session: Path, meta: SessionMeta, dry_run: bool,
 
     out: dict = {"phase": "prep", "steps": []}
 
+    # Déjà renommée et déjà expansée : ne pas reparcourir les WAV.
+    # Une nuit seulement renommée continue vers TE×10 (reprise normale).
+    if not force:
+        done = Manifest.load(session)
+        if done is not None and done.is_done("rename") and done.is_done("te10"):
+            print("  déjà préparée : renommage et expansion sont faits.")
+            out["skipped"] = "déjà préparée"
+            out["already_done"] = True
+            return out
+
     # 1.a : renommage
     if progress is not None:
         progress(0, 100, "rename")
@@ -404,6 +416,9 @@ def run_phase_prep(session: Path, meta: SessionMeta, dry_run: bool,
     # message et on poursuit le TE×10 sur le dossier réel (final_session_path).
     if r.get("warnings"):
         out.setdefault("warnings", []).extend(r["warnings"])
+        if any("déjà renommé" in str(w) for w in r["warnings"]):
+            print("  renommage déjà fait. Expansion seulement.")
+            out["rename_already"] = True
     final = Path(r.get("final_session_path") or session)
 
     # 1.b : TE×10 — progress fin tranche par fichier traité

@@ -250,6 +250,36 @@ def _map_headers(header_row: tuple) -> dict[int, str]:
 # Suivi
 # ---------------------------------------------------------------------------
 
+_SUIVI_CACHE: dict[tuple, "Suivi"] = {}
+_SUIVI_LOCK = __import__("threading").Lock()
+
+
+def load_suivi_cached(path: Path) -> "Suivi":
+    """Ouvre le Suivi une fois par fichier et par date de modification.
+
+    Un batch d'une quinzaine de nuits ne doit pas reparser le même classeur
+    à chaque session (verrou Excel, disque lent).
+    """
+    path = Path(path).resolve()
+    st = path.stat()
+    key = (str(path), int(st.st_mtime_ns), int(st.st_size))
+    with _SUIVI_LOCK:
+        hit = _SUIVI_CACHE.get(key)
+        if hit is not None:
+            return hit
+        for old in list(_SUIVI_CACHE):
+            if old[0] == key[0]:
+                _SUIVI_CACHE.pop(old, None)
+        loaded = Suivi(path)
+        _SUIVI_CACHE[key] = loaded
+        return loaded
+
+
+def clear_suivi_cache() -> None:
+    with _SUIVI_LOCK:
+        _SUIVI_CACHE.clear()
+
+
 class Suivi:
     """Lecture du fichier Suivi analyse Chiros (lecture seule)."""
 

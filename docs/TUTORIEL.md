@@ -1247,11 +1247,12 @@ Ne pas relire le 1er message des issues
 (SPEC §0.1 à §0.4). Issue
 [#11](https://github.com/kevin-guille/ChiroTool/issues/11) : la fenêtre
 de suivi batch se rouvre, et la fermer ne fige plus l'interface.
-Fermeture de l'exe et historique live restent ouverts (SPEC §0.5).
+Fermer ChiroTool pendant un traitement demande confirmation.
+L'historique se met à jour pendant le traitement (exe 0.8.2).
 
-- **Batch Préparer** (interne, SPEC §0.6) : le bilan ne compte plus une
-  nuit ignorée comme un succès (exe 0.8.2). Reste : `try_auto_meta` ouvre
-  encore le Suivi à chaque nuit.
+- **Batch Préparer** (interne, SPEC §0.6, exe 0.8.2) : une nuit ignorée
+  n'est plus un succès. Un log Titley évite de relire tous les WAV.
+  Une nuit déjà préparée n'est pas refaite.
 - Export compilé espèces × nuits ; fusion `_Vu` → xlsx (choix produit).
 - Pas plusieurs exe : le Batch enchaîne les nuits (SPEC D14).
 
