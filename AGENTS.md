@@ -44,7 +44,7 @@ dans un texte lu par un humain. Voix « je » sur le contenu public.
 - Stable publiée : tag GitHub Latest `v0.8.1` (exe du 2026-09-19).
 - Pré-release locale : `version.py` = 0.8.2, build 2026-09-24, exe
   `dist/ChiroTool.exe` (SHA-256
-  `C431B224DD3EF135F6964B8CF94A0703CDB70072E1CF45C1343281584C21130A`).
+  `4A21E1917AEC850D668F35E690FC29CA94BB23208821A84D3DF67E2DF4350B20`).
   Ce n'est pas la Latest tant que Kevin ne promeut pas la pré-release.
 - Vérifier `git status` et les tags avant d'affirmer qu'un correctif est
   en ligne. `origin/main` peut être en retard sur le commit de pré-release.

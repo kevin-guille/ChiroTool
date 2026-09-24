@@ -32,7 +32,7 @@ Arborescence produite
           Data_k/          (si include_data_k)
           Data/            (si include_data et source en Data/)
           *.wav            (si include_data et WAV à la racine source)
-          chirosurf/       (si présent — toujours inclus ; multi-nuits ChiroSurf)
+          CSV par nuit/    (si présent, toujours inclus)
 
 Garde-fous
 ----------
@@ -249,7 +249,7 @@ def collect_metadata_files(session: Path) -> list[Path]:
 
 
 def collect_always_dirs(session: Path) -> list[Path]:
-    """Dossiers toujours emportés s'ils existent (ex. ChiroSurf_nuits/)."""
+    """Dossiers toujours emportés s'ils existent (CSV par nuit, ancien nom compris)."""
     session = Path(session)
     out: list[Path] = []
     for name in _ALWAYS_DIRS:
@@ -405,7 +405,7 @@ def plan_export(
         for mf in collect_metadata_files(session):
             _add(mf, mf.name, "meta")
 
-        # --- ChiroSurf_nuits / dossiers toujours ---------------------------
+        # --- dossiers toujours emportés (CSV par nuit) ----------------------
         for adir in collect_always_dirs(session):
             for f in _iter_files_under(adir):
                 try:
@@ -495,7 +495,7 @@ def _build_readme(plan: ExportPlan, result_stats: dict) -> str:
         "Métadonnées toujours incluses",
         "-----------------------------",
         "  _session_manifest.json, observations xlsx/csv + sidecar .sync.json,",
-        "  _stats_before_cleanup.json, Summary*.txt, ChiroSurf_nuits/ (si présent).",
+        "  _stats_before_cleanup.json, Summary*.txt, CSV par nuit (s'il y en a).",
         "",
         "Réutilisation",
         "-------------",

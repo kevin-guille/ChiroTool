@@ -4837,6 +4837,11 @@ class TestPreRelease082:
         assert "Méthode MNHN" not in activity
         assert "ChiroSurf exige" not in nights
         assert "Pour ce type d'analyse, se reporter à ChiroSurf." in app
+        assert "Ouvrir le dossier des CSV" in app
+        assert "chirosurf/" not in app
+        export = (root / "export_sessions.py").read_text(encoding="utf-8")
+        assert "ChiroSurf_nuits/ (si présent)" not in export
+        assert "CSV par nuit (s'il y en a)" in export
 
 
 if __name__ == "__main__":

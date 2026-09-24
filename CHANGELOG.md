@@ -14,7 +14,7 @@ qui ouvre encore le Suivi à chaque nuit du batch (SPEC §0.6, points 3 et 4).
 
 `version.py` = `0.8.2` (build 2026-09-24). **Pré-release** GitHub
 [v0.8.2](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.2)
-(SHA-256 `C431B224DD3EF135F6964B8CF94A0703CDB70072E1CF45C1343281584C21130A`).
+(SHA-256 `4A21E1917AEC850D668F35E690FC29CA94BB23208821A84D3DF67E2DF4350B20`).
 La Latest reste
 [v0.8.1](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.1)
 tant que cette pré-release n'est pas promue.
@@ -46,6 +46,8 @@ tant que cette pré-release n'est pas promue.
   dit. Le calcul de relecture du `_Vu` ne change pas. La case s'appelle
   « Interprétation _Vu ». « Identifications validées seulement » est le
   même libellé en Synthèse et en Activité.
+- **CSV par nuit** : le bouton dit « Ouvrir le dossier des CSV ». Le
+  dialogue et le récap d'export ne citent plus le nom du dossier.
 - **Batch Préparer** (interne, SPEC §0.6) : une nuit ignorée n'est plus
   comptée dans les OK. Log Titley présent : plus de listing Data_k à
   chaque nuit.

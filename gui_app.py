@@ -2407,7 +2407,7 @@ class ChiroToolApp(ctk.CTk):
                       "reste la nuit du 16. Ouvrir le CSV copie le "
                       "CSV à côté des WAV (Data_k) : le logiciel externe (version 4.x) cherche "
                       "les sons dans le même dossier que le tableur. Un _Vu "
-                      "déjà produit (Nuit_1_…, chirosurf/ ou Data_k/) est "
+                      "déjà produit (Nuit_1_…, dossier des CSV ou Data_k/) est "
                       "reconnu. Le récapitulatif ChiroTool, c'est Synthèse.",
             font=ctk.CTkFont(size=11), text_color=("gray40", "gray70"),
             wraplength=600, anchor="w", justify="left",
@@ -2512,7 +2512,7 @@ class ChiroToolApp(ctk.CTk):
         footer = ctk.CTkFrame(dlg, fg_color="transparent")
         footer.pack(fill="x", padx=12, pady=10)
         ctk.CTkButton(
-            footer, text="📂 Ouvrir le dossier chirosurf/",
+            footer, text="📂 Ouvrir le dossier des CSV",
             command=_open_folder, height=32,
         ).pack(side="left")
         ctk.CTkButton(
