@@ -41,19 +41,26 @@ dans un texte lu par un humain. Voix « je » sur le contenu public.
 
 ## Version et git
 
-- Stable publiée : tag GitHub Latest `v0.8.1` (exe du 2026-09-19).
-- Pré-release locale : `version.py` = 0.8.2, build 2026-09-24, exe
-  `dist/ChiroTool.exe` (SHA-256
-  `5106C7F58CFE1741962454FF1EC1F218B123805328EC65002567E44BD5AB7CEB`).
-  Ce n'est pas la Latest tant que Kevin ne promeut pas la pré-release.
+- Stable publiée : tag GitHub Latest `v0.8.1` (exe du 2026-09-19,
+  SHA-256 `14C620BC40BC1E2DB9059653B6830E5B107A1726DCF0107DB3D16BD4123B19AE`).
+- Pré-release publiée le 2026-09-24 : tag `v0.8.2`, pas Latest.
+  Asset `ChiroTool.exe`, 37465004 octets, SHA-256
+  `5106C7F58CFE1741962454FF1EC1F218B123805328EC65002567E44BD5AB7CEB`.
+  `origin/main` est `a140a94`. Le tag `v0.8.2` pointe sur `a767aef`
+  (trois commits plus tôt : `924cbe2`, `f1d4e2c`, `a140a94`, scan et pastille).
+  L'exe publié correspond à `a140a94`, pas à l'arbre du tag.
+  Ne pas déplacer ce tag sans demande explicite.
+- Un `Data_k` déjà rempli n'est plus « incomplet » s'il manque des
+  tranches de 5 s. Ne pas rétablir ce contrôle sur la pastille, Upload,
+  Vérifier / Réparer ou Valider. Une nuit dont le manifest a `renamed`
+  et `te10_done` n'est pas retraitée.
 - Remplacer l'exe ne migre pas les dossiers déjà en cours. Schéma du
   registre : version 3, inchangé depuis 0.8.1. `feed_from_scan` met à jour
   les pastilles. Il ne réécrit pas l'identifiant de participation, l'état
   portail ni le compteur d'identifications. L'historique live ne touche
-  pas le registre. Une nuit dont le manifest a `renamed` et `te10_done`
-  n'est pas retraitée.
-- Vérifier `git status` et les tags avant d'affirmer qu'un correctif est
-  en ligne. `origin/main` peut être en retard sur le commit de pré-release.
+  pas le registre.
+- Vérifier `git status`, `origin/main` et le tag avant d'affirmer qu'un
+  correctif est dans l'exe publié. Le tag et l'asset peuvent diverger.
 - Ne pas pousser, taguer, publier une release, ni reconstruire l'exe
   sans demande explicite de Kevin. C'est lui qui lance `git push`.
 - Ne pas réécrire l'historique.

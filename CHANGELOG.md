@@ -5,7 +5,9 @@ Les versions publiées suivent le SemVer du fichier `version.py` / tags GitHub.
 
 ## [Unreleased]
 
-Rien en attente au-dessus de la pré-release 0.8.2.
+Rien en attente au-dessus de la pré-release 0.8.2, publiée le 2026-09-24.
+Le tag `v0.8.2` pointe sur `a767aef`. Le code du scan et de la pastille
+est sur `main` (`a140a94`). L'exe joint à la pré-release est celui de `a140a94`.
 
 ## [0.8.2] - 2026-09-24
 

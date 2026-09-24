@@ -65,7 +65,7 @@ Vigie-Chiro) ; CSV pour ouvrir une nuit dans le logiciel externe déjà en 0.7.1
   sans relancer Tadarida si la nuit est déjà analysée. **Publiée** GitHub
   le 2026-09-19 en Latest
   ([v0.8.1](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.1)).
-- **v0.8.2** (2026-09-24, pré-release) : #13 choix sur la carte, #11
+- **v0.8.2** (2026-09-24, pré-release publiée) : #13 choix sur la carte, #11
   suivi d'upload (clics, confirmation à la fermeture, historique pendant
   l'envoi), #14 nuit déjà analysée sans comparer les WAV, #12 espèces de
   la nuit affichée, libellés, batch Préparer (§0.6). Le calcul de relecture
