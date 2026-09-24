@@ -21,6 +21,8 @@ rust_ext/*.pyd
 
 # Jeux de test locaux (WAV Titley, manifests, packets Astra)
 samples/issue4_mickael/
+samples/issue8_mickael/
+samples/issue9_10/
 
 # Données utilisateur / test (jamais versionnées)
 test_output/
