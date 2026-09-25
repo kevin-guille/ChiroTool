@@ -5,9 +5,14 @@ Les versions publiées suivent le SemVer du fichier `version.py` / tags GitHub.
 
 ## [Unreleased]
 
-Rien en attente au-dessus de la pré-release 0.8.2, publiée le 2026-09-24.
 Le tag `v0.8.2` pointe sur `a767aef`. Le code du scan et de la pastille
 est sur `main` (`a140a94`). L'exe joint à la pré-release est celui de `a140a94`.
+Latest reste la 0.8.1.
+
+- **Site** : `docs/sitemap.xml` date la page et le PDF du tutoriel au
+  2026-09-24. Les textes étaient déjà à jour. La date dit au robot de
+  les relire. Le résumé affiché par un moteur de recherche suit quand
+  il revient, pas au moment du commit.
 
 ## [0.8.2] - 2026-09-24
 

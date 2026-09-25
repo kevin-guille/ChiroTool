@@ -87,6 +87,7 @@ Vigie-Chiro) ; CSV pour ouvrir une nuit dans le logiciel externe déjà en 0.7.1
 | [`docs/RELEASE_v0.8.2.md`](docs/RELEASE_v0.8.2.md) | Note de pré-release GitHub v0.8.2 (2026-09-24, SHA exe) |
 | [`docs/TUTORIEL.md`](docs/TUTORIEL.md) | Guide utilisateur (pick, Synthèse, CSV optionnel pour le logiciel externe, repair) |
 | [`docs/ChiroTool-Tutoriel.pdf`](docs/ChiroTool-Tutoriel.pdf) | PDF généré via `python docs/build_pdf.py` |
+| [`docs/sitemap.xml`](docs/sitemap.xml) | Dates (`lastmod`) de la page et du PDF publiés. À avancer quand l'un des deux change. |
 | [`samples/issue3_benjamin/`](samples/issue3_benjamin/) | Fixtures CSV multi-nuits + `_Vu` (issue #3) |
 | [`tests/fixtures/titley_log_overnight.csv`](tests/fixtures/titley_log_overnight.csv) | Log Titley de test (CI). Le log terrain `samples/issue4_mickael/` n'est pas versionné. |
 
