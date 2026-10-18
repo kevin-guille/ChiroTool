@@ -10,8 +10,11 @@ Les champs :
   - N° site Tadarida (6 chiffres)
   - Point (ex Z3)
   - Passage (1 à 9)
-  - N° enregistreur (1 à 27) — auto-remplit Série + Micro depuis Feuil2
+  - N° enregistreur (1 à 27), auto-remplit Série + Micro depuis Feuil2
   - Série (auto-rempli, modifiable)
+  - Heure début, heure fin, températures, vent, couverture (optionnel)
+
+Le lot n'ouvre pas ce formulaire. Il reprend ce qui a été validé ici.
 
 Validation via naming.validate_meta() avant OK.
 """
@@ -26,6 +29,10 @@ from tkinter import messagebox
 import customtkinter as ctk
 
 from naming import SessionMeta, validate_meta
+
+# Valeur vide des menus vent / couverture. CTkOptionMenu recolle une
+# valeur inconnue sur values[0], donc le blanc doit être la première entrée.
+_METEO_UNSET = "non renseigné"
 
 
 def _load_suivi_safe():
@@ -57,6 +64,13 @@ class SessionMetaWizard(ctk.CTkToplevel):
         self.focus()
 
         self._result: SessionMeta | None = None
+        self._participation_payload: dict | None = None
+        self._saved_conditions: dict | None = None
+        self._had_saved_conditions = False
+        self._auto_date_debut = None
+        self._auto_date_fin = None
+        self._auto_temp_debut = None
+        self._auto_temp_fin = None
         self.suivi = _load_suivi_safe()
         self.session_name = session_name or "(session)"
         self.session_path = Path(session_path) if session_path else None
@@ -67,6 +81,7 @@ class SessionMetaWizard(ctk.CTkToplevel):
         # Continuité carte → meta : préremplit site/point si absents du guess
         self._apply_active_point_prefill(prefill)
         self._apply_summary_wav_hint()
+        self._load_recording_conditions()
 
         self.protocol("WM_DELETE_WINDOW", self._on_cancel)
         self._load_recent_points_async()
@@ -225,11 +240,11 @@ class SessionMetaWizard(ctk.CTkToplevel):
         # --- Passage ---
         self._add_field_label(form, row, "Passage",
                                help="Numéro de passage dans l'année (1, 2, 3…)")
-        self.pass_var = ctk.StringVar(value="1")
+        self.pass_var = ctk.StringVar(value="?")
         pass_frame = ctk.CTkFrame(form, fg_color="transparent")
         pass_frame.grid(row=row, column=1, sticky="w", padx=8, pady=4)
         ctk.CTkOptionMenu(pass_frame, variable=self.pass_var, width=80,
-                           values=[str(i) for i in range(1, 10)]
+                           values=["?"] + [str(i) for i in range(1, 10)]
                            ).pack(side="left")
         row += 1
 
@@ -282,6 +297,77 @@ class SessionMetaWizard(ctk.CTkToplevel):
                                           placeholder_text="ex: SMU03126",
                                           font=ctk.CTkFont(family="Consolas", size=12))
         self.serie_entry.grid(row=row, column=1, sticky="ew", padx=8, pady=4)
+        row += 1
+
+        # Heures et météo. Le détecteur et les micros restent dans Mes matériels
+        # et dans le formulaire d'envoi unitaire. Ici, seulement ce que le lot
+        # ne peut pas demander (pas de formulaire dans le thread).
+        from vigiechiro_enums import couverture_labels, vent_labels
+        ctk.CTkLabel(
+            form, text="Conditions d'enregistrement (optionnel)",
+            font=ctk.CTkFont(size=12, weight="bold"), anchor="w",
+        ).grid(row=row, column=0, columnspan=2, sticky="ew",
+               padx=16, pady=(12, 0))
+        row += 1
+        ctk.CTkLabel(
+            form,
+            text=("Heures et températures : log ou Summary. "
+                  "Vent et couverture : saisie, comme le matériel."),
+            font=ctk.CTkFont(size=10),
+            text_color=("gray50", "gray60"),
+            anchor="w", justify="left", wraplength=560,
+        ).grid(row=row, column=0, columnspan=2, sticky="ew",
+               padx=16, pady=(0, 4))
+        row += 1
+
+        self._add_field_label(form, row, "Heure début",
+                               help="HH:MM, début d'enregistrement")
+        self.heure_deb_var = ctk.StringVar()
+        ctk.CTkEntry(form, textvariable=self.heure_deb_var, width=120,
+                     placeholder_text="HH:MM",
+                     font=ctk.CTkFont(family="Consolas", size=12),
+                     ).grid(row=row, column=1, sticky="w", padx=8, pady=4)
+        row += 1
+
+        self._add_field_label(form, row, "Heure fin",
+                               help="HH:MM. Si avant le début, lendemain")
+        self.heure_fin_var = ctk.StringVar()
+        ctk.CTkEntry(form, textvariable=self.heure_fin_var, width=120,
+                     placeholder_text="HH:MM",
+                     font=ctk.CTkFont(family="Consolas", size=12),
+                     ).grid(row=row, column=1, sticky="w", padx=8, pady=4)
+        row += 1
+
+        self._add_field_label(form, row, "T° début",
+                               help="Entier optionnel, -20 à +50")
+        self.temp_deb_var = ctk.StringVar()
+        ctk.CTkEntry(form, textvariable=self.temp_deb_var, width=120,
+                     placeholder_text="ex: 18",
+                     ).grid(row=row, column=1, sticky="w", padx=8, pady=4)
+        row += 1
+
+        self._add_field_label(form, row, "T° fin",
+                               help="Entier optionnel, -20 à +50")
+        self.temp_fin_var = ctk.StringVar()
+        ctk.CTkEntry(form, textvariable=self.temp_fin_var, width=120,
+                     placeholder_text="ex: 12",
+                     ).grid(row=row, column=1, sticky="w", padx=8, pady=4)
+        row += 1
+
+        self._add_field_label(form, row, "Vent", help="Optionnel")
+        self.vent_var = ctk.StringVar(value=_METEO_UNSET)
+        ctk.CTkOptionMenu(
+            form, variable=self.vent_var, width=160,
+            values=[_METEO_UNSET] + vent_labels(),
+        ).grid(row=row, column=1, sticky="w", padx=8, pady=4)
+        row += 1
+
+        self._add_field_label(form, row, "Couverture", help="Optionnel")
+        self.cov_var = ctk.StringVar(value=_METEO_UNSET)
+        ctk.CTkOptionMenu(
+            form, variable=self.cov_var, width=160,
+            values=[_METEO_UNSET] + couverture_labels(),
+        ).grid(row=row, column=1, sticky="w", padx=8, pady=4)
         row += 1
 
         # Footer : erreurs éventuelles + boutons (Annuler / Valider)
@@ -375,6 +461,8 @@ class SessionMetaWizard(ctk.CTkToplevel):
                     text=f"Auto-résolution échouée : {detail}")
                 return
             self._fill_from(auto)
+            if not self._refresh_hours_temps(target):
+                return
             if not auto.n_site_tadarida:
                 self.err_lbl.configure(
                     text="✓ Série et date détectées — complète le n° de carré "
@@ -1022,33 +1110,180 @@ class SessionMetaWizard(ctk.CTkToplevel):
 
     # -- Pré-remplissage / watchers ----------------------------------------
 
-    def _summary_wav_warning(self) -> str | None:
-        if not self.session_path:
-            return None
+    def _current_enr_id(self) -> int | None:
+        choice = (self.enr_var.get() or "").strip()
+        if choice == "Autre":
+            try:
+                n = int((self.enr_other_var.get() or "").strip())
+            except (ValueError, TypeError, AttributeError):
+                return None
+            return n if n >= 1 else None
+        return self._extract_enr_id(choice)
+
+    def _menu_label(self, code, pairs) -> str:
+        for value, label in pairs:
+            if code == value:
+                return label
+        return _METEO_UNSET
+
+    def _remember_auto(self, pre: dict) -> None:
+        self._auto_date_debut = pre.get("_auto_date_debut")
+        self._auto_date_fin = pre.get("_auto_date_fin")
+        self._auto_temp_debut = pre.get("_auto_temperature_debut")
+        self._auto_temp_fin = pre.get("_auto_temperature_fin")
+
+    def _fill_hours_temps(self, pre: dict, *, overwrite: bool) -> None:
+        from chiro_core import format_hhmm
+        if overwrite or not self.heure_deb_var.get().strip():
+            self.heure_deb_var.set(format_hhmm(pre.get("date_debut")))
+        if overwrite or not self.heure_fin_var.get().strip():
+            self.heure_fin_var.set(format_hhmm(pre.get("date_fin")))
+        if overwrite or not self.temp_deb_var.get().strip():
+            t0 = pre.get("temperature_debut")
+            self.temp_deb_var.set("" if t0 is None else str(t0))
+        if overwrite or not self.temp_fin_var.get().strip():
+            t1 = pre.get("temperature_fin")
+            self.temp_fin_var.set("" if t1 is None else str(t1))
+
+    def _fill_weather_menus(self, source: dict) -> None:
+        from vigiechiro_enums import COUVERTURE_VALUES, VENT_VALUES
+        self.vent_var.set(self._menu_label(source.get("vent"), VENT_VALUES))
+        self.cov_var.set(self._menu_label(source.get("couverture"), COUVERTURE_VALUES))
+
+    def _load_recording_conditions(self) -> None:
+        """Cache manifest, puis le log comble seulement les champs vides."""
+        saved: dict = {}
+        if self.session_path is not None:
+            try:
+                from manifest import Manifest
+                loaded = Manifest.load(self.session_path)
+                raw = (loaded.meta or {}).get("participation_payload") if loaded else None
+                if isinstance(raw, dict) and raw:
+                    saved = raw
+                    self._had_saved_conditions = True
+                    self._saved_conditions = dict(raw)
+            except Exception:
+                saved = {}
+        pre: dict = {}
+        if self.session_path is not None:
+            try:
+                from chiro_core import collect_wizard_prefill
+                pre = collect_wizard_prefill(
+                    self.session_path,
+                    n_enregistreur=self._current_enr_id(),
+                    allow_wav_listing=False,
+                )
+            except Exception:
+                pre = {}
+        self._remember_auto(pre)
+        source = pre if pre else saved
+        self._fill_hours_temps(source, overwrite=False)
+        self._apply_wav_hour_hint(pre)
+        self._fill_weather_menus(source)
+
+    def _apply_wav_hour_hint(self, pre: dict) -> None:
+        """Le Summary d'une autre pose ne doit pas remplir les heures."""
+        from chiro_core import format_hhmm, recording_hours_from_wav_hint
+        adjusted = recording_hours_from_wav_hint(
+            pre, getattr(self, "_wav_hint", None))
+        if not adjusted:
+            return
+        self.heure_deb_var.set(format_hhmm(adjusted.get("date_debut")))
+        self.heure_fin_var.set(format_hhmm(adjusted.get("date_fin")))
+        self._auto_date_debut = adjusted.get("date_debut")
+        self._auto_date_fin = adjusted.get("date_fin")
+        if "temperature_debut" in adjusted:
+            self.temp_deb_var.set(str(adjusted["temperature_debut"]))
+            self._auto_temp_debut = adjusted["temperature_debut"]
+        if "temperature_fin" in adjusted:
+            self.temp_fin_var.set(str(adjusted["temperature_fin"]))
+            self._auto_temp_fin = adjusted["temperature_fin"]
+
+    def _refresh_hours_temps(self, folder: Path) -> bool:
+        """Re-deviner : heures et T° du log. Vent et couverture saisis restent."""
         try:
-            from rename import inspect_summary_vs_wav
-            return inspect_summary_vs_wav(self.session_path).get("warning")
-        except Exception:
-            return None
+            from chiro_core import collect_wizard_prefill
+            pre = collect_wizard_prefill(
+                folder,
+                n_enregistreur=self._current_enr_id(),
+                apply_cache=False,
+            )
+        except Exception as exc:
+            self.err_lbl.configure(text=f"Re-deviner : conditions illisibles ({exc})")
+            return False
+        self._remember_auto(pre)
+        self._fill_hours_temps(pre, overwrite=True)
+        return True
+
+    def _read_conditions(self, day: datetime | None):
+        """Heures, T°, vent, couverture. Les erreurs rejoignent la validation."""
+        from chiro_core import night_datetimes, parse_hhmm
+        from vigiechiro_enums import couverture_from_label, vent_from_label
+        errs: list[str] = []
+        try:
+            start_hm = parse_hhmm(self.heure_deb_var.get())
+        except ValueError:
+            start_hm = None
+            errs.append("heure début invalide (HH:MM)")
+        try:
+            end_hm = parse_hhmm(self.heure_fin_var.get())
+        except ValueError:
+            end_hm = None
+            errs.append("heure fin invalide (HH:MM)")
+        if not errs and ((start_hm is None) ^ (end_hm is None)):
+            errs.append(
+                "renseigne l'heure de début et l'heure de fin, "
+                "ou laisse les deux vides")
+        start = end = None
+        if not errs and start_hm is not None and end_hm is not None and day is not None:
+            start, end = night_datetimes(day, start_hm, end_hm)
+
+        def _temp(raw: str, label: str):
+            text = (raw or "").strip()
+            if not text:
+                return None
+            try:
+                value = int(text)
+            except ValueError:
+                errs.append(f"{label} invalide (nombre entier, ou vide)")
+                return None
+            if value < -20 or value > 50:
+                errs.append(f"{label} hors limites (-20 à +50 °C) : {value}")
+                return None
+            return value
+
+        temp_deb = _temp(self.temp_deb_var.get(), "température début")
+        temp_fin = _temp(self.temp_fin_var.get(), "température fin")
+        vent = vent_from_label(self.vent_var.get())
+        couverture = couverture_from_label(self.cov_var.get())
+        return start, end, temp_deb, temp_fin, vent, couverture, errs
 
     def _apply_summary_wav_hint(self):
-        warn = self._summary_wav_warning()
-        if not warn:
+        """Un seul passage sur les WAV. La date affichée suit les fichiers
+        si le Summary décrit une autre pose. Les heures sont ajustées après,
+        dans ``_load_recording_conditions``.
+        """
+        self._wav_hint = None
+        if self.session_path is None:
             return
         try:
             from rename import inspect_summary_vs_wav
             info = inspect_summary_vs_wav(self.session_path)
-            wav_min = info.get("wav_min")
-            if wav_min is not None:
-                self.date_var.set(wav_min.strftime("%Y-%m-%d"))
+        except Exception:
+            return
+        self._wav_hint = info
+        warn = info.get("warning")
+        if not warn:
+            return
+        wav_min = info.get("wav_min")
+        if wav_min is not None:
+            self.date_var.set(wav_min.strftime("%Y-%m-%d"))
+        try:
             self._date_hint.configure(
                 text="⚠ Summary ≠ WAV (carte SD souvent non formatée). "
                      "Date proposée = celle des fichiers.")
         except Exception:
-            try:
-                self._date_hint.configure(text="⚠ " + warn.splitlines()[0])
-            except Exception:
-                pass
+            pass
 
     def _fill_from(self, meta: SessionMeta):
         if meta.nom_contrat:
@@ -1186,6 +1421,9 @@ class SessionMetaWizard(ctk.CTkToplevel):
             if n_enr is None:
                 errs.append("n° enregistreur manquant (choisis dans la liste)")
         serie = self.serie_var.get().strip()
+        (start, end, temp_deb, temp_fin,
+         vent, couverture, cond_errs) = self._read_conditions(date_debut)
+        errs.extend(cond_errs)
 
         meta = SessionMeta(
             date_debut=date_debut,
@@ -1241,6 +1479,26 @@ class SessionMetaWizard(ctk.CTkToplevel):
                                          warning_msg, parent=self):
                 return
 
+        from chiro_core import (
+            build_conditions_payload, hours_are_user_set, temperatures_are_user_set,
+        )
+        hours_user = False
+        if start is not None and end is not None:
+            hours_user = hours_are_user_set(
+                self._auto_date_debut, self._auto_date_fin, start, end)
+        self._participation_payload = build_conditions_payload(
+            self._saved_conditions,
+            date_debut=start,
+            date_fin=end,
+            temperature_debut=temp_deb,
+            temperature_fin=temp_fin,
+            vent=vent,
+            couverture=couverture,
+            temperature_user_set=temperatures_are_user_set(
+                self._auto_temp_debut, self._auto_temp_fin, temp_deb, temp_fin),
+            hours_user_set=hours_user,
+            had_saved=self._had_saved_conditions,
+        )
         self._result = meta
         self.destroy()
 
@@ -1252,6 +1510,10 @@ class SessionMetaWizard(ctk.CTkToplevel):
         """À appeler après wait_window() pour récupérer le résultat."""
         return self._result
 
+    def get_participation_payload(self) -> dict | None:
+        """Conditions validées, ou None si rien à écrire."""
+        return self._participation_payload
+
 
 def open_wizard(master, *, prefill: SessionMeta | None = None,
                 session_name: str | None = None,
@@ -1260,7 +1522,8 @@ def open_wizard(master, *, prefill: SessionMeta | None = None,
 
     Si un PointSelection a été retenu (pick carte / récent avec GPS), il est
     attaché sur ``meta._point_selection`` pour que l'appelant le fusionne
-    dans le manifest (D8).
+    dans le manifest (D8). Les conditions d'enregistrement validées sont
+    attachées sur ``meta._participation_payload`` (None si rien à écrire).
     """
     dlg = SessionMetaWizard(master, prefill=prefill, session_name=session_name,
                             session_path=session_path)
@@ -1269,6 +1532,10 @@ def open_wizard(master, *, prefill: SessionMeta | None = None,
     if meta is not None:
         try:
             meta._point_selection = dlg.get_point_selection()  # type: ignore[attr-defined]
+        except Exception:
+            pass
+        try:
+            meta._participation_payload = dlg.get_participation_payload()  # type: ignore[attr-defined]
         except Exception:
             pass
     return meta

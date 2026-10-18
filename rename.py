@@ -143,6 +143,38 @@ def _av_safe_pace() -> tuple[int, float] | None:
     return None
 
 
+def _passage_conflict(wav_paths, n_passage: int | None) -> str | None:
+    """Refuse de réécrire un PassN déjà présent dans les noms.
+
+    Un lot n'a personne pour confirmer. Pass2 réécrit en Pass1 casse le
+    lien avec le CSV d'analyse. Les noms bruts (sans Pass) ne sont pas
+    concernés. Plusieurs Pass dans le même dossier : refus aussi.
+    """
+    counts: dict[int, int] = {}
+    for src in wav_paths:
+        m = VIGIECHIRO_RE.match(src.name)
+        if not m:
+            continue
+        n = int(m.group("pass_num"))
+        counts[n] = counts.get(n, 0) + 1
+    if not counts:
+        return None
+    if len(counts) > 1:
+        detail = ", ".join(f"Pass{k} ({v})" for k, v in sorted(counts.items()))
+        return (
+            f"les WAV portent plusieurs passages ({detail}). "
+            "Aucun renommage effectué."
+        )
+    found = next(iter(counts))
+    if n_passage is None or found == int(n_passage):
+        return None
+    return (
+        f"les WAV sont déjà en Pass{found} ({counts[found]} fichier(s)), "
+        f"la méta demande Pass{int(n_passage)}. "
+        "Aucun renommage effectué. Aligne le passage sur celui des fichiers."
+    )
+
+
 def rename_session(
     session: Path,
     meta: SessionMeta,
@@ -214,6 +246,15 @@ def rename_session(
         )
         out["audiomoth_twav_raw"] = n_twav
         return out
+
+    # Garde passage : un Pass déjà écrit n'est pas remplacé par un autre.
+    # ``force`` reste l'échappatoire CLI (le lot et la fenêtre passent False).
+    if not force:
+        passage_err = _passage_conflict(wav_paths, meta.n_passage)
+        if passage_err:
+            out["errors"].append(passage_err)
+            out["passage_conflict"] = True
+            return out
 
     # --- 4. vérification cohérence série observée vs meta
     consistency = check_serial_consistency(meta, (p.name for p in wav_paths))

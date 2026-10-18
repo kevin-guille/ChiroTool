@@ -125,6 +125,41 @@ def _load_external_site_ids() -> list[str]:
     return []
 
 
+def site_ids_from_participations(participations) -> list[str]:
+    """Ids de carré portés par des participations (dict ``site`` ou chaîne)."""
+    out: list[str] = []
+    seen: set[str] = set()
+    for item in participations or []:
+        if not isinstance(item, dict):
+            continue
+        site_ref = item.get("site")
+        if isinstance(site_ref, dict):
+            sid = str(site_ref.get("_id") or "")
+        else:
+            sid = str(site_ref) if site_ref else ""
+        if sid and sid not in seen:
+            seen.add(sid)
+            out.append(sid)
+    return out
+
+
+def foreign_square_ids(own_ids, participation_ids, remembered_ids) -> list[str]:
+    """Carrés à recharger : mémorisés d'abord, puis ceux de mes participations.
+
+    Exclut les carrés déjà listés comme miens, et les doublons. N'écrit rien.
+    """
+    own = {str(x) for x in (own_ids or []) if x}
+    out: list[str] = []
+    seen: set[str] = set()
+    for raw in list(remembered_ids or []) + list(participation_ids or []):
+        sid = str(raw) if raw else ""
+        if not sid or sid in own or sid in seen:
+            continue
+        seen.add(sid)
+        out.append(sid)
+    return out
+
+
 def _remember_external_site_id(site_id: str) -> None:
     try:
         import json
@@ -676,13 +711,18 @@ class MapPanel(ctk.CTkFrame):
                 # sans (on tombera sur le fallback registre local).
                 pass
 
-            # Carrés EXTERNES : appartenant à d'autres observateurs, sur lesquels
-            # l'utilisateur a ajouté un point. /moi/sites ne les liste pas, on
-            # les re-fetch par id pour qu'ils restent visibles (marqués is_mine=False).
+            # Carrés d'autres observateurs. /moi/sites ne les liste pas.
+            # On recharge par id : ceux déjà mémorisés, et ceux où j'ai une
+            # participation. Pas d'écriture du fichier à chaque affichage.
             own_ids = {s["id"] for s in out}
-            for ext_id in _load_external_site_ids():
-                if not ext_id or ext_id in own_ids:
-                    continue
+            flat_parts = [
+                p for parts in self._api_participations_by_site.values()
+                for p in parts
+            ]
+            for ext_id in foreign_square_ids(
+                    own_ids,
+                    site_ids_from_participations(flat_parts),
+                    _load_external_site_ids()):
                 try:
                     raw = client.get_site_raw(ext_id)
                 except Exception:
@@ -1882,12 +1922,15 @@ class MapPanel(ctk.CTkFrame):
             self._apply_pick_radius_filter(lat, lon)
 
     def _apply_pick_radius_filter(self, lat: float, lon: float) -> None:
-        """En mode pick : n'affiche que mes points dans un rayon de 5 km (D10)."""
-        from point_selection import PICK_RADIUS_KM, filter_points_within_radius, haversine_km
+        """En mode pick : points dans 5 km (D10), y compris un carré d'autrui.
+
+        Un carré où j'ai une participation reste sélectionnable. Les miens
+        sont verts, les autres violets. Le rayon ne sert pas à masquer les
+        points du carré en cours de création (autre chemin).
+        """
+        from point_selection import PICK_RADIUS_KM, filter_points_within_radius
         flat = []
         for s in self._sites_cache or []:
-            if not s.get("is_mine", True):
-                continue
             for pt in s.get("points") or []:
                 if pt.get("lat") is None or pt.get("lon") is None:
                     continue
@@ -1901,13 +1944,17 @@ class MapPanel(ctk.CTkFrame):
         self._clear_markers()
         for item in near:
             s, pt = item["site"], item["pt"]
+            if s.get("is_mine", True):
+                circle_c, outside_c, text_c = "#2ea043", "#1b6828", "#1b6828"
+            else:
+                circle_c, outside_c, text_c = "#8957e5", "#5a2ca0", "#5a2ca0"
             try:
                 mk = self.map.set_marker(
                     float(pt["lat"]), float(pt["lon"]),
                     text=str(pt.get("nom") or ""),
-                    marker_color_circle="#2ea043",
-                    marker_color_outside="#1b6828",
-                    text_color="#1b6828",
+                    marker_color_circle=circle_c,
+                    marker_color_outside=outside_c,
+                    text_color=text_c,
                     command=lambda _c=None, site=s, point=pt: self._show_point_popup(site, point),
                 )
                 # store for cleanup

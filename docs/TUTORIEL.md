@@ -8,7 +8,7 @@
 
 ![Icône ChiroTool](captures/icon_256.png)
 
-**Version 0.8.2** · Tutoriel utilisateur. Pré-release GitHub : [v0.8.2](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.2). La version stable reste [v0.8.1](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.1) tant que cette pré-release n'est pas promue.
+**Version 0.8.3** · Tutoriel utilisateur. Pré-release : [v0.8.3](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.3). La version stable reste [v0.8.1](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.1) tant que cette pré-release n'est pas promue.
 
 </div>
 
@@ -103,7 +103,7 @@ ChiroTool est un **logiciel portable** : pas d'installation, pas de droits
 administrateur requis.
 
 1. Récupérez le fichier **`ChiroTool.exe`** (≈ 36 Mo) auprès de votre référent ou
-   sur la [pré-release v0.8.2](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.2).
+   sur la [pré-release v0.8.3](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.3).
 2. Placez-le où vous voulez (Bureau, clé USB, disque dur externe…).
 3. Double-cliquez pour le lancer.
 
@@ -304,13 +304,23 @@ Dans cet assistant :
 - **Date de début** : la date de pose (un bouton 📅 ouvre un calendrier)
 - **N° site Tadarida** : les 6 chiffres du carré (saisie manuelle si besoin)
 - **Point** : Z1, A2, etc.
-- **Passage** : 1, 2…
+- **Passage** : 1, 2… Le menu n'est pas pré-coché à 1 (exe 0.8.3).
+  S'il n'est pas choisi, le lot ignore la nuit, sauf si le Suivi le
+  fournit. Un fichier déjà nommé Pass2 n'est pas réécrit Pass1.
 - **N° enregistreur** : choisissez-le dans la liste (il remplit automatiquement
   la série et le micro depuis votre parc « Mes matériels »)
+- **Heure début, heure fin** (exe 0.8.3) : `HH:MM`. Les deux, ou aucune.
+  Une seule heure est refusée. Si la fin est avant le début, c'est le
+  lendemain. Les deux vides ne sont pas enregistrées comme 20:00.
+- **T° début, T° fin** : entiers, optionnels.
+- **Vent, couverture** : optionnels. Laissés vides, le menu affiche
+  « non renseigné ». Re-deviner relit le log ou le Summary pour les
+  heures et les températures. Le vent et la couverture saisis restent.
 
 > 💡 **Astuce** : créez ou réutilisez un point une fois (carte ou pick depuis
 > les meta) → il devient le *point actif*. Au « Préparer » suivant, carré et
-> point sont préremplis. Sur la fiche d’un marker : **« ★ Utiliser pour la
+> point sont préremplis s'il en manque encore un. Une nuit qui a déjà les
+> deux les garde (exe 0.8.3). Sur la fiche d’un marker : **« ★ Utiliser pour la
 > prochaine préparation »** (bouton toujours visible en bas de la fiche).
 >
 > **📍 Carte** (barre d’actions) = mode **FOCUS** : zoom sur le point de la
@@ -500,15 +510,26 @@ Vous pouvez **fermer l'application** pendant l'attente : les analyses continuent
 côté serveur. Au retour, relancez « Upload » sur les nuits concernées (ou utilisez
 « 🔄 Sync API » dans le Registre) pour récupérer les résultats.
 
-Le batch **n'ouvre pas** l'assistant métadonnées. Une nuit sans carré / point
-(jamais préparée à la main) est **ignorée**, et le bilan ne la compte plus
-comme un succès (exe 0.8.2). Une nuit déjà renommée et déjà expansée n'est
+Le batch **n'ouvre pas** l'assistant métadonnées. Il transmet les heures
+et la météo déjà enregistrées sur chaque nuit, sans lister les WAV
+(exe 0.8.3). Une nuit sans carré, point ou passage
+(jamais préparée à la main) est **ignorée**. Le journal nomme cette nuit,
+et le bilan ne la compte plus comme un succès. Une nuit déjà renommée et déjà expansée n'est
 pas refaite : les fichiers restent. S'il ne manque que l'expansion, elle
 continue. Avec un log Titley, les horaires sont lus dans ce log.
 
+Une nuit déjà renseignée garde son carré, son point et ses conditions.
+Un fichier déjà nommé Pass2 n'est pas réécrit Pass1. Un dossier
+`Data_k` vide n'est pas un envoi réussi. Une préparation qui le laisse
+vide n'est pas un succès non plus. Un jeton expiré arrête le lot.
+La fenêtre de suivi ne bloque plus les autres nuits. Une nuit déjà dans
+le lot ne se relance pas. Les nuits cochées restent prises jusqu'à la
+fermeture de cette fenêtre. Les nuits non cochées restent utilisables.
+
 Si une nuit n'a pas bougé parce que le carré ou le point manquait,
 **▶ Préparer** cette nuit **seule** (l'assistant peut les saisir), puis
-relancer le batch.
+relancer le batch. Détail :
+[Nouveautés v0.8.3](#nouveautes-v083).
 
 ---
 
@@ -1019,8 +1040,9 @@ canal `_0_`, tag `_T_`, préfixe `NOISE_`, espaces.
 
 Déposez ensuite ce dossier de WAV dans ChiroTool et lancez **Préparer**
 (rename + TE×10 + tranches 5 s) comme une nuit SM4. Le SM2 n'écrit pas de
-`Summary.txt` SM4 : dates d'après les noms de fichiers, météo à la main dans
-l'assistant.
+`Summary.txt` SM4 : dates d'après les noms de fichiers. Heures et météo
+se saisissent dans les métadonnées de la nuit (exe 0.8.3), ou dans
+l'assistant de participation pour un envoi unitaire.
 
 Si l'appareil enregistre déjà en **WAV trigger**, sautez Kaleidoscope.
 Si Kaleidoscope a **déjà** fait le TE×10, ne le refaites pas : ChiroTool
@@ -1190,7 +1212,10 @@ ChiroTool couvre la grande majorité des cas, mais pas (encore) tout :
   sans filtre bruit, **un fichier par trigger**), puis Préparer. Détail
   [§12](#12--questions-fréquentes--dépannage) (« Mes fichiers SM2 sont en
   .WAC »).
-- **Modifier une participation déjà créée** (météo erronée…) : via le portail web.
+- **Modifier une participation déjà créée** (météo erronée…) :
+  **Vérifier / Réparer** pousse les heures et la météo déjà enregistrées
+  sur cette nuit (exe 0.8.3). Le portail web reste utilisable.
+  Voir [Nouveautés v0.8.3](#nouveautes-v083).
 - **Supprimer un carré créé par erreur** : action réservée aux administrateurs
   Vigie-Chiro (contactez l'équipe du programme).
 - **Participation multi-nuits** : **📊 Synthèse** n'affiche le menu Nuit
@@ -1229,6 +1254,7 @@ ChiroTool couvre la grande majorité des cas, mais pas (encore) tout :
 | **Fenêtres** | Après **Afficher le bureau** (Win+D), recliquer ChiroTool ramène la progression. Plus besoin de tuer le process |
 | **Dates** | WAV font foi si Summary cumulé |
 | **SM2** | `.wac` / `.w4v` : conversion Kaleidoscope Lite en amont (issue #6) |
+| **v0.8.3** | Heures, températures, vent et couverture dans les métadonnées de chaque nuit. Le lot les envoie sans formulaire. Un passage déjà écrit dans les noms n'est pas réécrit. Sans passage, la nuit est ignorée et le journal la nomme. Un `Data_k` vide n'est pas un envoi réussi, ni une préparation réussie. Points d'un carré créé par quelqu'un d'autre, violets, cliquables dans les 5 km. La fenêtre de lot ne bloque plus les autres nuits |
 
 La **v0.6** (carte pick/FOCUS, Vérifier / Réparer, export USB, météo non
 bloquante, CSV par nuit) reste le socle : voir le
@@ -1245,7 +1271,11 @@ Conception / dev : [`SPEC_v06_parcours.md`](SPEC_v06_parcours.md) · issues
 [#10](https://github.com/kevin-guille/ChiroTool/issues/10),
 [#11](https://github.com/kevin-guille/ChiroTool/issues/11).
 
-### Suite (hors 0.8.2)
+### Nouveautés v0.8.3
+
+Livré dans l'exe 0.8.3 (pré-release du 2026-10-18). La version stable
+publiée reste la 0.8.1 tant que cette pré-release n'est pas promue.
+L'exe 0.8.2 ne contient pas les points ci-dessous.
 
 Ne pas relire le 1er message des issues
 [#4](https://github.com/kevin-guille/ChiroTool/issues/4),
@@ -1258,6 +1288,45 @@ Ne pas relire le 1er message des issues
 de suivi batch se rouvre, et la fermer ne fige plus l'interface.
 Fermer ChiroTool pendant un traitement demande confirmation.
 L'historique se met à jour pendant le traitement (exe 0.8.2).
+
+- **Heures et météo, nuit par nuit**
+  ([#15](https://github.com/kevin-guille/ChiroTool/issues/15)).
+  L'assistant de métadonnées porte l'heure de début, l'heure de fin,
+  les deux températures, le vent et la couverture. Vent et couverture
+  laissés vides s'affichent « non renseigné ». Re-deviner relit le log
+  ou le Summary pour les heures et les températures. Le vent et la
+  couverture saisis restent. Il faut les deux heures, ou aucune : une
+  seule heure est refusée. Si l'heure de fin est avant l'heure de début,
+  c'est le lendemain. Les deux vides ne sont pas enregistrées comme 20:00.
+
+  Deux nuits déjà renseignées restent distinctes. Le lot et
+  Vérifier / Réparer reprennent le carré, le point et les conditions
+  de chaque nuit. Le dernier point créé ne remplit le formulaire que
+  si le carré ou le point manque encore, et seulement à l'ouverture
+  de ce formulaire. Une nuit qui a déjà les deux les garde.
+
+  L'envoi groupé n'ouvre pas de formulaire. Il transmet les heures et
+  la météo déjà enregistrées sur cette nuit, sans lister les WAV.
+  L'envoi d'une seule nuit ouvre toujours l'assistant de participation.
+
+- **Lot**. Un fichier déjà nommé Pass2 n'est pas réécrit Pass1 si la
+  méta dit 1. Le passage n'est plus pré-coché à 1. Tant qu'il n'est
+  pas choisi, ou repris du Suivi, la nuit est ignorée. Le journal
+  nomme chaque nuit ignorée. Un dossier
+  `Data_k` vide n'est pas un envoi réussi : aucune participation n'est
+  créée. Une préparation qui laisse ce dossier vide n'est pas un succès
+  non plus. Un jeton expiré arrête le lot, y compris les fichiers encore
+  en file. La fenêtre de suivi ne bloque plus les autres nuits. Une
+  nuit déjà dans le lot ne se relance pas. Les nuits cochées pour ce
+  lot restent prises jusqu'à la fermeture de cette fenêtre. Les nuits
+  non cochées restent utilisables. Une seule instance.
+
+- **Carte**
+  ([#19](https://github.com/kevin-guille/ChiroTool/issues/19)).
+  Un carré créé par quelqu'un d'autre apparaît s'il porte une de mes
+  participations, ou s'il est déjà mémorisé. En choix de point, ces
+  points restent cliquables dans les 5 km. Ils sont violets. Les miens
+  restent verts.
 
 - **Batch Préparer** (interne, SPEC §0.6, exe 0.8.2) : une nuit ignorée
   n'est plus un succès. Un log Titley évite de relire tous les WAV.

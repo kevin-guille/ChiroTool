@@ -79,6 +79,14 @@ def _fmt_size(n: int) -> str:
     return f"{n:.0f} PB"
 
 
+def _token_dead(exc: BaseException) -> bool:
+    """Vrai si l'exception vient d'un jeton Vigie-Chiro expiré."""
+    if type(exc).__name__ == "TokenExpiredError":
+        return True
+    msg = str(exc).lower()
+    return "expir" in msg and ("jeton" in msg or "token" in msg)
+
+
 def _session_status_glyph(s: SessionState) -> tuple[str, str]:
     """Retourne (glyph, couleur).
 
@@ -683,11 +691,30 @@ class ChiroToolApp(ctk.CTk):
         """
         if self._reveal_run_dialog(f"batch:{phase}"):
             return
+        if self._other_batch_running():
+            messagebox.showinfo(
+                "Lot déjà en cours",
+                "Un lot tourne déjà. Tu peux ouvrir les nuits qui n'en font "
+                "pas partie. Attends la fin de ce lot avant d'en lancer un autre.",
+            )
+            return
         sessions = self._selected_batch_states()
         if not sessions:
             messagebox.showinfo(
                 "Sélection vide",
                 "Coche au moins une session avant de lancer un batch.")
+            return
+        busy = [s.name for s in sessions if self._treatment_running_on(s.path)]
+        if busy:
+            shown = "\n".join(busy[:8])
+            if len(busy) > 8:
+                shown += f"\n+ {len(busy) - 8} autre(s)"
+            messagebox.showinfo(
+                "Nuit déjà dans un traitement",
+                "Ces nuits sont déjà en cours :\n"
+                f"{shown}\n\n"
+                "Attends la fin, ou décoche-les, avant de lancer le lot.",
+            )
             return
         from tkinter import messagebox as mb
         if not mb.askyesno(
@@ -695,9 +722,9 @@ class ChiroToolApp(ctk.CTk):
             f"Lancer la phase « {phase} » sur {len(sessions)} session(s) "
             f"en série (l'une après l'autre) ?\n\n"
             f"Les sessions qui ne sont pas prêtes pour cette phase (ou déjà "
-            f"faites) seront automatiquement ignorées — le détail apparaît "
-            f"dans le journal du modal.\n\n"
-            f"Tu pourras suivre la progression dans le modal qui s'ouvre.",
+            f"faites) seront automatiquement ignorées. Le détail apparaît "
+            f"dans le journal.\n\n"
+            f"La fenêtre de suivi reste ouverte, sans bloquer les autres nuits.",
         ):
             return
         self._run_batch_serial(phase, sessions)
@@ -737,10 +764,14 @@ class ChiroToolApp(ctk.CTk):
                     results.append({"session": s.name, "session_obj": s,
                                      "result": r})
                     if isinstance(r, dict) and (r.get("error") or r.get("errors")):
+                        msg = r.get("error") or r.get("errors")
+                        if isinstance(msg, (list, tuple)):
+                            msg = "; ".join(str(v) for v in msg)
+                        log(f"  erreur : {s.name} ({msg})")
                         _log.warning("Batch %s : session %d/%d %s erreur(s) : %s",
-                                      phase, i, total, s.name,
-                                      r.get("error") or r.get("errors"))
+                                      phase, i, total, s.name, msg)
                     elif isinstance(r, dict) and r.get("skipped") and not r.get("already_done"):
+                        log(f"  ignorée : {s.name} ({r.get('skipped')})")
                         _log.warning("Batch %s : session %d/%d %s ignorée : %s",
                                       phase, i, total, s.name, r.get("skipped"))
                     elif isinstance(r, dict) and r.get("already_done"):
@@ -749,12 +780,20 @@ class ChiroToolApp(ctk.CTk):
                     else:
                         _log.info("Batch %s : session %d/%d OK : %s",
                                   phase, i, total, s.name)
+                    if isinstance(r, dict) and r.get("stop_batch"):
+                        log("Jeton expiré. Les nuits suivantes de ce lot "
+                            "ne sont pas lancées.")
+                        break
                 except Exception as e:
                     log(f"⚠ Erreur sur {s.name} : {e}")
                     _log.exception("Batch %s : session %d/%d EXCEPTION — %s",
                                     phase, i, total, s.name)
                     results.append({"session": s.name, "session_obj": s,
                                      "error": str(e)})
+                    if _token_dead(e):
+                        log("Jeton expiré. Les nuits suivantes de ce lot "
+                            "ne sont pas lancées.")
+                        break
 
             # === Phase 2 : wait + fetch en PARALLÈLE (uniquement pour upload) ===
             if phase == "upload":
@@ -776,26 +815,28 @@ class ChiroToolApp(ctk.CTk):
 
             if progress:
                 progress(total, total, "terminé")
-            from pipeline import classify_batch_row
+            from pipeline import batch_bilan_lines, classify_batch_row
             kinds = [classify_batch_row(r) for r in results]
             n_ok = sum(1 for k in kinds if k == "ok")
             n_skip = sum(1 for k in kinds if k == "skipped")
             n_err = sum(1 for k in kinds if k == "error")
             log("")
-            if n_skip:
-                log(f"=== Bilan : {n_ok}/{total} OK, {n_skip} ignorée(s), "
-                    f"{n_err} erreur(s) ===")
-            else:
-                log(f"=== Bilan : {n_ok}/{total} OK, {n_err} erreur(s) ===")
+            for line in batch_bilan_lines(results, total=total):
+                log(line)
             _log.info("=== Batch %s terminé : %d OK / %d ignorée(s) / %d erreur(s) ===",
                       phase, n_ok, n_skip, n_err)
             # Strip session_obj qui n'est pas sérialisable proprement
             for r in results:
                 r.pop("session_obj", None)
-            return {"batch": True, "results": results,
-                     "n_ok": n_ok, "n_skipped": n_skip, "n_err": n_err}
+            out = {"batch": True, "results": results,
+                   "n_ok": n_ok, "n_skipped": n_skip, "n_err": n_err}
+            if n_err:
+                out["error"] = f"{n_err} nuit(s) en erreur"
+            elif n_skip:
+                out["warnings"] = [f"{n_skip} nuit(s) ignorée(s), nommées dans le bilan"]
+            return out
 
-        dlg = RunDialog(self, title=title, worker=worker)
+        dlg = RunDialog(self, title=title, worker=worker, modal=False)
         self._run_dialogs[f"batch:{phase}"] = dlg
         for s in sessions:
             self._run_dialogs[str(s.path)] = dlg
@@ -875,72 +916,17 @@ class ChiroToolApp(ctk.CTk):
     def _meta_is_complete(meta) -> bool:
         """Vrai si la meta a tous les champs requis pour le renommage.
 
-        try_auto_meta renvoie une meta PARTIELLE (date + série + contrat) quand
-        le carré/point ne sont pas déductibles (cas normal sans Suivi). Dans ce
-        cas il FAUT passer par le wizard (simple-clic) ou signaler « à compléter »
-        (batch) — surtout pas lancer un renommage qui échouera sur
-        « n_site_tadarida manquant ».
+        try_auto_meta renvoie une meta partielle (date, série, contrat) quand
+        le carré ou le point ne sont pas déductibles. Le lot ne lance pas
+        le renommage dans ce cas.
         """
-        if meta is None:
-            return False
-        return all([
-            meta.date_debut is not None,
-            bool(meta.n_site_tadarida),
-            bool(meta.n_point_fixe),
-            meta.n_passage is not None,
-            meta.n_enregistreur is not None,
-            bool(meta.n_serie),
-        ])
+        from pipeline import meta_is_complete_for_batch
+        return meta_is_complete_for_batch(meta)
 
     def _resolve_meta_for_batch(self, s):
-        """Résout la meta pour une session dans un contexte batch.
-
-        - Lit le manifest existant en priorité (rapide, déterministe)
-        - Fallback : try_auto_meta (heuristiques sur les WAV / Suivi)
-        - Pas de wizard interactif (le batch tourne dans un thread)
-
-        Retourne SessionMeta ou None.
-        """
-        # 1. Manifest
-        try:
-            from datetime import datetime as _dt
-            from manifest import Manifest
-            from naming import SessionMeta
-            m = Manifest.load(s.path)
-            if m and m.meta:
-                dt = (_dt.fromisoformat(m.meta["date_debut"])
-                      if m.meta.get("date_debut") else None)
-                meta = SessionMeta(
-                    date_debut=dt,
-                    n_site_tadarida=m.meta.get("n_site_tadarida"),
-                    n_point_fixe=m.meta.get("n_point_fixe"),
-                    n_passage=m.meta.get("n_passage"),
-                    n_enregistreur=m.meta.get("n_enregistreur"),
-                    n_serie=m.meta.get("n_serie"),
-                    nom_contrat=m.meta.get("nom_contrat"),
-                )
-                # Validation basique : si tous les champs critiques sont là
-                if meta.date_debut and meta.n_site_tadarida and meta.n_point_fixe \
-                        and meta.n_passage is not None:
-                    return meta
-        except Exception:
-            import logging
-            logging.getLogger("chirotool.batch").exception(
-                "manifest illisible pour le batch : %s", s.path)
-        # 2. Auto-résolution heuristique — uniquement si elle est COMPLÈTE.
-        # Une meta partielle (carré/point manquants) ne peut pas être renommée
-        # en batch (pas de wizard dans un thread) → on renvoie None pour que le
-        # batch saute proprement la session avec un message explicite.
-        try:
-            from rename import try_auto_meta
-            auto, _msgs = try_auto_meta(s.path)
-            if self._meta_is_complete(auto):
-                return auto
-        except Exception:
-            import logging
-            logging.getLogger("chirotool.batch").exception(
-                "auto-métadonnées en échec pour le batch : %s", s.path)
-        return None
+        """Meta de cette session. Le point actif n'est pas lu."""
+        from pipeline import resolve_meta_for_batch
+        return resolve_meta_for_batch(s.path)
 
     def _run_phase_for(self, s, phase: str, log, progress):
         """Exécute une phase pour une session donnée dans un contexte batch.
@@ -954,10 +940,12 @@ class ChiroToolApp(ctk.CTk):
             from pipeline import run_phase_prep
             meta = self._resolve_meta_for_batch(s)
             if meta is None:
-                log(f"  ⚠ {s.name} : métadonnées incomplètes (carré/point) — "
-                    f"prépare cette nuit en simple-clic pour les saisir, puis "
-                    f"relance le batch. Session ignorée.")
+                log(f"  ⚠ {s.name} : métadonnées incomplètes (carré, point ou passage). "
+                    f"Prépare cette nuit en simple-clic pour les saisir, puis "
+                    f"relance le lot. Session ignorée.")
                 return {"skipped": "métadonnées incomplètes (saisie wizard requise)"}
+            log(f"  méta : site {meta.n_site_tadarida} / {meta.n_point_fixe} "
+                f"/ Pass{meta.n_passage} / enr#{meta.n_enregistreur}")
             try:
                 from chiro_core import find_titley_log
                 # Même règle que l'upload unitaire (issue #9) : un log Titley
@@ -993,9 +981,27 @@ class ChiroToolApp(ctk.CTk):
             if meta is None:
                 log(f"  ⚠ {s.name} : meta introuvable, skip")
                 return {"skipped": "meta indisponible"}
+            payload = None
+            try:
+                from chiro_core import (
+                    format_condition_span,
+                    recording_conditions_for_upload,
+                )
+                payload = recording_conditions_for_upload(
+                    s.path, n_enregistreur=meta.n_enregistreur)
+                line = format_condition_span(
+                    payload.get("date_debut"), payload.get("date_fin"))
+                if line:
+                    log(f"  {line}")
+            except Exception:
+                import logging
+                logging.getLogger("chirotool.batch").exception(
+                    "conditions d'enregistrement illisibles : %s", s.path)
+                payload = None
             return _capture_stdout(
-                lambda: run_phase_upload(s.path, meta, dry_run=False,
-                                            token=token, progress=progress),
+                lambda: run_phase_upload(
+                    s.path, meta, dry_run=False, token=token,
+                    progress=progress, participation_payload=payload),
                 log,
             )
         if phase == "cleanup":
@@ -1219,6 +1225,60 @@ class ChiroToolApp(ctk.CTk):
         # Le thème peut avoir changé, tout le reste est déjà persisté côté
         # gui_preferences. Rien d'autre à faire pour l'instant.
         self.settings = new_settings
+
+    def _dialog_alive(self, dlg) -> bool:
+        try:
+            return bool(dlg.winfo_exists() and not getattr(dlg, "_done", False))
+        except Exception:
+            return False
+
+    _NIGHT_KEY_PREFIXES = (
+        "prep:",
+        "repair:",
+        "repair-diag:",
+        "cleanup:",
+        "cleanup-dry:",
+    )
+
+    def _is_batch_dialog(self, dlg) -> bool:
+        for key, other in self._run_dialogs.items():
+            if other is dlg and str(key).startswith("batch:"):
+                return True
+        return False
+
+    def _treatment_running_on(self, path) -> bool:
+        """Vrai si cette nuit est déjà dans un traitement en cours.
+
+        Comparaison exacte du chemin : un dossier ``nuit`` ne bloque pas
+        ``nuit2``.
+        """
+        needle = str(path)
+        for key, dlg in list(self._run_dialogs.items()):
+            key_s = str(key)
+            if key_s != needle and not any(
+                key_s == prefix + needle for prefix in self._NIGHT_KEY_PREFIXES
+            ):
+                continue
+            if self._dialog_alive(dlg):
+                return True
+        return False
+
+    def _other_batch_running(self) -> bool:
+        for key, dlg in list(self._run_dialogs.items()):
+            if str(key).startswith("batch:") and self._dialog_alive(dlg):
+                return True
+        return False
+
+    def _refuse_if_this_night_is_running(self, s) -> bool:
+        """True si l'action est refusée. Les autres nuits restent libres."""
+        if not self._treatment_running_on(s.path):
+            return False
+        messagebox.showinfo(
+            "Nuit déjà dans un traitement",
+            "Cette nuit est déjà dans un traitement. "
+            "Tu peux ouvrir les autres nuits pendant ce temps.",
+        )
+        return True
 
     def _busy_run_dialogs(self) -> list:
         """Fenêtres de traitement encore ouvertes (une fois chacune)."""
@@ -1840,6 +1900,8 @@ class ChiroToolApp(ctk.CTk):
     # -- Actions réelles ----------------------------------------------------
 
     def _run_prep(self, s: SessionState):
+        if self._refuse_if_this_night_is_running(s):
+            return
         meta = self._resolve_meta_interactive(s)
         if meta is None:
             return
@@ -1888,6 +1950,7 @@ class ChiroToolApp(ctk.CTk):
                 n_serie=meta.n_serie,
             )
             self._merge_point_selection_into_manifest(mm, meta)
+            self._persist_recording_conditions(mm, meta)
             mm.save(s.path)
         except Exception:
             pass
@@ -1907,6 +1970,8 @@ class ChiroToolApp(ctk.CTk):
             return False
 
     def _run_repair(self, s: SessionState):
+        if self._refuse_if_this_night_is_running(s):
+            return
         """Flux sûr : diagnostic dry-run → rapport → confirmations → apply.
 
         Une seule nuit. Aucune modification tant que l'utilisateur n'a pas
@@ -1943,6 +2008,8 @@ class ChiroToolApp(ctk.CTk):
         self, s: SessionState, token: str, diag: dict,
     ):
         """Après dry-run : montre le rapport et demande confirmation par action."""
+        if self._refuse_if_this_night_is_running(s):
+            return
         if diag.get("error") and not diag.get("participation_id"):
             messagebox.showerror(
                 "Diagnostic impossible",
@@ -2221,6 +2288,16 @@ class ChiroToolApp(ctk.CTk):
 
     def _run_upload(self, s: SessionState):
         key = str(s.path)
+        own = self._run_dialogs.get(key)
+        # Le lot enregistre aussi la nuit sous son chemin. Recliquer Upload
+        # ne doit pas ramener cette fenêtre par-dessus le travail en cours.
+        if (own is not None and self._dialog_alive(own)
+                and not self._is_batch_dialog(own)):
+            if hasattr(own, "reveal"):
+                own.reveal()
+            return
+        if self._refuse_if_this_night_is_running(s):
+            return
         if self._reveal_run_dialog(key):
             return
         token = load_token()
@@ -2290,6 +2367,8 @@ class ChiroToolApp(ctk.CTk):
         self._run_dialogs[key] = dlg
 
     def _run_cleanup(self, s: SessionState):
+        if self._refuse_if_this_night_is_running(s):
+            return
         meta = self._resolve_meta_interactive(s)
         if meta is None:
             return
@@ -2326,6 +2405,8 @@ class ChiroToolApp(ctk.CTk):
     def _confirm_and_run_cleanup(self, s: SessionState, meta, stats: dict):
         """Aperçu chiffré (issu de la simulation) puis confirmation AVANT la
         suppression définitive. Défaut « Non » (pas de suppression par Entrée)."""
+        if self._refuse_if_this_night_is_running(s):
+            return
         files = (stats or {}).get("files", {}) if isinstance(stats, dict) else {}
         n_tot = files.get("total_wav_on_disk", 0) or 0
         n_del = files.get("planned_deleted", 0) or 0
@@ -2688,6 +2769,7 @@ class ChiroToolApp(ctk.CTk):
             n_serie=meta.n_serie,
         )
         self._merge_point_selection_into_manifest(m, meta)
+        self._persist_recording_conditions(m, meta)
         m.save(s.path)
         # Mémorise le contrat saisi pour l'autocomplétion future (LRU, 50 max)
         self._remember_contract(meta.nom_contrat)
@@ -2696,6 +2778,17 @@ class ChiroToolApp(ctk.CTk):
             f"Session : {s.name}\n\nLes métadonnées seront utilisées pour "
             f"les prochaines actions (préparation, upload, nettoyage)."
         )
+
+    @staticmethod
+    def _persist_recording_conditions(manifest, meta) -> None:
+        """Écrit les conditions validées. None ne touche pas le cache existant.
+
+        Un dict vide efface des conditions qui étaient seules dans le cache.
+        """
+        payload = getattr(meta, "_participation_payload", None)
+        if payload is None:
+            return
+        manifest.set_meta(participation_payload=payload)
 
     @staticmethod
     def _merge_point_selection_into_manifest(m, meta) -> None:

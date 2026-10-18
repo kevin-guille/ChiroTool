@@ -30,6 +30,7 @@ import customtkinter as ctk
 from chiro_core import (
     build_participation_configuration,
     collect_wizard_prefill,
+    hours_are_user_set,
     temperatures_are_user_set,
 )
 from manifest import Manifest
@@ -813,6 +814,13 @@ class ParticipationWizard(ctk.CTkToplevel):
                 "temperature_debut": temp_deb,
                 "temperature_fin": temp_fin,
                 "temperature_user_set": temps_user_set,
+                "hours_user_set": bool(
+                    date_debut and date_fin and hours_are_user_set(
+                        self._prefill.get("_auto_date_debut"),
+                        self._prefill.get("_auto_date_fin"),
+                        date_debut, date_fin,
+                    )
+                ),
                 "vent": vent,
                 "couverture": couverture,
                 "detecteur_enregistreur_type": detecteur,

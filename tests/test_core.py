@@ -666,6 +666,25 @@ class TestBatchRowClassify:
             "result": {"skipped": "déjà préparée", "already_done": True},
         }) == "ok"
 
+    def test_bilan_names_ignored_nights(self):
+        from pipeline import batch_bilan_lines
+        lines = batch_bilan_lines([
+            {"session": "nuit_sans_passage",
+             "result": {"skipped": "métadonnées incomplètes (saisie wizard requise)"}},
+            {"session": "nuit_faite",
+             "result": {"skipped": "déjà préparée", "already_done": True}},
+            {"session": "nuit_vide",
+             "result": {"error": "Data_k ne contient aucun WAV. La préparation n'est pas un succès."}},
+        ], total=3)
+        text = "\n".join(lines)
+        assert "nuit_sans_passage" in text
+        assert "métadonnées incomplètes" in text
+        assert "Nuits ignorées :" in text
+        assert "nuit_vide" in text
+        assert "Nuits en erreur :" in text
+        assert "nuit_faite" not in text
+        assert "1/3 OK, 1 ignorée(s), 1 erreur(s)" in text
+
 
 class TestFinishUploadWithTrigger:
     """Branche all_already_present / trigger : toujours record_action, jamais
@@ -788,6 +807,161 @@ class TestFinishUploadWithTrigger:
         assert last.status == "error"
         assert last.stats.get("trigger_ok") is False
         assert "503" in (last.notes or "")
+
+
+class TestPassageGuard:
+    """Un Pass déjà écrit n'est pas remplacé. Les noms bruts restent renommables."""
+
+    def _meta(self, n_passage: int):
+        from naming import SessionMeta
+        return SessionMeta(
+            date_debut=datetime(2022, 7, 21), n_site_tadarida="430658",
+            n_point_fixe="Z1", n_passage=n_passage, n_enregistreur=5,
+            n_serie="24F319", nom_contrat="T")
+
+    def test_refuses_to_rewrite_pass2_as_pass1(self, tmp_path):
+        from rename import rename_session
+        sess = tmp_path / "nuit"
+        sess.mkdir()
+        name = "Car430658-2022-Pass2-Z1-24F319_20220721_033014.wav"
+        (sess / name).write_bytes(b"RIFF")
+        res = rename_session(sess, self._meta(1), dry_run=False,
+                             rename_folder=False, force=False)
+        assert res.get("passage_conflict") is True
+        assert res["executed"] == 0
+        assert (sess / name).exists()
+
+    def test_same_pass_is_not_a_conflict(self, tmp_path):
+        from rename import rename_session
+        sess = tmp_path / "nuit"
+        sess.mkdir()
+        name = "Car430658-2022-Pass2-Z1-24F319_20220721_033014.wav"
+        (sess / name).write_bytes(b"RIFF")
+        res = rename_session(sess, self._meta(2), dry_run=False,
+                             rename_folder=False, force=False)
+        assert not res.get("passage_conflict")
+        assert not res.get("errors"), res.get("errors")
+        assert res["executed"] == 0
+        assert res["skipped_same_name"] == 1
+        assert (sess / name).exists()
+
+    def test_force_still_rewrites(self, tmp_path):
+        from rename import rename_session
+        sess = tmp_path / "nuit"
+        sess.mkdir()
+        src = "Car430658-2022-Pass2-Z1-24F319_20220721_033014.wav"
+        dst = "Car430658-2022-Pass1-Z1-24F319_20220721_033014.wav"
+        (sess / src).write_bytes(b"RIFF")
+        res = rename_session(sess, self._meta(1), dry_run=False,
+                             rename_folder=False, force=True)
+        assert not res.get("passage_conflict")
+        assert not res.get("errors"), res.get("errors")
+        assert res["executed"] == 1
+        assert not (sess / src).exists()
+        assert (sess / dst).exists()
+
+    def test_raw_name_still_renames(self, tmp_path):
+        from rename import rename_session
+        sess = tmp_path / "nuit"
+        sess.mkdir()
+        (sess / "20220721_033014.wav").write_bytes(b"RIFF")
+        res = rename_session(sess, self._meta(1), dry_run=False,
+                             rename_folder=False, force=False)
+        assert not res.get("passage_conflict")
+        assert not res.get("errors"), res.get("errors")
+        assert res["executed"] == 1
+        assert (sess / "Car430658-2022-Pass1-Z1-24F319_20220721_033014.wav").exists()
+
+    def test_mixed_pass_numbers_refuse(self, tmp_path):
+        from rename import rename_session
+        sess = tmp_path / "nuit"
+        sess.mkdir()
+        a = "Car430658-2022-Pass1-Z1-24F319_20220721_033014.wav"
+        b = "Car430658-2022-Pass2-Z1-24F319_20220721_033114.wav"
+        (sess / a).write_bytes(b"RIFF")
+        (sess / b).write_bytes(b"RIFF")
+        res = rename_session(sess, self._meta(1), dry_run=False,
+                             rename_folder=False, force=False)
+        assert res.get("passage_conflict") is True
+        assert res["executed"] == 0
+        assert (sess / a).exists() and (sess / b).exists()
+
+
+class TestEmptyDataKIsNotUploaded:
+    def _meta(self):
+        from naming import SessionMeta
+        return SessionMeta(
+            date_debut=datetime(2022, 7, 21), n_site_tadarida="430658",
+            n_point_fixe="Z1", n_passage=2, n_enregistreur=5,
+            n_serie="24F319", nom_contrat="T")
+
+    def test_empty_data_k_is_an_error_before_any_client(self, tmp_path):
+        from manifest import Manifest
+        from pipeline import run_phase_upload
+        session = tmp_path / "sess"
+        (session / "Data_k").mkdir(parents=True)
+        res = run_phase_upload(session, self._meta(), dry_run=False, token="nope")
+        assert "aucun WAV" in res.get("error", "")
+        assert not res.get("stop_batch")
+        # Rien n'est écrit : pas de participation, pas de nuit marquée envoyée.
+        loaded = Manifest.load(session)
+        assert loaded is None or not loaded.is_done("upload")
+
+    def _ready(self, tmp_path, n_wav: int):
+        from manifest import Manifest
+        session = tmp_path / "sess"
+        data_k = session / "Data_k"
+        data_k.mkdir(parents=True)
+        for i in range(n_wav):
+            (data_k / f"f{i}.wav").write_bytes(b"RIFF")
+        m = Manifest.load_or_create(session)
+        m.set_meta(
+            vigiechiro_site_id="site1",
+            vigiechiro_participation_id="part1",
+            vigiechiro_participation_date="2022-07-21",
+        )
+        m.save(session)
+        return session
+
+    def test_listing_token_expired_stops_and_does_not_mark_sent(
+            self, tmp_path, monkeypatch):
+        from manifest import Manifest
+        from pipeline import run_phase_upload
+        from vigiechiro_api import TokenExpiredError, VigieChiroClient
+        session = self._ready(tmp_path, 1)
+
+        def boom(self, pid):
+            raise TokenExpiredError("token Vigie-Chiro invalide ou expiré")
+
+        monkeypatch.setattr(VigieChiroClient, "list_participation_files", boom)
+        res = run_phase_upload(
+            session, self._meta(), dry_run=False, token="x" * 16)
+        assert res.get("stop_batch") is True
+        assert "expir" in res.get("error", "").lower()
+        assert not Manifest.load(session).is_done("upload")
+
+    def test_token_expired_mid_upload_does_not_send_the_rest(
+            self, tmp_path, monkeypatch):
+        from manifest import Manifest
+        from pipeline import run_phase_upload
+        from vigiechiro_api import TokenExpiredError, VigieChiroClient
+        session = self._ready(tmp_path, 3)
+        calls: list[str] = []
+
+        def listed(self, pid):
+            return []
+
+        def upload_wav(self, pid, wav):
+            calls.append(wav.name)
+            raise TokenExpiredError("token Vigie-Chiro invalide ou expiré")
+
+        monkeypatch.setattr(VigieChiroClient, "list_participation_files", listed)
+        monkeypatch.setattr(VigieChiroClient, "upload_wav", upload_wav)
+        res = run_phase_upload(
+            session, self._meta(), dry_run=False, token="x" * 16, max_workers=1)
+        assert calls == ["f0.wav"]
+        assert res.get("stop_batch") is True
+        assert not Manifest.load(session).is_done("upload")
 
 
 # =========================================================================
@@ -1801,6 +1975,23 @@ class TestMapExternalSites:
         gui_map._remember_external_site_id("abc123")   # idempotent
         gui_map._remember_external_site_id("def456")
         assert gui_map._load_external_site_ids() == ["abc123", "def456"]
+
+    def test_foreign_square_ids_remembered_then_participations(self):
+        import gui_map
+        assert gui_map.site_ids_from_participations([
+            {"site": {"_id": "aaa"}},
+            {"site": "bbb"},
+            {"site": "aaa"},
+            {"site": ""},
+            {"point": "Z1"},
+            "nope",
+        ]) == ["aaa", "bbb"]
+        assert gui_map.foreign_square_ids(
+            ["own"],
+            ["own", "part", "mem"],
+            ["mem", "remembered"],
+        ) == ["mem", "remembered", "part"]
+        assert gui_map.foreign_square_ids(None, None, None) == []
 
 
 # =========================================================================
@@ -4796,6 +4987,444 @@ class TestTitleyLog:
         assert pre["_dates_from_titley"] is True
 
 
+class TestRecordingConditions:
+    def test_night_datetimes_overnight_is_not_shifted_later(self):
+        from chiro_core import night_datetimes, parse_hhmm
+        from pipeline import _participation_window
+        day = datetime(2026, 8, 21)
+        start, end = night_datetimes(day, parse_hhmm("20:39"), parse_hhmm("7:41"))
+        assert start == datetime(2026, 8, 21, 20, 39)
+        assert end == datetime(2026, 8, 22, 7, 41)
+        assert _participation_window(start, end) == (start, end)
+
+    def test_night_datetimes_same_evening_and_blank(self):
+        import pytest
+        from chiro_core import night_datetimes, parse_hhmm
+        day = datetime(2026, 8, 21)
+        start, end = night_datetimes(day, parse_hhmm("20:00"), parse_hhmm("23:00"))
+        assert start == datetime(2026, 8, 21, 20, 0)
+        assert end == datetime(2026, 8, 21, 23, 0)
+        assert night_datetimes(day, None, None) == (None, None)
+        assert parse_hhmm("") is None
+        with pytest.raises(ValueError):
+            parse_hhmm("25:00")
+        with pytest.raises(ValueError):
+            night_datetimes(day, (20, 0), None)
+
+    def test_user_hours_win_over_titley(self):
+        from chiro_core import hours_are_user_set, overlay_participation_cache
+        auto_start = datetime(2026, 8, 21, 20, 39, 5)
+        auto_end = datetime(2026, 8, 22, 7, 41, 32)
+        typed_start = datetime(2026, 8, 21, 20, 39)
+        typed_end = datetime(2026, 8, 22, 7, 41)
+        assert hours_are_user_set(auto_start, auto_end, typed_start, typed_end) is False
+        assert hours_are_user_set(
+            auto_start, auto_end, datetime(2026, 8, 21, 21, 0), typed_end) is True
+        pre = {
+            "_dates_from_titley": True,
+            "date_debut": auto_start,
+            "date_fin": auto_end,
+        }
+        overlay_participation_cache(pre, {
+            "date_debut": "2026-08-21T21:00:00",
+            "date_fin": "2026-08-22T06:30:00",
+            "hours_user_set": True,
+        })
+        assert pre["date_debut"] == datetime(2026, 8, 21, 21, 0)
+        assert pre["date_fin"] == datetime(2026, 8, 22, 6, 30)
+        assert pre["hours_user_set"] is True
+
+    def test_user_hours_survive_titley_prefill(self, tmp_path):
+        import json
+        import shutil
+        from chiro_core import collect_wizard_prefill
+        shutil.copyfile(_TITLEY_LOG, tmp_path / "log_2026-08-21.csv")
+        (tmp_path / "_session_manifest.json").write_text(json.dumps({
+            "schema_version": 1,
+            "meta": {
+                "participation_payload": {
+                    "date_debut": "2026-08-21T21:00:00",
+                    "date_fin": "2026-08-22T06:30:00",
+                    "hours_user_set": True,
+                    "vent": "FAIBLE",
+                }
+            },
+            "actions": [],
+            "flags": {},
+        }), encoding="utf-8")
+        pre = collect_wizard_prefill(tmp_path, allow_wav_listing=False)
+        assert pre["date_debut"] == datetime(2026, 8, 21, 21, 0)
+        assert pre["date_fin"] == datetime(2026, 8, 22, 6, 30)
+        assert pre["vent"] == "FAIBLE"
+        assert pre["_wav_listed"] is False
+        assert pre["_auto_date_debut"] == datetime(2026, 8, 21, 20, 39, 5)
+
+    def test_allow_wav_listing_false_does_not_list(self, tmp_path, monkeypatch):
+        import chiro_core
+        from chiro_core import collect_wizard_prefill
+        called = {"n": 0}
+
+        def _count(session):
+            called["n"] += 1
+            return []
+
+        monkeypatch.setattr(chiro_core, "list_session_wav_names", _count)
+        collect_wizard_prefill(tmp_path, allow_wav_listing=False)
+        assert called["n"] == 0
+        collect_wizard_prefill(tmp_path, allow_wav_listing=True)
+        assert called["n"] == 1
+
+    def test_payload_keeps_gear_and_does_not_invent_20h(self):
+        from chiro_core import build_conditions_payload, format_condition_span
+        assert build_conditions_payload(
+            None,
+            date_debut=None, date_fin=None,
+            temperature_debut=None, temperature_fin=None,
+            vent=None, couverture=None,
+            temperature_user_set=False, hours_user_set=False,
+            had_saved=False,
+        ) is None
+        wiped = build_conditions_payload(
+            {"date_debut": "2026-08-21T21:00:00", "vent": "FORT"},
+            date_debut=None, date_fin=None,
+            temperature_debut=None, temperature_fin=None,
+            vent=None, couverture=None,
+            temperature_user_set=False, hours_user_set=False,
+            had_saved=True,
+        )
+        assert wiped == {}
+        kept = build_conditions_payload(
+            {"detecteur_enregistreur_type": "Anabat Swift", "commentaire": "sec"},
+            date_debut=None, date_fin=None,
+            temperature_debut=None, temperature_fin=None,
+            vent=None, couverture=None,
+            temperature_user_set=False, hours_user_set=False,
+            had_saved=True,
+        )
+        assert kept["detecteur_enregistreur_type"] == "Anabat Swift"
+        assert kept["commentaire"] == "sec"
+        assert "date_debut" not in kept
+        saved = build_conditions_payload(
+            {"detecteur_enregistreur_type": "Anabat Swift"},
+            date_debut=datetime(2026, 8, 21, 21, 0),
+            date_fin=datetime(2026, 8, 22, 6, 30),
+            temperature_debut=16, temperature_fin=None,
+            vent="FAIBLE", couverture="0-25",
+            temperature_user_set=True, hours_user_set=True,
+            had_saved=True,
+        )
+        assert saved["date_debut"] == "2026-08-21T21:00:00"
+        assert saved["date_fin"] == "2026-08-22T06:30:00"
+        assert saved["temperature_debut"] == 16
+        assert saved["temperature_fin"] is None
+        assert saved["vent"] == "FAIBLE"
+        assert saved["couverture"] == "0-25"
+        assert saved["hours_user_set"] is True
+        assert saved["detecteur_enregistreur_type"] == "Anabat Swift"
+        assert format_condition_span(saved["date_debut"], saved["date_fin"]) == (
+            "conditions : début 2026-08-21 21:00 fin 2026-08-22 06:30"
+        )
+        assert format_condition_span(None, None) is None
+
+    def test_wav_hint_replaces_summary_hours_not_titley(self):
+        from chiro_core import recording_hours_from_wav_hint
+        wav_min = datetime(2026, 8, 22, 21, 5)
+        wav_max = datetime(2026, 8, 23, 6, 10)
+        hint = {"prefer_wav": True, "wav_min": wav_min, "wav_max": wav_max}
+        got = recording_hours_from_wav_hint(
+            {"date_debut": datetime(2026, 8, 18, 20, 0)}, hint)
+        assert got["date_debut"] == wav_min
+        assert got["date_fin"] == wav_max
+        assert "temperature_debut" not in got
+        assert recording_hours_from_wav_hint(
+            {"_dates_from_titley": True}, hint) is None
+        assert recording_hours_from_wav_hint({}, {"prefer_wav": False}) is None
+
+    def test_user_hours_not_replaced_by_titley_on_repair_fields(self, tmp_path):
+        import shutil
+        from chiro_core import collect_local_participation_fields
+        from manifest import Manifest
+        shutil.copyfile(_TITLEY_LOG, tmp_path / "log_2026-08-21.csv")
+        m = Manifest.load_or_create(tmp_path)
+        m.set_meta(
+            n_serie="669178",
+            participation_payload={
+                "date_debut": "2026-08-21T21:00:00",
+                "date_fin": "2026-08-22T06:30:00",
+                "hours_user_set": True,
+                "temperature_debut": 16,
+                "temperature_fin": 10,
+                "temperature_user_set": True,
+            },
+        )
+        m.save(tmp_path)
+        local = collect_local_participation_fields(tmp_path)
+        assert local["date_debut"] == datetime(2026, 8, 21, 21, 0)
+        assert local["date_fin"] == datetime(2026, 8, 22, 6, 30)
+        assert local.get("_from_titley_dates") is not True
+        assert local["meteo"]["temperature_debut"] == 16
+        assert local["meteo"]["temperature_fin"] == 10
+
+
+class TestNightMetadataStayApart:
+    """Deux nuits déjà renseignées restent distinctes au lot et au PATCH.
+
+    Le dernier point créé et la dernière saisie ne sont pas recopiés.
+    """
+
+    def _write(self, path: Path, *, day: str, site: str, point: str,
+               passage: int, payload: dict) -> None:
+        import shutil
+        from manifest import Manifest
+        path.mkdir()
+        shutil.copyfile(_TITLEY_LOG, path / "log_2026-08-21.csv")
+        m = Manifest.load_or_create(path)
+        m.set_meta(
+            date_debut=day,
+            n_site_tadarida=site,
+            n_point_fixe=point,
+            n_passage=passage,
+            n_enregistreur=7,
+            n_serie="669178",
+            nom_contrat="Contrat",
+            participation_payload=payload,
+        )
+        m.save(path)
+
+    def test_batch_and_patch_keep_each_night(self, tmp_path, monkeypatch):
+        import copy
+        import gui_map
+        from chiro_core import (
+            collect_local_participation_fields,
+            recording_conditions_for_upload,
+        )
+        from manifest import Manifest
+        from pipeline import (
+            _find_existing_participation,
+            _resolve_upload_payload,
+            _sync_participation_fields,
+            resolve_meta_for_batch,
+        )
+
+        class _Mat:
+            modele = "SHARED"
+            micro_modele = "SHARED-MIC"
+            hauteur_m = 99
+            stereo = False
+            micro2_modele = None
+            serie_enr = "SHARED-SER"
+
+            def is_empty(self):
+                return False
+
+        monkeypatch.setattr(
+            "materiels.find_by_id", lambda mats, i: _Mat())
+        monkeypatch.setattr("materiels.load_materiels", lambda: [])
+        monkeypatch.setattr(
+            gui_map, "_active_point_path",
+            lambda: tmp_path / "active_point.json")
+        gui_map.save_active_point(
+            site_id="site-z9", numero="333333", point="Z9",
+            lat=45.0, lon=1.0, source="create")
+        active = gui_map.load_active_point()
+        assert gui_map.should_prefill_from_active("111111", "Z1", active) is False
+        assert gui_map.should_prefill_from_active("222222", "Z3", active) is False
+
+        night_a = tmp_path / "nuit_a"
+        night_b = tmp_path / "nuit_b"
+        payload_a = {
+            "date_debut": "2026-08-21T21:00:00",
+            "date_fin": "2026-08-22T06:30:00",
+            "hours_user_set": True,
+            "temperature_debut": 16,
+            "temperature_fin": 9,
+            "temperature_user_set": True,
+            "vent": "FAIBLE",
+            "couverture": "0-25",
+            "micro0_hauteur": "2",
+            "micro0_modele": "SMX-A",
+            "detecteur_enregistreur_type": "Anabat Swift",
+            "commentaire": "nuit A",
+        }
+        payload_b = {
+            "date_debut": "2026-08-22T22:15:00",
+            "date_fin": "2026-08-23T05:40:00",
+            "hours_user_set": True,
+            "temperature_debut": 11,
+            "temperature_fin": 4,
+            "temperature_user_set": True,
+            "vent": "FORT",
+            "couverture": "75-100",
+            "micro0_hauteur": "8",
+            "micro0_modele": "SMX-B",
+            "detecteur_enregistreur_type": "Anabat Swift",
+            "commentaire": "nuit B",
+        }
+        self._write(
+            night_a, day="2026-08-21T00:00:00", site="111111",
+            point="Z1", passage=1, payload=payload_a)
+        self._write(
+            night_b, day="2026-08-22T00:00:00", site="222222",
+            point="Z3", passage=2, payload=payload_b)
+
+        def _boom():
+            raise AssertionError("le lot ne doit pas lire le point actif")
+
+        monkeypatch.setattr(gui_map, "load_active_point", _boom)
+
+        meta_a = resolve_meta_for_batch(night_a)
+        meta_b = resolve_meta_for_batch(night_b)
+        assert meta_a.n_site_tadarida == "111111"
+        assert meta_a.n_point_fixe == "Z1"
+        assert meta_a.n_passage == 1
+        assert meta_b.n_site_tadarida == "222222"
+        assert meta_b.n_point_fixe == "Z3"
+        assert meta_b.n_passage == 2
+
+        first_a = recording_conditions_for_upload(night_a, 7)
+        first_b = recording_conditions_for_upload(night_b, 7)
+        again_a = recording_conditions_for_upload(night_a, 7)
+
+        assert first_a["date_debut"] == datetime(2026, 8, 21, 21, 0)
+        assert first_a["date_fin"] == datetime(2026, 8, 22, 6, 30)
+        assert first_a["meteo"]["vent"] == "FAIBLE"
+        assert first_a["meteo"]["couverture"] == "0-25"
+        assert first_a["meteo"]["temperature_debut"] == 16
+        assert first_a["meteo"]["temperature_fin"] == 9
+        assert first_a["configuration"]["micro0_hauteur"] == "2"
+        assert first_a["configuration"]["micro0_modele"] == "SMX-A"
+        assert first_a["configuration"]["detecteur_enregistreur_type"] == "Anabat Swift"
+        assert first_a["commentaire"] == "nuit A"
+        assert first_b["date_debut"] == datetime(2026, 8, 22, 22, 15)
+        assert first_b["date_fin"] == datetime(2026, 8, 23, 5, 40)
+        assert first_b["meteo"]["vent"] == "FORT"
+        assert first_b["meteo"]["couverture"] == "75-100"
+        assert first_b["meteo"]["temperature_debut"] == 11
+        assert first_b["configuration"]["micro0_hauteur"] == "8"
+        assert first_b["configuration"]["micro0_modele"] == "SMX-B"
+        assert first_b["configuration"]["detecteur_enregistreur_type"] == "Anabat Swift"
+        assert first_b["commentaire"] == "nuit B"
+        assert again_a["meteo"]["vent"] == "FAIBLE"
+        assert again_a["date_debut"] == first_a["date_debut"]
+        assert first_a["meteo"] is not first_b["meteo"]
+        assert first_a["configuration"] is not first_b["configuration"]
+
+        first_b["meteo"]["vent"] = "NUL"
+        first_b["configuration"]["micro0_hauteur"] = "99"
+        reread = recording_conditions_for_upload(night_a, 7)
+        assert reread["meteo"]["vent"] == "FAIBLE"
+        assert reread["configuration"]["micro0_hauteur"] == "2"
+        assert first_a["meteo"]["vent"] == "FAIBLE"
+
+        manifest_b = Manifest.load(night_b).meta
+        resolved = _resolve_upload_payload(first_a, manifest_b)
+        assert resolved["meteo"]["vent"] == "FAIBLE"
+        assert resolved["commentaire"] == "nuit A"
+        from_disk = _resolve_upload_payload(None, Manifest.load(night_b).meta)
+        assert from_disk["meteo"]["vent"] == "FORT"
+        assert from_disk["commentaire"] == "nuit B"
+
+        class _Client:
+            def __init__(self):
+                self.edits = []
+
+            def get_participation(self, pid):
+                return {"meteo": {}, "configuration": {}}
+
+            def edit_participation(self, pid, **kwargs):
+                self.edits.append((pid, copy.deepcopy(kwargs)))
+
+        client = _Client()
+        _sync_participation_fields(client, "part-a", again_a)
+        _sync_participation_fields(client, "part-b", recording_conditions_for_upload(night_b, 7))
+        _sync_participation_fields(client, "part-a2", recording_conditions_for_upload(night_a, 7))
+        assert client.edits[0][0] == "part-a"
+        assert client.edits[0][1]["meteo"]["vent"] == "FAIBLE"
+        assert client.edits[0][1]["meteo"]["temperature_debut"] == 16
+        assert client.edits[0][1]["commentaire"] == "nuit A"
+        assert client.edits[0][1]["configuration"]["micro0_hauteur"] == "2"
+        assert client.edits[1][1]["meteo"]["vent"] == "FORT"
+        assert client.edits[1][1]["meteo"]["temperature_debut"] == 11
+        assert client.edits[1][1]["commentaire"] == "nuit B"
+        assert client.edits[1][1]["configuration"]["micro0_hauteur"] == "8"
+        assert client.edits[2][1]["meteo"]["vent"] == "FAIBLE"
+        assert client.edits[0][1]["meteo"] is not client.edits[1][1]["meteo"]
+
+        local_a = collect_local_participation_fields(night_a)
+        local_b = collect_local_participation_fields(night_b)
+        assert local_a["meteo"]["vent"] == "FAIBLE"
+        assert local_a["date_debut"] == datetime(2026, 8, 21, 21, 0)
+        assert local_b["meteo"]["vent"] == "FORT"
+        assert local_b["date_debut"] == datetime(2026, 8, 22, 22, 15)
+        assert local_a.get("_from_titley_dates") is not True
+        assert local_b.get("_from_titley_dates") is not True
+
+        class _Portal:
+            def iter_participations(self, mine_only=True):
+                return [{
+                    "_id": "part-a",
+                    "site": "site-1",
+                    "point": "Z1",
+                    "date_debut": "2026-08-21T21:00:00",
+                }]
+
+        portal = _Portal()
+        assert _find_existing_participation(
+            portal, site_id="site-1", point="Z3",
+            date_debut=datetime(2026, 8, 21, 22, 15),
+        ) is None
+        assert _find_existing_participation(
+            portal, site_id="site-1", point="Z1",
+            date_debut=datetime(2026, 8, 22, 22, 15),
+        ) is None
+        same = _find_existing_participation(
+            portal, site_id="site-1", point="Z1",
+            date_debut=datetime(2026, 8, 21, 21, 0),
+        )
+        assert same["_id"] == "part-a"
+
+        assert Manifest.load(night_a).meta["participation_payload"]["vent"] == "FAIBLE"
+        assert Manifest.load(night_b).meta["participation_payload"]["vent"] == "FORT"
+        assert Manifest.load(night_a).meta["n_point_fixe"] == "Z1"
+        assert Manifest.load(night_b).meta["n_point_fixe"] == "Z3"
+
+    def test_incomplete_night_is_not_filled_from_last_point(
+            self, tmp_path, monkeypatch):
+        import gui_map
+        from chiro_core import recording_conditions_for_upload
+        from manifest import Manifest
+        from pipeline import resolve_meta_for_batch
+
+        monkeypatch.setattr(
+            gui_map, "_active_point_path",
+            lambda: tmp_path / "active_point.json")
+        gui_map.save_active_point(
+            site_id="site-z9", numero="333333", point="Z9",
+            lat=45.0, lon=1.0, source="create")
+        active = gui_map.load_active_point()
+        assert gui_map.should_prefill_from_active("", "", active) is True
+        assert gui_map.should_prefill_from_active("333333", "", active) is True
+
+        night = tmp_path / "nuit_vide"
+        night.mkdir()
+        m = Manifest.load_or_create(night)
+        m.set_meta(participation_payload={
+            "vent": "NUL",
+            "couverture": "25-50",
+            "commentaire": "deja saisi",
+        })
+        m.save(night)
+        assert resolve_meta_for_batch(night) is None
+        got = recording_conditions_for_upload(night, None)
+        assert got["meteo"]["vent"] == "NUL"
+        assert got["meteo"]["couverture"] == "25-50"
+        assert got["commentaire"] == "deja saisi"
+        reloaded = Manifest.load(night)
+        assert reloaded.meta.get("n_site_tadarida") is None
+        assert reloaded.meta.get("n_point_fixe") is None
+        assert reloaded.meta["participation_payload"]["vent"] == "NUL"
+
+
 class TestPreRelease082:
     def test_wizard_finds_map_on_ancestor_not_on_itself(self):
         from gui_windowing import find_ancestor_with
@@ -4990,7 +5619,142 @@ class TestPreRelease082:
         )
         out = run_phase_prep(sess, meta, dry_run=False, force=False)
         assert out.get("already_done") is True
+        assert out.get("error") is None
         assert out.get("steps") in (None, [])
+
+    def test_prep_empty_data_k_is_not_success(self, tmp_path, monkeypatch):
+        from manifest import Manifest
+        from naming import SessionMeta
+        from pipeline import run_phase_prep
+        sess = tmp_path / "nuit_prep_vide"
+        sess.mkdir()
+        (sess / "brut.wav").write_bytes(b"RIFF")
+        meta = SessionMeta(
+            date_debut=datetime(2026, 8, 21),
+            n_site_tadarida="381079",
+            n_point_fixe="Z1",
+            n_passage=2,
+            n_enregistreur=1,
+            n_serie="669178",
+        )
+        monkeypatch.setattr(
+            "rename.rename_session",
+            lambda *a, **k: {
+                "final_session_path": str(sess),
+                "n_planned": 1,
+                "executed": True,
+            },
+        )
+        monkeypatch.setattr(
+            "te10.process_folder",
+            lambda *a, **k: {
+                "n_source_wavs": 1,
+                "n_planned_segments": 2,
+                "written": 0,
+                "skipped": 0,
+                "errors": 2,
+            },
+        )
+        opened = {"n": 0}
+
+        class _Suivi:
+            def __init__(self, *a, **k):
+                opened["n"] += 1
+
+            def update_row(self, *a, **k):
+                opened["n"] += 1
+
+        monkeypatch.setattr("suivi_write.SuiviWriter", _Suivi)
+        xlsx = tmp_path / "Suivi.xlsx"
+        xlsx.write_text("x", encoding="utf-8")
+        monkeypatch.setattr("suivi._default_path", lambda year=None: xlsx)
+        out = run_phase_prep(sess, meta, dry_run=False, force=False)
+        assert out.get("error")
+        assert "Data_k" in out["error"]
+        assert "succès" in out["error"] or "échec" in out["error"]
+        assert opened["n"] == 0
+        assert Manifest.load(sess).is_done("te10") is False
+
+    def test_prep_backend_error_is_not_success(self, tmp_path, monkeypatch):
+        from naming import SessionMeta
+        from pipeline import run_phase_prep
+        sess = tmp_path / "nuit_prep_backend"
+        sess.mkdir()
+        (sess / "brut.wav").write_bytes(b"RIFF")
+        meta = SessionMeta(
+            date_debut=datetime(2026, 8, 21),
+            n_site_tadarida="381079",
+            n_point_fixe="Z1",
+            n_passage=2,
+            n_enregistreur=1,
+            n_serie="669178",
+        )
+        monkeypatch.setattr(
+            "rename.rename_session",
+            lambda *a, **k: {"final_session_path": str(sess)},
+        )
+        monkeypatch.setattr(
+            "te10.process_folder",
+            lambda *a, **k: {"error": f"Aucun WAV trouvé dans {sess}"},
+        )
+        opened = {"n": 0}
+
+        class _Suivi:
+            def __init__(self, *a, **k):
+                opened["n"] += 1
+
+        monkeypatch.setattr("suivi_write.SuiviWriter", _Suivi)
+        xlsx = tmp_path / "Suivi.xlsx"
+        xlsx.write_text("x", encoding="utf-8")
+        monkeypatch.setattr("suivi._default_path", lambda year=None: xlsx)
+        out = run_phase_prep(sess, meta, dry_run=False, force=False)
+        assert "Aucun WAV" in out.get("error", "")
+        assert "succès" in out["error"]
+        assert opened["n"] == 0
+
+    def test_prep_with_wavs_stays_success(self, tmp_path, monkeypatch):
+        from manifest import Manifest
+        from naming import SessionMeta
+        from pipeline import run_phase_prep
+        from verify import VerifyResult
+        sess = tmp_path / "nuit_prep_ok"
+        sess.mkdir()
+        (sess / "brut.wav").write_bytes(b"RIFF")
+        (sess / "Data_k").mkdir()
+        (sess / "Data_k" / "a.wav").write_bytes(b"RIFF")
+        meta = SessionMeta(
+            date_debut=datetime(2026, 8, 21),
+            n_site_tadarida="381079",
+            n_point_fixe="Z1",
+            n_passage=2,
+            n_enregistreur=1,
+            n_serie="669178",
+        )
+        monkeypatch.setattr(
+            "rename.rename_session",
+            lambda *a, **k: {"final_session_path": str(sess), "executed": True},
+        )
+        monkeypatch.setattr(
+            "te10.process_folder",
+            lambda *a, **k: {
+                "n_source_wavs": 1,
+                "n_planned_segments": 1,
+                "written": 1,
+                "skipped": 0,
+                "errors": 0,
+            },
+        )
+
+        def _ok(*a, **k):
+            return VerifyResult(verdict="PASS", phase="test")
+
+        monkeypatch.setattr("pipeline.verify_rename", _ok)
+        monkeypatch.setattr("pipeline.verify_te10", _ok)
+        monkeypatch.setattr(
+            "suivi._default_path", lambda year=None: tmp_path / "absent.xlsx")
+        out = run_phase_prep(sess, meta, dry_run=False, force=False)
+        assert out.get("error") is None
+        assert Manifest.load(sess).is_done("te10") is True
 
     def test_align_taxon_selection_fills_empty_view(self):
         from activity_graph import align_taxon_selection

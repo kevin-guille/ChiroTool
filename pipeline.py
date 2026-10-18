@@ -108,6 +108,50 @@ def classify_batch_row(row: dict) -> str:
     return "ok"
 
 
+def _batch_reason(value) -> str:
+    """Texte court pour le journal du lot. Pas de tiret long."""
+    if isinstance(value, (list, tuple)):
+        value = "; ".join(str(v) for v in value if v)
+    text = str(value or "").strip()
+    return text or "sans détail"
+
+
+def batch_bilan_lines(results: list, total: int | None = None) -> list[str]:
+    """Lignes du bilan. Chaque nuit ignorée ou en erreur est nommée.
+
+    Une nuit ``already_done`` reste un OK : elle n'apparaît pas dans
+    les ignorées.
+    """
+    rows = list(results or [])
+    n = total if total is not None else len(rows)
+    kinds = [classify_batch_row(r if isinstance(r, dict) else {}) for r in rows]
+    n_ok = sum(k == "ok" for k in kinds)
+    n_skip = sum(k == "skipped" for k in kinds)
+    n_err = sum(k == "error" for k in kinds)
+    if n_skip:
+        lines = [
+            f"=== Bilan : {n_ok}/{n} OK, {n_skip} ignorée(s), {n_err} erreur(s) ===",
+            "Nuits ignorées :",
+        ]
+        for row, kind in zip(rows, kinds):
+            if kind != "skipped" or not isinstance(row, dict):
+                continue
+            result = row.get("result") if isinstance(row.get("result"), dict) else {}
+            reason = row.get("error") or result.get("skipped") or "ignorée"
+            lines.append(f"  {row.get('session') or '?'} : {_batch_reason(reason)}")
+    else:
+        lines = [f"=== Bilan : {n_ok}/{n} OK, {n_err} erreur(s) ==="]
+    if n_err:
+        lines.append("Nuits en erreur :")
+        for row, kind in zip(rows, kinds):
+            if kind != "error" or not isinstance(row, dict):
+                continue
+            result = row.get("result") if isinstance(row.get("result"), dict) else {}
+            reason = row.get("error") or result.get("error") or result.get("errors") or "erreur"
+            lines.append(f"  {row.get('session') or '?'} : {_batch_reason(reason)}")
+    return lines
+
+
 # ---------------------------------------------------------------------------
 # Résolution des métadonnées
 # ---------------------------------------------------------------------------
@@ -218,6 +262,61 @@ def _resolve_upload_payload(participation_payload, manifest_meta) -> dict:
     if not raw and isinstance(manifest_meta, dict):
         raw = manifest_meta.get("participation_payload") or {}
     return coerce_participation_payload(raw)
+
+
+def meta_is_complete_for_batch(meta) -> bool:
+    """Vrai si la meta a tous les champs requis pour le renommage."""
+    if meta is None:
+        return False
+    return all([
+        meta.date_debut is not None,
+        bool(meta.n_site_tadarida),
+        bool(meta.n_point_fixe),
+        meta.n_passage is not None,
+        meta.n_enregistreur is not None,
+        bool(meta.n_serie),
+    ])
+
+
+def resolve_meta_for_batch(session: Path):
+    """Meta de cette session pour un lot.
+
+    Un manifest déjà rempli (date, carré, point, passage) est repris tel quel.
+    Le point actif n'est pas lu : la dernière création de point ne remplace
+    pas une nuit déjà renseignée.
+    """
+    session = Path(session)
+    try:
+        m = Manifest.load(session)
+        if m and m.meta:
+            raw_date = m.meta.get("date_debut")
+            dt = datetime.fromisoformat(raw_date) if raw_date else None
+            meta = SessionMeta(
+                date_debut=dt,
+                n_site_tadarida=m.meta.get("n_site_tadarida"),
+                n_point_fixe=m.meta.get("n_point_fixe"),
+                n_passage=m.meta.get("n_passage"),
+                n_enregistreur=m.meta.get("n_enregistreur"),
+                n_serie=m.meta.get("n_serie"),
+                nom_contrat=m.meta.get("nom_contrat"),
+            )
+            if (meta.date_debut and meta.n_site_tadarida and meta.n_point_fixe
+                    and meta.n_passage is not None):
+                return meta
+    except Exception:
+        import logging
+        logging.getLogger("chirotool.batch").exception(
+            "manifest illisible pour le batch : %s", session)
+    try:
+        from rename import try_auto_meta
+        auto, _msgs = try_auto_meta(session)
+        if meta_is_complete_for_batch(auto):
+            return auto
+    except Exception:
+        import logging
+        logging.getLogger("chirotool.batch").exception(
+            "auto-métadonnées en échec pour le batch : %s", session)
+    return None
 
 
 def _sync_participation_fields(client, participation_id, pp: dict) -> None:
@@ -433,9 +532,15 @@ def run_phase_prep(session: Path, meta: SessionMeta, dry_run: bool,
                           progress=progress)
     out["steps"].append({"step": "te10", **te_r})
 
-    # 1.c : manifest + journal campagne + vérification indépendante
-    m = Manifest.load_or_create(final)
+    # 1.c : manifest + journal campagne + vérification indépendante.
+    # Un Data_k sans WAV n'est pas une préparation réussie : le drapeau
+    # te10 reste faux, et le Suivi n'est pas marqué pré-traitement OK.
+    rename_status = "ok"
+    te_status = "ok"
+    te_notes = None
+    rename_notes = None
     if not dry_run and "error" not in te_r:
+        m = Manifest.load_or_create(final)
         # -- rename : verif indépendante --
         try:
             vr = verify_rename(final, expected_serial=meta.n_serie)
@@ -479,6 +584,12 @@ def run_phase_prep(session: Path, meta: SessionMeta, dry_run: bool,
             )
             te_notes = f"{te_notes}; {warning}" if te_notes else warning
             out.setdefault("warnings", []).append(warning)
+        if not _dir_has_wavs(te_out):
+            te_status = "error"
+            empty_note = (
+                "Data_k ne contient aucun WAV. La préparation n'est pas un succès."
+            )
+            te_notes = f"{te_notes}; {empty_note}" if te_notes else empty_note
         m.record_action(
             "te10", status=te_status, notes=te_notes,
             params={"factor": 10, "segment_s": 5.0},
@@ -496,13 +607,22 @@ def run_phase_prep(session: Path, meta: SessionMeta, dry_run: bool,
                         notes=te_notes,
                         tool_version=TOOL_VERSION)
 
-        # Remonter un warning dans out si vérif a échoué
-        if rename_status != "ok" or te_status != "ok":
-            out.setdefault("warnings", []).append(
-                f"Vérification indépendante : rename={rename_status} "
-                f"te10={te_status} — voir manifest")
+    if te_r.get("error"):
+        out["error"] = (
+            f"Préparation en échec : {te_r['error']}. "
+            "Data_k n'est pas un succès."
+        )
+    elif not dry_run and (rename_status != "ok" or te_status != "ok"):
+        detail = te_notes or rename_notes or "vérification en échec"
+        out["error"] = (
+            f"Préparation en échec : rename={rename_status}, te10={te_status}. "
+            f"{detail}"
+        )
 
-    # 1.d : Suivi write (flag_lupas_kaleidoscope = True)
+    # 1.d : Suivi seulement si la préparation a produit un Data_k utilisable.
+    if "error" in out:
+        out["final_session_path"] = str(final)
+        return out
     try:
         from suivi import _default_path
         from suivi_write import SuiviWriter, RowKey, SuiviFileLockedError
@@ -566,6 +686,21 @@ def run_phase_upload(session: Path, meta: SessionMeta, dry_run: bool,
     if m.is_done("upload"):
         out["skipped"] = "déjà uploadé selon le manifest"
         return out
+
+    # Avant toute création de participation. Un dossier Data_k vide ne doit
+    # pas être lu comme « tout est déjà sur le serveur » (pastille analysée
+    # alors que rien n'est parti).
+    data_k_now = session / "Data_k"
+    if not data_k_now.is_dir():
+        return {"phase": "upload", "error": f"Data_k/ introuvable : {data_k_now}"}
+    if not any(data_k_now.glob("*.wav")):
+        return {
+            "phase": "upload",
+            "error": (
+                "Data_k ne contient aucun WAV. Rien n'est envoyé, "
+                "et la nuit n'est pas marquée envoyée."
+            ),
+        }
 
     # Besoin de l'ID site Vigie-Chiro (pas juste le n° Tadarida)
     # On le récupère depuis le manifest (si stocké) ou via API (cherche par numéro)
@@ -708,10 +843,8 @@ def run_phase_upload(session: Path, meta: SessionMeta, dry_run: bool,
                 "step": "sync_participation_fields", "warning": str(e),
             })
 
-    # upload des WAVs de Data_k/
+    # Le dossier a déjà été contrôlé avant toute création de participation.
     data_k = session / "Data_k"
-    if not data_k.is_dir():
-        return {"phase": "upload", "error": f"Data_k/ introuvable : {data_k}"}
     local_all = sorted(data_k.glob("*.wav"))
     wavs = list(local_all)
     n_local = len(local_all)
@@ -732,7 +865,16 @@ def run_phase_upload(session: Path, meta: SessionMeta, dry_run: bool,
         already_uploaded: set[str] = set()
         try:
             already_uploaded = set(client.list_participation_files(part_id))
-        except Exception:
+        except Exception as exc:
+            from vigiechiro_api import TokenExpiredError
+            if isinstance(exc, TokenExpiredError):
+                return {
+                    "phase": "upload",
+                    "error": str(exc),
+                    "stop_batch": True,
+                }
+            # Autre échec de listing : on renvoie les fichiers, on ne
+            # les déclare pas déjà présents.
             already_uploaded = set()
         if already_uploaded:
             wavs_before = len(wavs)
@@ -798,19 +940,30 @@ def run_phase_upload(session: Path, meta: SessionMeta, dry_run: bool,
         already_done_409: list[str] = []
 
         def _upload_one(wav):
-            try:
-                res = client.upload_wav(part_id, wav)
+            # Un 401 sur un fichier : les suivants ne partent pas. Le pool
+            # a déjà soumis toute la file, donc le drapeau est lu ici.
+            if done_counter.get("token_dead"):
                 with lock:
-                    uploaded.append(wav.name)
-                    if isinstance(res, dict) and res.get("already_done"):
-                        already_done_409.append(wav.name)
+                    failed.append((wav.name, "jeton Vigie-Chiro expiré"))
                     done_counter["n"] += 1
                     n_done = done_counter["n"]
-            except Exception as e:
-                with lock:
-                    failed.append((wav.name, str(e)))
-                    done_counter["n"] += 1
-                    n_done = done_counter["n"]
+            else:
+                try:
+                    res = client.upload_wav(part_id, wav)
+                    with lock:
+                        uploaded.append(wav.name)
+                        if isinstance(res, dict) and res.get("already_done"):
+                            already_done_409.append(wav.name)
+                        done_counter["n"] += 1
+                        n_done = done_counter["n"]
+                except Exception as e:
+                    from vigiechiro_api import TokenExpiredError
+                    with lock:
+                        failed.append((wav.name, str(e)))
+                        if isinstance(e, TokenExpiredError):
+                            done_counter["token_dead"] = True
+                        done_counter["n"] += 1
+                        n_done = done_counter["n"]
 
             # Rapport vers la GUI (toutes les 1 file, la GUI applique son
             # propre throttling si besoin). Format : (done, total, label).
@@ -888,6 +1041,13 @@ def run_phase_upload(session: Path, meta: SessionMeta, dry_run: bool,
                 "Relance « Upload + Tadarida » : seuls les WAV manquants seront "
                 "renvoyés (reprise automatique)."
             )
+            if done_counter.get("token_dead"):
+                out["stop_batch"] = True
+                out["error"] = (
+                    "jeton Vigie-Chiro expiré. "
+                    + out["error"]
+                    + " Les nuits suivantes du lot ne sont pas lancées."
+                )
             # On enregistre quand même l'action en 'partial' pour la traçabilité
             m.record_action("upload", status="partial",
                             params={"participation_id": part_id},

@@ -2,9 +2,9 @@
 
 | | |
 |--|--|
-| **Statut** | **Livré** : v0.6.0 à **v0.8.1** (Latest GitHub, 2026-09-19). **Pré-release v0.8.2** (2026-09-24) : #11 gel du suivi batch, #13 choix sur la carte, #14 avancement du diagnostic, message Activité #12, libellés. |
-| **Ouvert** | Issues #4, #7, #8, #9, #10 : ne pas relire le premier message (SPEC §0.1 à §0.4). #11 à #14 : code dans la pré-release 0.8.2 (§0.5, §0.7), réponses GitHub encore à poster. Batch Préparer : §0.6 dans le même exe. |
-| **Date** | 2026-08-04 (conception) · 2026-08-07 (v0.6) · 2026-08-30 (v0.7) · 2026-09-03 (D13) · 2026-09-06 (P8) · 2026-09-08 (exe 0.8.0 : 409 + Win+D) · 2026-09-09 (Titley TE×10, Activité avec relecture du `_Vu`, pre-release GitHub [v0.8.0](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.0)) · 2026-09-10 (0.8.1 : scan export + pastille TE + #8) · 2026-09-16 (0.8.1 : #9 wizard, #10 Activité) · 2026-09-19 (Latest GitHub [v0.8.1](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.1)) · 2026-09-24 (pré-release [v0.8.2](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.2)) |
+| **Statut** | **Livré** : v0.6.0 à **v0.8.1** (Latest GitHub, 2026-09-19). **Pré-release v0.8.2** (2026-09-24) : #11 gel du suivi batch, #13 choix sur la carte, #14 avancement du diagnostic, message Activité #12, libellés. **Pré-release v0.8.3** (2026-10-18) : gardes de lot §0.6 lignes 5 à 8, journal des nuits ignorées, préparation au `Data_k` vide en erreur, #15, #19 (§0.8). |
+| **Ouvert** | Issues #4, #7, #8, #9, #10 : ne pas relire le premier message (SPEC §0.1 à §0.4). #11 à #14 : le correctif décrit au §0.5 et au §0.7 est dans la pré-release 0.8.2. Réponses GitHub encore à poster. Batch Préparer : correctifs 1 à 4 du §0.6 dans l'exe 0.8.2. Gardes 5 à 8 du §0.6, journal, préparation `Data_k` vide, #15 et #19 : exe 0.8.3 (§0.8). |
+| **Date** | 2026-08-04 (conception) · 2026-08-07 (v0.6) · 2026-08-30 (v0.7) · 2026-09-03 (D13) · 2026-09-06 (P8) · 2026-09-08 (exe 0.8.0 : 409 + Win+D) · 2026-09-09 (Titley TE×10, Activité avec relecture du `_Vu`, pre-release GitHub [v0.8.0](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.0)) · 2026-09-10 (0.8.1 : scan export + pastille TE + #8) · 2026-09-16 (0.8.1 : #9 wizard, #10 Activité) · 2026-09-19 (Latest GitHub [v0.8.1](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.1)) · 2026-09-24 (pré-release [v0.8.2](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.2)) · 2026-10-18 (pré-release v0.8.3 : §0.6 gardes 5 à 8, §0.8, tutoriel) |
 | **Contexte** | Issue [#3](https://github.com/kevin-guille/ChiroTool/issues/3) (retours terrain) + retours carte / meta + issues [#4](https://github.com/kevin-guille/ChiroTool/issues/4) / [#7](https://github.com/kevin-guille/ChiroTool/issues/7) / [#8](https://github.com/kevin-guille/ChiroTool/issues/8) / [#9](https://github.com/kevin-guille/ChiroTool/issues/9) / [#10](https://github.com/kevin-guille/ChiroTool/issues/10) / [#11](https://github.com/kevin-guille/ChiroTool/issues/11) |
 | **Principe** | Pragmatisme — une vérité disque, peu de fichiers, parcours unifiés, libellés humains d’abord |
 
@@ -106,9 +106,21 @@ Correctifs 1 et 2 : dans l'exe **0.8.2** (ils étaient sur `main`, pas dans l'ex
 | 2 | Batch listait tous les WAV (`inspect_summary_vs_wav`) même avec un log Titley, × N nuits | **Corrigé** : log Titley → pas de listing Data_k |
 | 3 | `try_auto_meta` liste encore les WAV + ouvre le Suivi Excel à chaque nuit | **Corrigé** : log Titley → pas de listing. Suivi parsé une fois (cache). L'horaire du log n'est pas remplacé par une ligne Suivi. |
 | 4 | `rename` déjà marqué fait : warning, pas d'erreur, TE×10 continue | **Corrigé** : renommage et expansion déjà faits → nuit non retraitée, comptée OK. Renommage seul → expansion seulement. |
+| 5 | WAV déjà nommés `Pass2`, méta à 1 : le lot réécrivait les noms | **Garde** : aucun fichier touché. La nuit est une erreur. Les suivantes continuent. |
+| 6 | `Data_k` vide compté « déjà sur le serveur », Tadarida lancée | **Garde** : erreur avant de créer une participation. Pas un succès. |
+| 7 | Jeton expiré au milieu du lot | **Garde** : les nuits suivantes ne partent pas. Upload reprend celles déjà commencées. |
+| 8 | Fenêtre de lot modale : les nuits déjà faites sont inaccessibles | **Garde** : le suivi ne prend pas les clics (D14, une seule instance). Une nuit du lot en cours ne se relance pas. |
+
+Les lignes 5 à 8 sont dans l'exe **0.8.3**. Elles ne sont pas dans
+l'exe publié 0.8.2.
 
 Le batch n'ouvre **pas** l'assistant meta (thread). Une nuit sans carré /
-point / Suivi est **ignorée**, ce n'est pas un succès.
+point / passage / Suivi est **ignorée**, ce n'est pas un succès. Le journal
+nomme chaque nuit ignorée (dossier et raison). Une préparation qui laisse
+`Data_k` sans WAV est une erreur : pas de succès, drapeau d'expansion non
+posé, Suivi non marqué pré-traitement OK. Une nuit déjà marquée préparée
+n'est pas retraitée. Le journal et cette garde de préparation sont dans
+l'exe 0.8.3.
 
 Une nuit sans carré / point reste ignorée (pas de succès). Les erreurs
 de lecture du manifest ou du Suivi sont écrites dans `chirotool.log`.
@@ -129,6 +141,16 @@ Pas de `trigger_compute` si l'état est PLANIFIE, EN_COURS, TERMINE ou FINI.
 | #12 Graphe Activité vide | Si les taxons cochés ne sont pas dans la vue, les plus présents de cette vue sont cochés (Top 5 compris). Case « Interprétation _Vu ». Même libellé « Identifications validées seulement » qu'en Synthèse. |
 | Libellés | Plus de case « Méthode MNHN ». Le message sans WAV ne dit plus « ChiroSurf exige ». |
 | Dossiers déjà en cours | Pas de migration. Manifest, registre (schéma 3), Suivi Excel, WAV et participations restent. Un `Data_k` déjà présent ne ressort pas « incomplet » s'il manque des tranches de 5 s. Nuit déjà renommée et expansée : non refaite. État TERMINE ou FINI : pas de listing WAV, pas de `trigger_compute`. |
+
+### 0.8 Pré-release 0.8.3 (18 octobre 2026)
+
+Les gardes du §0.6 (lignes 5 à 8) et le tableau ci-dessous sont dans
+l'exe **0.8.3**. Ils ne sont pas dans l'exe publié 0.8.2.
+
+| Sujet | 0.8.3 |
+|---|---|
+| #15 Heures et météo avant l'envoi groupé | Le formulaire de métadonnées porte l'heure de début, l'heure de fin, les deux températures, le vent et la couverture. Re-deviner relit le log ou le Summary pour les heures et les températures, et laisse le vent et la couverture saisis. L'envoi groupé reprend ces valeurs. Il n'ouvre pas de formulaire et ne liste pas les WAV. Une heure vide n'est pas remplacée par 20:00 dans ce qui est enregistré. Deux nuits déjà renseignées restent distinctes : le lot et le correctif portail reprennent le carré, le point et les conditions de chaque nuit. Le dernier point créé ne remplit une nuit que si le carré ou le point manque encore, et seulement à l'ouverture du formulaire. |
+| #19 Carrés d'autres observateurs | La carte affiche aussi les carrés où j'ai déjà une participation, et ceux déjà mémorisés. En choix de point, ces points restent cliquables dans les 5 km. Les miens sont verts, les autres violets. |
 
 ---
 
@@ -359,7 +381,7 @@ Légende fichiers : `+` créé · `~` modifié · `=` inchangé · `→` lecture
 1. **▶ Préparer** (ou **✎ Métadonnées**) → wizard.
 2. Clic **🗺️ Choisir sur la carte…** → carte en **mode PICK** (focus UI, pas un clone de module).
 3. Recherche **commune / lieu** (Nominatim existant) → zoom.
-4. Charge **mes points dans 5 km** (`PICK_RADIUS_KM = 5`, D10).
+4. Charge **mes points dans 5 km** (`PICK_RADIUS_KM = 5`, D10). Les points d'un carré d'un autre observateur, là où j'ai déjà une participation, entrent dans ce rayon et restent cliquables.
 5a. **Clic marqueur existant (mien)** → confirmer → **PointSelection** → retour wizard, champs remplis.  
 5b. **Clic vide / Créer ici** → résolution carré STOC (API) →
     - aperçu **tous les points du carré** (vert = moi, orange = autres) ;
@@ -599,6 +621,7 @@ Le tutoriel **ne décrit pas** les features non livrées comme déjà disponible
 | 2026-09-19 | v0.8.1 | Tag GitHub Latest `v0.8.1` (SHA exe vérifié). Fixture Titley `tests/fixtures/titley_log_overnight.csv` pour la CI. §0.5 : issue #11 partielle. |
 | 2026-09-19 | batch | §0.6 interne (pas d'issue GitHub) : ~15 Préparer, dernières nuits sans rename mais OK. Bilan skipped ≠ succès ; pas de listing WAV Titley en batch. Reste : `try_auto_meta` / Suivi. |
 | 2026-09-24 | v0.8.2 | §0.5 : fermeture de l'exe et historique live. §0.6 : cache Suivi, horaire Titley conservé, nuit déjà préparée non retraitée, erreurs de lecture dans `chirotool.log`. §0.7 : #12, #13, #14. |
+| 2026-10-18 | v0.8.3 | §0.6 gardes 5 à 8 : PassN déjà écrit, Data_k vide, jeton expiré, fenêtre de lot non bloquante. Le journal nomme les nuits ignorées. Une préparation sans WAV dans Data_k est une erreur. §0.8 : #15 heures et météo par nuit, #19 points d'un autre carré. |
 
 ---
 

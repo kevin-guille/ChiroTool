@@ -50,6 +50,14 @@ dans un texte lu par un humain. Voix « je » sur le contenu public.
   (trois commits plus tôt : `924cbe2`, `f1d4e2c`, `a140a94`, scan et pastille).
   L'exe publié correspond à `a140a94`, pas à l'arbre du tag.
   Ne pas déplacer ce tag sans demande explicite.
+- Pré-release locale **0.8.3** (build 2026-10-18). `version.py` = `0.8.3`.
+  L'exe est `dist\ChiroTool.exe`, 37463806 octets, FileVersion 0.8.3.0,
+  SHA-256 `15AE87D81D04FF7F29116878625EF0C935E397194127E7FCA03AB4A0CBB80D33`.
+  Le tag GitHub `v0.8.3` et l'asset ne sont pas publiés tant que Kevin
+  ne le demande pas. Latest reste `v0.8.1`. L'asset publié reste celui
+  de la 0.8.2 tant que cette release n'est pas créée.
+  Ce binaire contient le journal qui nomme chaque nuit ignorée, et
+  l'erreur quand une préparation laisse `Data_k` sans WAV.
 - Un `Data_k` déjà rempli n'est plus « incomplet » s'il manque des
   tranches de 5 s. Ne pas rétablir ce contrôle sur la pastille, Upload,
   Vérifier / Réparer ou Valider. Une nuit dont le manifest a `renamed`
@@ -71,22 +79,61 @@ dans un texte lu par un humain. Voix « je » sur le contenu public.
 ## Issues (ne pas relire le premier message comme un backlog)
 
 Déjà tranché dans la SPEC : #4 §0.1, #7 §0.2, #8 §0.3, #9 et #10 §0.4.
-#8, #9 et #10 sont fermées. #11 reste ouverte (§0.5).
+#8, #9 et #10 sont fermées. #11 est fermée depuis le 2026-10-08 (§0.5).
 
-Ouvertes au 2026-09-24, sans opposition au cadre ChiroSurf :
+Relues le 2026-10-18. #12 et #13 sont confirmées par Benjamin
+sur l'exe 0.8.2. Leurs nouveaux messages (seuil de confiance, « je laisse
+ouvert ») ne sont pas des bugs ouverts. Aucune n'oppose le cadre ChiroSurf.
 
 | Issue | Sujet | Piste |
 |---|---|---|
-| #11 | Suivi d'upload. Après fermeture du suivi batch, l'interface ne recevait plus les clics. | **0.8.2** : `grab_release`, dialogue batch enregistré, confirmation à la fermeture de l'exe, historique rafraîchi toutes les 4 s. |
-| #12 | Activité : graphe vide alors que les fichiers sont lus. Case « Méthode MNHN » dans l'exe 0.8.1. | **0.8.2** : message si les taxons cochés ne sont pas dans la sélection. Calcul inchangé. Case « Interprétation _Vu ». |
-| #13 | « Choisir sur la carte » disait « Onglet Carte indisponible ». | **0.8.2** : le wizard remonte jusqu'à la fenêtre qui a `map_panel`. |
-| #14 | Vérifier / Réparer listait tous les WAV sur une nuit déjà analysée. | **0.8.2** : si l'état est TERMINE ou FINI, pas de listing portail. Tableur manquant téléchargé. Miroir le plus fourni. Un Data_k déjà rempli n'est plus « incomplet » s'il manque des tranches de 5 s. Pas de `trigger_compute` si déjà analysé. |
+| #14 | Vérifier / Réparer listait tous les WAV sur une nuit déjà analysée. Le correctif 0.8.2 est validé. Suite : un lot de 40 à 50 nuits, jeton expiré en cours d'envoi. | Si l'état est TERMINE ou FINI, pas de listing. Un jeton mort arrête le lot. Les nuits suivantes ne sont pas lancées. |
+| #15 | Heures, températures et météo avant l'envoi groupé. | Dans l'exe 0.8.3, pas dans l'exe publié 0.8.2. Le formulaire de métadonnées porte les heures, les températures, le vent et la couverture. Re-deviner relit le log sans effacer le vent saisi. L'envoi groupé envoie ces valeurs sans ouvrir de formulaire et sans lister les WAV. Chaque nuit déjà renseignée garde son carré, son point et ses conditions. |
+| #16 | Pastille verte, participation absente du portail (carré 430827, 12 août 2026). | La pastille lit le disque. Un `Data_k` vide n'est plus un envoi réussi. Ne pas relancer cette nuit. |
+| #17 | Plusieurs exe pendant un upload de plusieurs jours. | **Non.** D14, une instance. Le suivi de lot ne prend pas les clics : les autres nuits restent consultables. |
+| #18 | Trente nuits d'un contrat renommées Pass1, le CSV Tadarida dit Pass2. | Si les WAV ont déjà un `PassN` différent de la méta, aucun fichier n'est renommé. |
+| #19 | La carte ne montre pas les points des carrés créés par quelqu'un d'autre. | Dans l'exe 0.8.3, pas dans l'exe publié 0.8.2. La carte affiche les carrés où j'ai une participation, même si quelqu'un d'autre a créé le carré. En choix de point, ces points restent cliquables dans les 5 km. |
 
 Batch Préparer (SPEC §0.6, pas d'issue GitHub, exe 0.8.2) : une nuit
 ignorée n'est pas un succès. Log Titley : pas de listing WAV, horaire
 du log conservé même si le Suivi a une autre nuit pour la même série.
 Suivi ouvert une fois. Nuit déjà renommée et expansée : non retraitée,
 comptée OK. Erreur de lecture du manifest ou du Suivi : `chirotool.log`.
+
+## Gardes (lot, et agents)
+
+Un lot n'a pas de formulaire. Une garde qui échoue est un refus, pas un
+succès : passage déjà écrit dans les noms et différent de la méta,
+`Data_k` vide, jeton Vigie-Chiro expiré. Une exception pendant le listing
+des fichiers du portail n'est pas une liste vide, et elle n'autorise pas
+à marquer la nuit envoyée.
+
+Le formulaire de métadonnées porte les heures et la météo. Le lot ne
+l'ouvre pas : il reprend ce qui est enregistré, le log ou le Summary,
+sans lister les WAV. Une heure vide n'est pas remplacée par 20:00 dans
+le cache. Chaque nuit déjà renseignée garde son carré, son point et ses
+conditions. Le dernier point créé ne remplit une nuit que si le carré
+ou le point manque encore, et seulement à l'ouverture du formulaire.
+Le tutoriel le dit dans « Nouveautés v0.8.3 », et le parcours
+étape par étape décrit cet exe.
+
+Le formulaire de métadonnées ne pré-coche plus le passage 1. Tant que le
+passage n'est pas choisi, ou repris du Suivi, le lot ignore la nuit.
+Le journal nomme chaque nuit ignorée. Une préparation qui laisse
+`Data_k` sans WAV est une erreur, pas un succès.
+
+La pastille verte reste lue sur le disque. Ne pas la faire dépendre d'un
+appel portail à chaque scan. Ne pas rétablir le contrôle « tranches de
+5 s manquantes ».
+
+Une seule instance. Pendant un lot, la fenêtre de suivi reste ouverte
+sans bloquer la fenêtre principale. Une nuit déjà dans ce lot ne se
+relance pas. Les autres nuits (activité, validation, synthèse, autre
+dossier) restent utilisables.
+
+Ne pas installer un harness tiers. Ne pas modifier les profils Grok Bot.
+Les briefs SuperBot (21 septembre, 28 septembre, 5 octobre 2026) servent
+à ces gardes, pas à élargir une flotte de bots.
 
 ## Astra (Codex)
 

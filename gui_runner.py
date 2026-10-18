@@ -21,7 +21,7 @@ from typing import Callable
 
 import customtkinter as ctk
 
-from gui_windowing import bind_modal
+from gui_windowing import bind_modal, promote_to_taskbar
 
 
 class RunDialog(ctk.CTkToplevel):
@@ -29,12 +29,24 @@ class RunDialog(ctk.CTkToplevel):
 
     def __init__(self, master, title: str,
                  worker: Callable[[Callable[[str], None]], dict],
-                 on_done: Callable[[dict], None] | None = None):
+                 on_done: Callable[[dict], None] | None = None,
+                 modal: bool = True):
         super().__init__(master)
         self.title(title)
         self.geometry("720x520")
         self.minsize(600, 400)
-        bind_modal(self, master)
+        # Un lot dure des heures. La fenêtre de suivi reste visible, mais
+        # elle ne prend pas les clics : le reste de l'application sert à
+        # regarder les nuits déjà faites. Une action unitaire reste modale.
+        self._modal = modal
+        if modal:
+            bind_modal(self, master)
+        else:
+            try:
+                self.transient(master)
+            except Exception:
+                pass
+            promote_to_taskbar(self)
 
         self.worker = worker
         self.on_done = on_done
@@ -350,7 +362,8 @@ class RunDialog(ctk.CTkToplevel):
             self.deiconify()
             self.lift()
             self.focus_force()
-            self.grab_set()
+            if self._modal:
+                self.grab_set()
         except Exception:
             pass
 

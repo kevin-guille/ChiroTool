@@ -357,12 +357,16 @@ def parse_titley_log(path: Path) -> TitleyLogInfo | None:
 def collect_wizard_prefill(session: Path, *,
                            n_enregistreur=None,
                            date_debut=None,
-                           wav_names: list[str] | None = None) -> dict:
+                           wav_names: list[str] | None = None,
+                           allow_wav_listing: bool = True,
+                           apply_cache: bool = True) -> dict:
     """Pré-remplissage du wizard participation, sans GUI.
 
     Ordre : log Titley (dates + T°) → Summary → WAV seulement si encore
     besoin. Une session Titley de 4000 WAV ne doit plus lister Data_k/
-    juste pour ouvrir la fenêtre (issue #9).
+    juste pour ouvrir la fenêtre (issue #9). ``allow_wav_listing=False``
+    saute aussi ce listing (envoi groupé). ``apply_cache=False`` laisse
+    le log tel quel, sans les heures déjà saisies.
     """
     session = Path(session)
     pre: dict = {}
@@ -411,11 +415,17 @@ def collect_wizard_prefill(session: Path, *,
 
     if not pre.get("_dates_from_titley"):
         names = wav_names
+        listed = False
         if names is None:
-            # Pas de Titley : on liste. Si Titley était là, on ne passe pas ici.
-            names = list_session_wav_names(session)
+            # Pas de Titley : on liste, sauf envoi groupé. Si Titley était
+            # là, on ne passe pas ici.
+            if allow_wav_listing:
+                names = list_session_wav_names(session)
+                listed = True
+            else:
+                names = []
         from naming import wav_timestamp_range
-        wav_min, wav_max = wav_timestamp_range(names)
+        wav_min, wav_max = wav_timestamp_range(names or [])
         if should_prefer_wav_dates(s, wav_min) and wav_min:
             pre["date_debut"] = wav_min
             if wav_max:
@@ -430,7 +440,7 @@ def collect_wizard_prefill(session: Path, *,
                 pre["temperature_fin"] = int(round(t1))
             elif not s:
                 pre.pop("temperature_fin", None)
-        pre["_wav_listed"] = True
+        pre["_wav_listed"] = listed
     else:
         pre["_wav_listed"] = False
 
@@ -460,6 +470,11 @@ def collect_wizard_prefill(session: Path, *,
     pre["_used_materiels"] = used_materiels
     pre["_auto_temperature_debut"] = pre.get("temperature_debut")
     pre["_auto_temperature_fin"] = pre.get("temperature_fin")
+    pre["_auto_date_debut"] = pre.get("date_debut")
+    pre["_auto_date_fin"] = pre.get("date_fin")
+
+    if not apply_cache:
+        return pre
 
     try:
         from manifest import Manifest
@@ -513,6 +528,91 @@ def temperatures_are_user_set(auto_debut, auto_fin, user_debut, user_fin) -> boo
     return user_debut != auto_debut or user_fin != auto_fin
 
 
+_HHMM_RE = re.compile(r"^(\d{1,2}):(\d{2})$")
+
+
+def parse_hhmm(raw: str) -> tuple[int, int] | None:
+    """``(heure, minute)`` ou None si le champ est vide.
+
+    Lève ``ValueError`` si le texte n'est pas une heure HH:MM.
+    """
+    text = (raw or "").strip()
+    if not text:
+        return None
+    match = _HHMM_RE.fullmatch(text)
+    if match is None:
+        raise ValueError(text)
+    hour, minute = int(match.group(1)), int(match.group(2))
+    if hour > 23 or minute > 59:
+        raise ValueError(text)
+    return hour, minute
+
+
+def night_datetimes(day: datetime,
+                    start_hm: tuple[int, int] | None,
+                    end_hm: tuple[int, int] | None,
+                    ) -> tuple[datetime | None, datetime | None]:
+    """Combine le jour calendaire du formulaire avec deux HH:MM.
+
+    Les deux vides : ``(None, None)``. Une seule des deux : ``ValueError``.
+    Si la fin est avant ou égale au début, elle passe au lendemain
+    (nuit biologique). N'invente pas 20:00.
+    """
+    if start_hm is None and end_hm is None:
+        return None, None
+    if start_hm is None or end_hm is None:
+        raise ValueError("heure incomplète")
+    start = day.replace(
+        hour=start_hm[0], minute=start_hm[1], second=0, microsecond=0)
+    end = day.replace(
+        hour=end_hm[0], minute=end_hm[1], second=0, microsecond=0)
+    if end <= start:
+        end = end + timedelta(days=1)
+    return start, end
+
+
+def format_hhmm(value) -> str:
+    """HH:MM d'un datetime ou d'un ISO. Chaîne vide si absent."""
+    dt = _as_dt(value)
+    if dt is None:
+        return ""
+    return f"{dt:%H:%M}"
+
+
+def format_condition_span(date_debut, date_fin) -> str | None:
+    """Ligne de lot si les deux horaires sont connus. None sinon."""
+    deb = _as_dt(date_debut)
+    fin = _as_dt(date_fin)
+    if deb is None or fin is None:
+        return None
+    return f"conditions : début {deb:%Y-%m-%d %H:%M} fin {fin:%Y-%m-%d %H:%M}"
+
+
+def recording_hours_from_wav_hint(pre: dict | None, hint: dict | None) -> dict | None:
+    """Heures des WAV quand le Summary décrit une autre pose.
+
+    None si le log Titley a déjà tranché, ou si les WAV ne sont pas
+    la référence. Les deux bornes sont requises. Une T° n'est ajoutée
+    que si le Summary en a une dans cette fenêtre.
+    """
+    if not isinstance(pre, dict) or not isinstance(hint, dict):
+        return None
+    if pre.get("_dates_from_titley") or not hint.get("prefer_wav"):
+        return None
+    wav_min = hint.get("wav_min")
+    wav_max = hint.get("wav_max")
+    if wav_min is None or wav_max is None:
+        return None
+    out: dict = {"date_debut": wav_min, "date_fin": wav_max}
+    t0, t1 = summary_temps_in_window(
+        hint.get("summary"), wav_min, wav_max)
+    if t0 is not None:
+        out["temperature_debut"] = int(round(t0))
+    if t1 is not None:
+        out["temperature_fin"] = int(round(t1))
+    return out
+
+
 def _as_int_temp(value):
     if value is None or value is False:
         return None
@@ -533,6 +633,22 @@ def _as_dt(value):
     return None
 
 
+def hours_are_user_set(auto_debut, auto_fin, user_debut, user_fin) -> bool:
+    """True si les HH:MM saisis s'écartent du préremplissage auto.
+
+    Compare heure et minute. Les secondes du log Titley ne comptent pas
+    comme une saisie.
+    """
+    return _hm(user_debut) != _hm(auto_debut) or _hm(user_fin) != _hm(auto_fin)
+
+
+def _hm(value):
+    dt = _as_dt(value)
+    if dt is None:
+        return None
+    return (dt.hour, dt.minute)
+
+
 def overlay_participation_cache(
     pre: dict,
     cached: dict | None,
@@ -542,7 +658,7 @@ def overlay_participation_cache(
     """Applique le cache wizard. Les T° forcées par l'utilisateur gagnent.
 
     Les horaires Titley / WAV restent prioritaires sur d'anciennes dates
-    de cache (sauf T° marquées ``temperature_user_set``).
+    de cache, sauf si ``hours_user_set`` est vrai.
     """
     if not isinstance(cached, dict):
         return pre
@@ -563,14 +679,16 @@ def overlay_participation_cache(
             continue
         if v is None:
             continue
-        if pre.get("_dates_from_titley") and k in ("date_debut", "date_fin"):
+        if (pre.get("_dates_from_titley") and k in ("date_debut", "date_fin")
+                and not cached.get("hours_user_set")):
             continue
         if k in ("date_debut", "date_fin") and isinstance(v, str):
             parsed_dt = _as_dt(v)
             if parsed_dt is None:
                 continue
             v = parsed_dt
-        if k in ("date_debut", "date_fin") and wav_day:
+        if (k in ("date_debut", "date_fin") and wav_day
+                and not cached.get("hours_user_set")):
             try:
                 cached_day = v.date().isoformat() if hasattr(v, "date") else str(v)[:10]
             except Exception:
@@ -628,12 +746,92 @@ def coerce_participation_payload(raw: dict | None) -> dict:
             )
         else:
             out["configuration"] = None
-    elif out.get("detecteur_enregistreur_serie") and not config.get(
-            "detecteur_enregistreur_serie"):
+    else:
+        # Copie : deux nuits ne partagent pas le même dictionnaire.
         config = dict(config)
-        config["detecteur_enregistreur_serie"] = out["detecteur_enregistreur_serie"]
+        if out.get("detecteur_enregistreur_serie") and not config.get(
+                "detecteur_enregistreur_serie"):
+            config["detecteur_enregistreur_serie"] = out[
+                "detecteur_enregistreur_serie"]
         out["configuration"] = config
     return out
+
+
+def recording_conditions_for_upload(session: Path, n_enregistreur=None) -> dict:
+    """Conditions de cette session pour l'envoi groupé.
+
+    Relit le manifest à chaque appel. Aucune valeur n'est gardée
+    d'une nuit sur l'autre.
+    """
+    pre = collect_wizard_prefill(
+        session,
+        n_enregistreur=n_enregistreur,
+        allow_wav_listing=False,
+    )
+    return coerce_participation_payload(pre)
+
+
+def build_conditions_payload(
+    existing: dict | None,
+    *,
+    date_debut: datetime | None,
+    date_fin: datetime | None,
+    temperature_debut: int | None,
+    temperature_fin: int | None,
+    vent: str | None,
+    couverture: str | None,
+    temperature_user_set: bool,
+    hours_user_set: bool,
+    had_saved: bool,
+) -> dict | None:
+    """Fusionne les conditions dans le cache manifest.
+
+    None : premier passage, rien à écrire (ne pas effacer un cache absent).
+    ``{}`` : l'utilisateur a vidé des conditions qui étaient seules dans
+    le cache. Le matériel et le commentaire déjà enregistrés restent.
+    Les heures vides ne sont pas remplacées par 20:00.
+    """
+    has_conditions = any((
+        date_debut is not None,
+        date_fin is not None,
+        temperature_debut is not None,
+        temperature_fin is not None,
+        vent,
+        couverture,
+        temperature_user_set,
+        hours_user_set,
+    ))
+    if not has_conditions and not had_saved:
+        return None
+    base = dict(existing) if isinstance(existing, dict) else {}
+    for key in (
+        "date_debut", "date_fin",
+        "temperature_debut", "temperature_fin",
+        "vent", "couverture",
+        "temperature_user_set", "hours_user_set",
+    ):
+        base.pop(key, None)
+    if not has_conditions:
+        return base
+    if date_debut is not None:
+        base["date_debut"] = date_debut.isoformat()
+    if date_fin is not None:
+        base["date_fin"] = date_fin.isoformat()
+    if temperature_user_set:
+        base["temperature_debut"] = temperature_debut
+        base["temperature_fin"] = temperature_fin
+    else:
+        if temperature_debut is not None:
+            base["temperature_debut"] = temperature_debut
+        if temperature_fin is not None:
+            base["temperature_fin"] = temperature_fin
+    if vent:
+        base["vent"] = vent
+    if couverture:
+        base["couverture"] = couverture
+    base["temperature_user_set"] = bool(temperature_user_set)
+    base["hours_user_set"] = bool(hours_user_set)
+    return base
 
 
 def _field_blank(value) -> bool:
@@ -697,8 +895,10 @@ def collect_local_participation_fields(session: Path) -> dict:
     cached = meta.get("participation_payload")
     cached = cached if isinstance(cached, dict) else {}
     user_set = bool(cached.get("temperature_user_set"))
+    hours_user = bool(cached.get("hours_user_set"))
     pp = coerce_participation_payload(cached)
     pp["_temperature_user_set"] = user_set
+    pp["_hours_user_set"] = hours_user
 
     cfg = dict(pp.get("configuration") or {})
     serie = cfg.get("detecteur_enregistreur_serie") or meta.get("n_serie")
@@ -709,7 +909,7 @@ def collect_local_participation_fields(session: Path) -> dict:
     log_path = find_titley_log(session)
     titley = parse_titley_log(log_path) if log_path else None
     if titley:
-        if titley.rec_start:
+        if titley.rec_start and not hours_user:
             pp["date_debut"] = titley.rec_start
             pp["date_fin"] = titley.rec_stop
             pp["_from_titley_dates"] = True

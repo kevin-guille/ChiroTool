@@ -5,14 +5,50 @@ Les versions publiées suivent le SemVer du fichier `version.py` / tags GitHub.
 
 ## [Unreleased]
 
-Le tag `v0.8.2` pointe sur `a767aef`. Le code du scan et de la pastille
-est sur `main` (`a140a94`). L'exe joint à la pré-release est celui de `a140a94`.
-Latest reste la 0.8.1.
+## [0.8.3] - 2026-10-18
 
-- **Site** : `docs/sitemap.xml` date la page et le PDF du tutoriel au
-  2026-09-24. Les textes étaient déjà à jour. La date dit au robot de
-  les relire. Le résumé affiché par un moteur de recherche suit quand
-  il revient, pas au moment du commit.
+`version.py` = `0.8.3` (build 2026-10-18). **Pré-release**.
+`ChiroTool.exe` : 37463806 octets, SHA-256
+`15AE87D81D04FF7F29116878625EF0C935E397194127E7FCA03AB4A0CBB80D33`.
+La Latest reste
+[v0.8.1](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.1)
+tant que cette pré-release n'est pas promue.
+Ces gardes ne sont pas dans l'exe 0.8.2 publié.
+
+### Corrigé
+
+- **Lot** : un WAV déjà nommé `Pass2` n'est plus réécrit `Pass1` si la
+  méta dit 1. Le passage n'est plus pré-coché à 1. Un `Data_k` vide
+  n'est plus un envoi réussi. Un jeton expiré arrête le lot, y compris
+  les fichiers encore en file. La fenêtre de suivi ne bloque plus les
+  autres nuits. Une nuit déjà dans le lot ne se relance pas.
+  Les nuits cochées restent prises jusqu'à la fermeture de cette fenêtre.
+  Les nuits non cochées restent utilisables. Le journal nomme chaque
+  nuit ignorée. Une préparation qui laisse `Data_k` sans WAV est une
+  erreur, pas un succès.
+
+### Ajouté
+
+- **Métadonnées** : le formulaire porte l'heure de début, l'heure de fin,
+  les deux températures, le vent et la couverture. Re-deviner relit le log
+  ou le Summary pour les heures et les températures. Le vent saisi reste.
+  L'envoi groupé transmet ces valeurs sans ouvrir de formulaire et sans
+  lister les WAV. Une heure vide n'est pas enregistrée comme 20:00.
+  Deux nuits déjà renseignées restent distinctes : le lot et le correctif
+  portail reprennent le carré, le point et les conditions de chaque nuit.
+  Le dernier point créé ne remplit une nuit que si le carré ou le point
+  manque encore, et seulement à l'ouverture du formulaire.
+- **Carte** : un carré créé par quelqu'un d'autre apparaît s'il porte
+  une de mes participations, ou s'il est déjà mémorisé. En choix de point,
+  ces points restent cliquables dans les 5 km (violet). Les miens restent verts.
+
+### Documentation
+
+- Le tutoriel décrit l'exe 0.8.3 (parcours et section
+  « Nouveautés v0.8.3 »). Le PDF est régénéré.
+  `docs/sitemap.xml` date la page et le PDF au 2026-10-18.
+  Le résumé affiché par un moteur de recherche suit quand il revient,
+  pas au moment du commit.
 
 ## [0.8.2] - 2026-09-24
 
