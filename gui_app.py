@@ -2475,7 +2475,8 @@ class ChiroToolApp(ctk.CTk):
 
     def _open_validation_view(self, s: SessionState):
         """Ouvre la fenêtre de validation de la nuit."""
-        xlsx = find_observations_xlsx(s.path)
+        initiales = self._guess_initiales()
+        xlsx = find_observations_xlsx(s.path, initiales=initiales)
         if xlsx is None:
             messagebox.showwarning(
                 "Pas d'observations",
@@ -2483,7 +2484,6 @@ class ChiroToolApp(ctk.CTk):
                 "dans ce dossier.\n\nLance d'abord l'upload + Tadarida."
             )
             return
-        initiales = self._guess_initiales()
         ValidationView(
             self, session_path=s.path, xlsx_path=xlsx,
             chirosurf_path=self.settings.chirosurf_path,

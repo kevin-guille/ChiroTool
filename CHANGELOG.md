@@ -3,11 +3,56 @@
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 Les versions publiées suivent le SemVer du fichier `version.py` / tags GitHub.
 
-## [Unreleased]
+## [0.8.4] - 2026-10-22
+
+`version.py` = `0.8.4` (build 2026-10-22). **Pré-release**.
+La 0.8.3 du 2026-10-18 n'est pas publiée. Cette version reprend
+son contenu (lot, métadonnées, carte) et ajoute les trois correctifs
+ci-dessous.
+`ChiroTool.exe` : 37469168 octets, SHA-256
+`EA70113C659FE8A5A8955BB278FFF59F3F71D18D09BC76C416F6FC010FF96A15`.
+La Latest reste
+[v0.8.1](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.1).
+L'exe publié précédent reste celui de la
+[v0.8.2](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.2).
+
+### Corrigé
+
+- **Sync API** : le compteur des participations est rafraîchi sur le fil
+  de l'interface, par paquets. Plusieurs centaines de nuits ne saturent
+  plus la fenêtre. Fermer la fenêtre arrête la récupération sans écrire
+  le registre. Appliquer le résultat n'a plus à retélécharger toute la liste.
+- **Tableurs d'observations** : enregistrer une validation réécrit une
+  seule copie `participation-<id>-observations_<initiales>.xlsx`.
+  Ouvrir une copie déjà suffixée n'en empile plus une autre
+  (`_AB` puis `_AB_AC`). Les chaînes déjà présentes sont retirées
+  à l'enregistrement suivant, s'il existe un tableur plus simple.
+  Le téléchargement d'origine et une copie à un seul suffixe restent.
+- **Export vers un autre compte** : l'export copie le manifeste tel quel.
+  Si ce manifeste contient déjà un identifiant de participation qui
+  n'est pas éditable avec le jeton courant, l'envoi crée une
+  participation sur le compte qui envoie. Un trou de réseau ou un
+  jeton expiré laisse l'identifiant en place. Sans identifiant dans
+  le manifeste, ce contrôle ne change rien.
+- **Repris de la 0.8.3 non publiée** : lot (PassN déjà écrit, passage
+  non pré-coché, journal des nuits ignorées, `Data_k` vide, jeton
+  expiré, fenêtre de suivi non bloquante), heures et météo par nuit,
+  points violets d'un carré créé par quelqu'un d'autre. Le détail
+  reste dans la section 0.8.3 ci-dessous.
+
+### Documentation
+
+- Le tutoriel décrit l'exe 0.8.4 (parcours et section
+  « Nouveautés v0.8.4 »). Le PDF est régénéré.
+  `docs/sitemap.xml` date la page et le PDF au 2026-10-22.
+  Note : [`docs/RELEASE_v0.8.4.md`](docs/RELEASE_v0.8.4.md).
 
 ## [0.8.3] - 2026-10-18
 
-`version.py` = `0.8.3` (build 2026-10-18). **Pré-release**.
+**Non publiée.** Le tag `v0.8.3` n'est pas créé. L'exe décrit ici
+est le build local du 2026-10-18. Son contenu est livré par la 0.8.4.
+
+`version.py` était `0.8.3` (build 2026-10-18). **Pré-release locale**.
 `ChiroTool.exe` : 37463806 octets, SHA-256
 `15AE87D81D04FF7F29116878625EF0C935E397194127E7FCA03AB4A0CBB80D33`.
 La Latest reste

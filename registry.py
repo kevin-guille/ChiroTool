@@ -446,6 +446,16 @@ class Registry:
             "total_bytes": data.get("total_bytes") or 0,
             "last_updated_at": now,
         }
+        # Champs API : seulement s'ils sont fournis. Un scan local ne doit
+        # pas effacer un identifiant de participation déjà connu.
+        for key in (
+            "vigiechiro_participation_id",
+            "vigiechiro_site_id",
+            "api_etat",
+            "last_api_sync_at",
+        ):
+            if data.get(key) not in (None, ""):
+                values[key] = data.get(key)
 
         if existing:
             cols = ", ".join(f"{k}=?" for k in values if k != "id")
@@ -1110,7 +1120,7 @@ class Registry:
     # -- Synchronisation avec l'API Vigie-Chiro ---------------------------
 
     def sync_from_api(self, token: str, on_progress=None,
-                       apply_changes: bool = True) -> dict:
+                       apply_changes: bool = True, cancel=None) -> dict:
         """Pull les participations depuis l'API et réconcilie avec le registre.
 
         Si ``apply_changes=False`` : retourne juste le diff sans modifier le
@@ -1146,18 +1156,27 @@ class Registry:
             result["errors"].append(f"client API : {e}")
             return result
 
-        # Récupération (avec progression)
+        # Récupération (avec progression). max_results doit rester < 101
+        # (plafond du portail). Le compteur est notifié par paquets : l'appelant
+        # rafraîchit l'interface sur son propre thread, pas à chaque nuit.
         participations = []
         try:
-            for p in client.iter_participations(mine_only=True):
+            for p in client.iter_participations(mine_only=True, page_size=99):
+                if cancel is not None and getattr(cancel, "is_set", lambda: False)():
+                    result["errors"].append("synchronisation annulée")
+                    result["total_fetched"] = len(participations)
+                    return result
                 participations.append(p)
-                if on_progress is not None:
-                    on_progress(len(participations), None)
+                n = len(participations)
+                if on_progress is not None and (n == 1 or n % 10 == 0):
+                    on_progress(n, None)
         except Exception as e:
             result["errors"].append(f"pull API : {e}")
             return result
 
         result["total_fetched"] = len(participations)
+        if on_progress is not None:
+            on_progress(len(participations), len(participations))
 
         # Index des sessions locales pour matching rapide
         local_sessions = self.all_sessions(include_archived=True)
@@ -1245,36 +1264,43 @@ class Registry:
             except Exception as e:
                 result["errors"].append(f"participation {p_id}: {e}")
 
-        # Application si demandée — sous un seul lock, transaction unique
-        # (évite l'interleaving avec un accès GUI concurrent, et garantit
-        # l'atomicité de l'ensemble updates + ghosts + log).
+        # Application si demandée. L'aperçu GUI rappelle apply_sync_result
+        # sur le diff déjà calculé : pas de second pull des centaines de nuits.
         if apply_changes:
-            now = datetime.now().isoformat(timespec="seconds")
-            with self._lock:
-                conn = self._get_conn()
-                try:
-                    for upd in result["updates"]:
-                        # _commit=False : on commit tout en bloc à la fin
-                        self._update_fields_locked(upd["id"],
-                                                     upd["_full_changes"],
-                                                     commit=False)
-                    for g in result["ghosts"]:
-                        self._add_ghost_session_locked(g, commit=False)
-                    conn.execute(
-                        "INSERT INTO merge_log (timestamp, source, added, updated, notes) "
-                        "VALUES (?, ?, ?, ?, ?)",
-                        (now, "api:vigiechiro",
-                         len(result["ghosts"]), len(result["updates"]),
-                         f"pull API ({result['total_fetched']} participations)"),
-                    )
-                    conn.commit()
-                except Exception:
-                    try:
-                        conn.rollback()
-                    except Exception:
-                        pass
-                    raise
+            self.apply_sync_result(result)
 
+        return result
+
+    def apply_sync_result(self, result: dict) -> dict:
+        """Écrit un diff déjà calculé (updates + ghosts) en une transaction.
+
+        Ne rappelle pas l'API. C'est le diff que l'utilisateur a confirmé.
+        """
+        now = datetime.now().isoformat(timespec="seconds")
+        with self._lock:
+            conn = self._get_conn()
+            try:
+                for upd in result.get("updates") or []:
+                    self._update_fields_locked(upd["id"],
+                                                 upd["_full_changes"],
+                                                 commit=False)
+                for g in result.get("ghosts") or []:
+                    self._add_ghost_session_locked(g, commit=False)
+                conn.execute(
+                    "INSERT INTO merge_log (timestamp, source, added, updated, notes) "
+                    "VALUES (?, ?, ?, ?, ?)",
+                    (now, "api:vigiechiro",
+                     len(result.get("ghosts") or []),
+                     len(result.get("updates") or []),
+                     f"pull API ({result.get('total_fetched', 0)} participations)"),
+                )
+                conn.commit()
+            except Exception:
+                try:
+                    conn.rollback()
+                except Exception:
+                    pass
+                raise
         return result
 
     def _add_ghost_session(self, ghost: dict) -> None:

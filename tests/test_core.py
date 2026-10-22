@@ -933,12 +933,20 @@ class TestEmptyDataKIsNotUploaded:
         def boom(self, pid):
             raise TokenExpiredError("token Vigie-Chiro invalide ou expiré")
 
+        def unreadable(self, pid):
+            # Le contrôle de propriétaire ne doit pas appeler le portail
+            # ici, ni conclure qu'il faut créer une autre participation.
+            raise TokenExpiredError("token Vigie-Chiro invalide ou expiré")
+
+        monkeypatch.setattr(VigieChiroClient, "get_participation", unreadable)
         monkeypatch.setattr(VigieChiroClient, "list_participation_files", boom)
         res = run_phase_upload(
             session, self._meta(), dry_run=False, token="x" * 16)
         assert res.get("stop_batch") is True
         assert "expir" in res.get("error", "").lower()
-        assert not Manifest.load(session).is_done("upload")
+        loaded = Manifest.load(session)
+        assert not loaded.is_done("upload")
+        assert loaded.meta.get("vigiechiro_participation_id") == "part1"
 
     def test_token_expired_mid_upload_does_not_send_the_rest(
             self, tmp_path, monkeypatch):
@@ -955,13 +963,129 @@ class TestEmptyDataKIsNotUploaded:
             calls.append(wav.name)
             raise TokenExpiredError("token Vigie-Chiro invalide ou expiré")
 
+        def unreadable(self, pid):
+            raise TokenExpiredError("token Vigie-Chiro invalide ou expiré")
+
+        monkeypatch.setattr(VigieChiroClient, "get_participation", unreadable)
         monkeypatch.setattr(VigieChiroClient, "list_participation_files", listed)
         monkeypatch.setattr(VigieChiroClient, "upload_wav", upload_wav)
         res = run_phase_upload(
             session, self._meta(), dry_run=False, token="x" * 16, max_workers=1)
         assert calls == ["f0.wav"]
         assert res.get("stop_batch") is True
-        assert not Manifest.load(session).is_done("upload")
+        loaded = Manifest.load(session)
+        assert not loaded.is_done("upload")
+        assert loaded.meta.get("vigiechiro_participation_id") == "part1"
+
+    def _patch_upload_client(self, monkeypatch, *, get_participation,
+                             create=None):
+        from vigiechiro_api import VigieChiroClient
+        uploaded: list[tuple] = []
+
+        def me(self):
+            return {"_id": "colleague"}
+
+        def iter_participations(self, mine_only=True, page_size=50, params=None):
+            return iter(())
+
+        def create_participation(self, site_id, **kwargs):
+            if create is not None:
+                return create(site_id, **kwargs)
+            raise AssertionError("création inattendue")
+
+        def list_participation_files(self, participation_id, progress=None):
+            uploaded.append(("list", participation_id))
+            return []
+
+        def upload_wav(self, participation_id, path, on_progress=None, **kwargs):
+            uploaded.append(("wav", participation_id, Path(path).name))
+            return {"_id": "f", "titre": Path(path).name}
+
+        def participation_status(self, participation_id):
+            return {"etat": "PLANIFIE"}
+
+        monkeypatch.setattr(VigieChiroClient, "me", me)
+        monkeypatch.setattr(VigieChiroClient, "get_participation", get_participation)
+        monkeypatch.setattr(VigieChiroClient, "iter_participations", iter_participations)
+        monkeypatch.setattr(VigieChiroClient, "create_participation", create_participation)
+        monkeypatch.setattr(VigieChiroClient, "list_participation_files",
+                            list_participation_files)
+        monkeypatch.setattr(VigieChiroClient, "upload_wav", upload_wav)
+        monkeypatch.setattr(VigieChiroClient, "participation_status",
+                            participation_status)
+        return uploaded
+
+    def test_foreign_participation_id_is_replaced(self, tmp_path, monkeypatch):
+        """Export : l'id de l'expéditeur ne doit pas bloquer l'envoi."""
+        from types import SimpleNamespace
+        from manifest import Manifest
+        from pipeline import run_phase_upload
+
+        session = self._ready(tmp_path, 1)
+
+        def get_participation(self, pid):
+            return SimpleNamespace(
+                raw={"_id": pid, "observateur": {"_id": "kevin"}},
+            )
+
+        def create(site_id, **kwargs):
+            return {"_id": "part-colleague"}
+
+        uploaded = self._patch_upload_client(
+            monkeypatch, get_participation=get_participation, create=create)
+        res = run_phase_upload(
+            session, self._meta(), dry_run=False, token="x" * 16, max_workers=1)
+        steps = [s.get("step") for s in res.get("steps") or []]
+        assert "drop_foreign_participation" in steps
+        assert ("wav", "part-colleague", "f0.wav") in uploaded
+        assert Manifest.load(session).meta["vigiechiro_participation_id"] == (
+            "part-colleague"
+        )
+        assert not res.get("error")
+
+    def test_missing_participation_is_replaced(self, tmp_path, monkeypatch):
+        """404 : l'identifiant stocké n'existe pas pour ce jeton."""
+        from vigiechiro_api import NotFoundError
+        from manifest import Manifest
+        from pipeline import run_phase_upload
+
+        session = self._ready(tmp_path, 1)
+
+        def get_participation(self, pid):
+            raise NotFoundError("ressource introuvable")
+
+        def create(site_id, **kwargs):
+            return {"_id": "part-new"}
+
+        uploaded = self._patch_upload_client(
+            monkeypatch, get_participation=get_participation, create=create)
+        res = run_phase_upload(
+            session, self._meta(), dry_run=False, token="x" * 16, max_workers=1)
+        steps = [s.get("step") for s in res.get("steps") or []]
+        assert "drop_foreign_participation" in steps
+        assert ("wav", "part-new", "f0.wav") in uploaded
+        assert Manifest.load(session).meta["vigiechiro_participation_id"] == (
+            "part-new"
+        )
+        assert not res.get("error")
+
+    def test_unreadable_participation_is_kept(self, tmp_path, monkeypatch):
+        """Un trou de réseau ne doit pas créer une deuxième participation."""
+        from pipeline import run_phase_upload
+
+        session = self._ready(tmp_path, 1)
+
+        def get_participation(self, pid):
+            raise OSError("offline")
+
+        uploaded = self._patch_upload_client(
+            monkeypatch, get_participation=get_participation)
+        res = run_phase_upload(
+            session, self._meta(), dry_run=False, token="x" * 16, max_workers=1)
+        steps = [s.get("step") for s in res.get("steps") or []]
+        assert "drop_foreign_participation" not in steps
+        assert ("wav", "part1", "f0.wav") in uploaded
+        assert not res.get("error")
 
 
 # =========================================================================
@@ -1000,6 +1124,72 @@ class TestCleanupFileDecision:
 # =========================================================================
 
 class TestRegistry:
+    def test_apply_sync_result_does_not_need_the_api(self, tmp_path):
+        from registry import Registry
+        r = Registry(tmp_path)
+        try:
+            result = {
+                "total_fetched": 2,
+                "updates": [],
+                "ghosts": [{
+                    "participation_id": "abc",
+                    "site_id": "site",
+                    "site_numero": "430001",
+                    "point": "Z1",
+                    "date_debut": "2026-08-01",
+                    "etat": "FINI",
+                }],
+                "unchanged": [],
+                "errors": [],
+            }
+            r.apply_sync_result(result)
+            rows = r.all_sessions(include_archived=True)
+            ghost = next(s for s in rows if s["id"] == "ghost_abc")
+            assert ghost["api_etat"] == "FINI"
+            assert ghost["vigiechiro_participation_id"] == "abc"
+            assert ghost["source"] == "server"
+        finally:
+            r.close()
+
+    def test_sync_cancel_stops_before_the_end(self, tmp_path, monkeypatch):
+        import threading
+        from registry import Registry
+        import vigiechiro_api
+
+        class _Client:
+            def __init__(self, token, source="foreground"):
+                pass
+
+            def iter_participations(self, mine_only=True, page_size=50,
+                                    params=None):
+                for i in range(500):
+                    yield {
+                        "_id": f"p{i}",
+                        "site": {},
+                        "point": "",
+                        "date_debut": "",
+                        "traitement": {},
+                    }
+
+        monkeypatch.setattr(vigiechiro_api, "VigieChiroClient", _Client)
+        cancel = threading.Event()
+
+        def on_progress(n, _total):
+            if n >= 30:
+                cancel.set()
+
+        r = Registry(tmp_path)
+        try:
+            result = r.sync_from_api(
+                "x" * 32, on_progress=on_progress,
+                apply_changes=False, cancel=cancel,
+            )
+            assert result["total_fetched"] == 30
+            assert result["errors"] == ["synchronisation annulée"]
+            assert r.all_sessions(include_archived=True) == []
+        finally:
+            r.close()
+
     def test_fresh_create_empty(self, tmp_path):
         from registry import Registry
         r = Registry(tmp_path)
@@ -2586,6 +2776,56 @@ class TestObservationSidecar:
         saved = tmp_path / "participation-abc-observations_KG.xlsx"
         side = load_observation_sidecar(saved)
         assert len(side["entries"]) == 1 and side["entries"][0]["donnee_id"] == "d1"
+
+    def test_sidecar_follows_stacked_initials_back_to_download(self, tmp_path):
+        from vigiechiro_api import load_observation_sidecar
+        donnees = [{"_id": "d1", "titre": "f.wav", "observations": [{"temps_debut": 1.0}]}]
+        c = self._fake_client(donnees)
+        c.download_observations_as_xlsx("abc", tmp_path / "participation-abc-observations.xlsx")
+        stacked = tmp_path / "participation-abc-observations_AB_AC.xlsx"
+        side = load_observation_sidecar(stacked)
+        assert side["entries"][0]["donnee_id"] == "d1"
+
+    def test_validation_stem_does_not_stack_initials(self):
+        from vigiechiro_api import (
+            observations_base_stem, observations_initials_depth,
+            observations_validation_stem,
+        )
+        stacked = "participation-abc-observations_AB_AC"
+        assert observations_base_stem(stacked) == "participation-abc-observations"
+        assert observations_initials_depth(stacked) == 2
+        assert observations_initials_depth("participation-abc-observations_AB") == 1
+        assert observations_validation_stem(stacked, "AB") == (
+            "participation-abc-observations_AB"
+        )
+        assert observations_validation_stem(stacked, "KG") == (
+            "participation-abc-observations_KG"
+        )
+        # _cleanup n'est pas une paire d'initiales.
+        assert observations_base_stem(
+            "participation-abc-observations_cleanup"
+        ).endswith("_cleanup")
+
+    def test_pick_skips_stacked_copy_when_a_simple_one_exists(self, tmp_path):
+        import os
+        import time
+        from vigiechiro_api import pick_observations_xlsx, stacked_observation_copies
+        base = tmp_path / "participation-abc-observations.xlsx"
+        one = tmp_path / "participation-abc-observations_AB.xlsx"
+        chain = tmp_path / "participation-abc-observations_AB_AC.xlsx"
+        for p in (base, one, chain):
+            p.write_bytes(b"PK")
+        now = time.time()
+        os.utime(base, (now, now - 30))
+        os.utime(one, (now, now - 20))
+        os.utime(chain, (now, now))  # la chaîne est la plus récente
+        assert pick_observations_xlsx(
+            [base, one, chain], initiales="AB") == one
+        assert pick_observations_xlsx([base, one, chain]) == one
+        assert pick_observations_xlsx([chain]) == chain
+        stacked = stacked_observation_copies(
+            tmp_path, "participation-abc-observations")
+        assert stacked == [chain]
 
     def test_missing_sidecar_tolerated(self, tmp_path):
         from vigiechiro_api import load_observation_sidecar

@@ -1,6 +1,9 @@
 # ChiroTool v0.8.3 : lot, métadonnées, carte
 
-Pré-release du 2026-10-18. La Latest reste la
+Non publiée. Le tag v0.8.3 n'est pas créé. Le contenu est repris
+dans [v0.8.4](RELEASE_v0.8.4.md).
+
+Pré-release locale du 2026-10-18. La Latest reste la
 [v0.8.1](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.1).
 
 `ChiroTool.exe`, 37463806 octets, SHA-256

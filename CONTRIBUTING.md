@@ -73,17 +73,19 @@ Vigie-Chiro) ; CSV pour ouvrir une nuit dans le logiciel externe déjà en 0.7.1
   restent en place (schéma du registre inchangé). Latest reste 0.8.1 tant
   que la pré-release n'est pas promue
   ([v0.8.2](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.2)).
-- **v0.8.3** (2026-10-18, pré-release) : gardes de lot (§0.6, lignes 5 à 8).
-  Le journal nomme chaque nuit ignorée. Une préparation qui laisse
-  `Data_k` sans WAV est une erreur. Heures et météo par nuit (#15),
-  points d'un autre carré (#19). `version.py` = 0.8.3. Exe :
-  37463806 octets. Latest reste 0.8.1 tant que cette pré-release
-  n'est pas promue
-  ([v0.8.3](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.3)).
+- **v0.8.3** (2026-10-18) : build local, **non publié**. Le tag
+  v0.8.3 n'est pas créé. Le contenu est repris dans la 0.8.4.
+- **v0.8.4** (2026-10-22, pré-release) : reprend la 0.8.3 (gardes de
+  lot §0.6 lignes 5 à 8, journal, `Data_k` vide, #15, #19) et ajoute
+  la sync API, un seul tableur de validation, l'export vers un autre
+  compte (SPEC §0.9). `version.py` = 0.8.4. Exe : 37469168 octets,
+  SHA-256 `EA70113C659FE8A5A8955BB278FFF59F3F71D18D09BC76C416F6FC010FF96A15`. Latest reste 0.8.1 tant que cette
+  pré-release n'est pas promue
+  ([v0.8.4](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.4)).
 
 | Document | Rôle |
 |----------|------|
-| [`docs/SPEC_v06_parcours.md`](docs/SPEC_v06_parcours.md) | **Source de vérité** (v0.8.1 Latest ; pré-release 0.8.2 §0.7 ; pré-release 0.8.3 §0.8 ; §0.1 #4 ; §0.2 #7 ; §0.3 #8 ; §0.4 #9/#10 ; §0.5 #11 ; §0.6 batch Préparer, gardes 5 à 8 dans l'exe 0.8.3 ; D14 Batch) |
+| [`docs/SPEC_v06_parcours.md`](docs/SPEC_v06_parcours.md) | **Source de vérité** (v0.8.1 Latest ; pré-release 0.8.2 §0.7 ; pré-release 0.8.4 §0.8 et §0.9, la 0.8.3 n'est pas publiée ; §0.1 #4 ; §0.2 #7 ; §0.3 #8 ; §0.4 #9/#10 ; §0.5 #11 ; §0.6 batch Préparer, gardes 5 à 8 dans l'exe 0.8.4 ; D14 Batch) |
 | [`CHANGELOG.md`](CHANGELOG.md) | Versions publiées + *Suite possible* |
 | [`docs/RELEASE_v0.6.0.md`](docs/RELEASE_v0.6.0.md) | Note de release GitHub v0.6 |
 | [`docs/RELEASE_v0.7.0.md`](docs/RELEASE_v0.7.0.md) | Note de release GitHub v0.7 |
@@ -92,7 +94,8 @@ Vigie-Chiro) ; CSV pour ouvrir une nuit dans le logiciel externe déjà en 0.7.1
 | [`docs/RELEASE_v0.8.0.md`](docs/RELEASE_v0.8.0.md) | Note de pre-release GitHub v0.8.0 (2026-09-09, remplacée par 0.8.1) |
 | [`docs/RELEASE_v0.8.1.md`](docs/RELEASE_v0.8.1.md) | Note de release GitHub v0.8.1 (Latest stable, 2026-09-19, SHA exe) |
 | [`docs/RELEASE_v0.8.2.md`](docs/RELEASE_v0.8.2.md) | Note de pré-release GitHub v0.8.2 (2026-09-24, SHA exe) |
-| [`docs/RELEASE_v0.8.3.md`](docs/RELEASE_v0.8.3.md) | Note de pré-release v0.8.3 (2026-10-18, SHA exe) |
+| [`docs/RELEASE_v0.8.3.md`](docs/RELEASE_v0.8.3.md) | Note locale v0.8.3, non publiée (contenu repris en 0.8.4) |
+| [`docs/RELEASE_v0.8.4.md`](docs/RELEASE_v0.8.4.md) | Note de pré-release v0.8.4 (2026-10-22, SHA exe) |
 | [`docs/TUTORIEL.md`](docs/TUTORIEL.md) | Guide utilisateur (pick, Synthèse, CSV optionnel pour le logiciel externe, repair) |
 | [`docs/ChiroTool-Tutoriel.pdf`](docs/ChiroTool-Tutoriel.pdf) | PDF généré via `python docs/build_pdf.py` |
 | [`docs/sitemap.xml`](docs/sitemap.xml) | Dates (`lastmod`) de la page et du PDF publiés. À avancer quand l'un des deux change. |

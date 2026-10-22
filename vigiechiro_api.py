@@ -300,6 +300,120 @@ def _parse_dt(v: Any) -> datetime | None:
 # Les initiales sont 1 à 5 lettres. Sert au fallback canonique de résolution
 # du sidecar (le sidecar d'origine porte le stem SANS ce suffixe).
 _INITIALS_SUFFIX_RE = re.compile(r"^(?P<base>.+)_[A-Za-z]{1,5}$")
+_OBSERVATIONS_MARK = "-observations"
+_INITIALS_TAIL_RE = re.compile(r"(?:_[A-Za-z]{1,5})+")
+
+
+def _initials_token(initiales: str | None) -> str:
+    """1 à 5 lettres. Le reste (espaces, chiffres) est ignoré."""
+    letters = re.sub(r"[^A-Za-z]", "", str(initiales or ""))
+    return letters[:5]
+
+
+def observations_base_stem(stem: str) -> str:
+    """Retire une chaîne d'initiales collée après ``-observations``.
+
+    ``participation-<id>-observations_AB_AC`` redevient
+    ``participation-<id>-observations``. Un suffixe qui n'est pas des
+    initiales (``_cleanup``, 7 lettres) reste en place.
+    """
+    s = str(stem or "")
+    idx = s.lower().rfind(_OBSERVATIONS_MARK)
+    if idx < 0:
+        return s
+    base_end = idx + len(_OBSERVATIONS_MARK)
+    tail = s[base_end:]
+    if tail and _INITIALS_TAIL_RE.fullmatch(tail):
+        return s[:base_end]
+    return s
+
+
+def observations_initials_depth(stem: str) -> int:
+    """0 : tableur téléchargé. 1 : une paire d'initiales. 2+ : empilement."""
+    s = str(stem or "")
+    base = observations_base_stem(s)
+    if base == s:
+        return 0
+    return s[len(base):].count("_")
+
+
+def observations_validation_stem(stem: str, initiales: str | None) -> str:
+    """Nom unique de la copie de validation, sans empiler les suffixes.
+
+    Quelle que soit la copie ouverte (``_AB``, ``_AB_AC``…), le résultat
+    est ``<tableur téléchargé>_<initiales>``.
+    """
+    base = observations_base_stem(stem)
+    ini = _initials_token(initiales)
+    if not ini:
+        return base
+    return f"{base}_{ini}"
+
+
+def pick_observations_xlsx(paths, initiales: str | None = None):
+    """Choisit le tableur à ouvrir.
+
+    Une copie à initiales simples gagne sur le téléchargement brut, pour
+    garder les identifications déjà saisies. Une chaîne ``_AB_AC`` n'est
+    reprise que s'il n'existe rien de plus simple.
+    """
+    files: list[Path] = []
+    for raw in paths or []:
+        path = Path(raw)
+        try:
+            if path.is_file():
+                files.append(path)
+        except OSError:
+            continue
+    if not files:
+        return None
+
+    def _mtime(path: Path) -> float:
+        try:
+            return path.stat().st_mtime
+        except OSError:
+            return 0.0
+
+    clean = [p for p in files if observations_initials_depth(p.stem) <= 1]
+    pool = clean or files
+    ini = _initials_token(initiales)
+    if ini:
+        mine = [
+            p for p in pool
+            if observations_initials_depth(p.stem) == 1
+            and p.stem == observations_validation_stem(p.stem, ini)
+        ]
+        if mine:
+            return max(mine, key=_mtime)
+    validated = [p for p in pool if observations_initials_depth(p.stem) == 1]
+    if validated:
+        return max(validated, key=_mtime)
+    return max(pool, key=_mtime)
+
+
+def stacked_observation_copies(folder, base_stem: str) -> list[Path]:
+    """xlsx ``…_AB_AC`` (deux suffixes ou plus) du même tableur, dans ``folder``."""
+    folder = Path(folder)
+    found: list[Path] = []
+    try:
+        children = list(folder.iterdir())
+    except OSError:
+        return found
+    for path in children:
+        try:
+            if not path.is_file():
+                continue
+        except OSError:
+            continue
+        if path.suffix.lower() != ".xlsx":
+            continue
+        if "_cleanup" in path.name.lower():
+            continue
+        if observations_base_stem(path.stem) != base_stem:
+            continue
+        if observations_initials_depth(path.stem) >= 2:
+            found.append(path)
+    return found
 
 
 def _sidecar_path(xlsx_path) -> Path:
@@ -336,9 +450,14 @@ def load_observation_sidecar(xlsx_path) -> dict:
     """
     p = Path(xlsx_path)
     candidates = [_sidecar_path(p)]
+    base = observations_base_stem(p.stem)
+    if base != p.stem:
+        candidates.append(p.with_name(base + ".sync.json"))
     m = _INITIALS_SUFFIX_RE.match(p.stem)
     if m:
-        candidates.append(p.with_name(m.group("base") + ".sync.json"))
+        alt = p.with_name(m.group("base") + ".sync.json")
+        if alt not in candidates:
+            candidates.append(alt)
     for c in candidates:
         try:
             if c.exists():

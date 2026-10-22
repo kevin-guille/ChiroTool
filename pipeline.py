@@ -210,6 +210,40 @@ def _calendar_day(value) -> str | None:
         return None
 
 
+def _participation_belongs_to_me(client, part_id) -> bool | None:
+    """True si cet identifiant est éditable par le jeton courant.
+
+    False : 403, 404, ou un autre observateur. None : réseau ou réponse
+    illisible. Dans ce dernier cas on garde l'identifiant, pour ne pas
+    créer un doublon sur son propre compte à cause d'un trou de réseau.
+    """
+    from vigiechiro_api import ForbiddenError, NotFoundError
+
+    try:
+        pobj = client.get_participation(part_id)
+    except (ForbiddenError, NotFoundError):
+        return False
+    except Exception:
+        return None
+    raw = getattr(pobj, "raw", None)
+    if not isinstance(raw, dict):
+        raw = pobj if isinstance(pobj, dict) else None
+    if not isinstance(raw, dict):
+        return None
+    obs = raw.get("observateur")
+    obs_id = obs.get("_id") if isinstance(obs, dict) else obs
+    if not obs_id:
+        return None
+    try:
+        me = client.me() or {}
+    except Exception:
+        return None
+    me_id = me.get("_id") or me.get("id")
+    if not me_id:
+        return None
+    return str(obs_id) == str(me_id)
+
+
 def _participation_id_is_stale(meta: dict, desired_debut) -> bool:
     """True si l'id stocké pointe vers une *autre* nuit que ``desired_debut``.
 
@@ -746,6 +780,26 @@ def run_phase_upload(session: Path, meta: SessionMeta, dry_run: bool,
         m.meta.pop("vigiechiro_participation_id", None)
         m.meta.pop("vigiechiro_participation_date", None)
         m.save(session)
+    # Export vers un autre compte : le manifeste emporte l'identifiant de
+    # l'expéditeur. Pousser les WAV dessus est refusé par le portail
+    # (pas le même propriétaire) et la nuit reste bloquée. On crée alors
+    # la participation sur le compte qui envoie.
+    if part_id and not dry_run:
+        owner_client = VigieChiroClient(token)
+        if _participation_belongs_to_me(owner_client, part_id) is False:
+            out["steps"].append({
+                "step": "drop_foreign_participation",
+                "old_id": part_id,
+            })
+            print(
+                "  ⚠ la participation enregistrée n'est pas sur ce compte. "
+                "Une participation est créée pour cet envoi.",
+                flush=True,
+            )
+            part_id = None
+            m.meta.pop("vigiechiro_participation_id", None)
+            m.meta.pop("vigiechiro_participation_date", None)
+            m.save(session)
     if not part_id:
         if dry_run:
             out["steps"].append({"step": "create_participation", "dry_run": True,

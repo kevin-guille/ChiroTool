@@ -42,9 +42,23 @@ class SyncPreviewDialog(ctk.CTkToplevel):
         self.token = token
         self.preview: dict | None = None
         self.applied = False
+        self._cancel = threading.Event()
+        self._progress_n = 0
+        self._worker_done = False
+        self._worker_error: str | None = None
+        self._worker_result: dict | None = None
+        self._apply_done = False
+        self._apply_error: str | None = None
 
         self._build_ui()
         self.after(100, self._run_preview)
+
+    def destroy(self):
+        self._cancel.set()
+        try:
+            super().destroy()
+        except Exception:
+            pass
 
     def _build_ui(self):
         self.grid_columnconfigure(0, weight=1)
@@ -97,29 +111,53 @@ class SyncPreviewDialog(ctk.CTkToplevel):
         self.textbox.configure(state="disabled")
 
     def _run_preview(self):
-        """Lance la récupération API en thread et affiche le diff."""
+        """Lance la récupération API en thread et affiche le diff.
+
+        Le thread réseau n'appelle pas Tk. Le compteur est lu ici, sur le
+        thread de l'interface, toutes les 200 ms. Plusieurs centaines
+        de ``after`` depuis l'autre thread figeaient la fenêtre.
+        """
         self._append("Récupération des participations via /api/v1/moi/participations…")
 
-        def _on_progress(n, total):
-            try:
-                self.after(0, lambda: self.status_lbl.configure(
-                    text=f"⏳ {n} participations récupérées…"))
-            except Exception:
-                pass
+        def _on_progress(n, _total):
+            self._progress_n = n
 
         def _worker():
             try:
                 # Preview-only : ne modifie pas le registre
-                result = self.registry.sync_from_api(
+                self._worker_result = self.registry.sync_from_api(
                     self.token, on_progress=_on_progress,
-                    apply_changes=False,
+                    apply_changes=False, cancel=self._cancel,
                 )
             except Exception as e:
-                self.after(0, lambda: self._show_error(str(e)))
-                return
-            self.after(0, lambda: self._show_preview(result))
+                self._worker_error = str(e)
+            finally:
+                self._worker_done = True
 
         threading.Thread(target=_worker, daemon=True).start()
+        self.after(200, self._poll_preview)
+
+    def _ui_alive(self) -> bool:
+        try:
+            return bool(self.winfo_exists())
+        except Exception:
+            return False
+
+    def _poll_preview(self):
+        if not self._ui_alive():
+            return
+        if not self._worker_done:
+            n = self._progress_n
+            self.status_lbl.configure(
+                text=f"⏳ {n} participations récupérées…")
+            self.after(200, self._poll_preview)
+            return
+        if self._worker_error:
+            self._show_error(self._worker_error)
+            return
+        if self._cancel.is_set():
+            return
+        self._show_preview(self._worker_result or {})
 
     def _show_error(self, msg: str):
         self._append(f"\n✗  Erreur : {msg}")
@@ -187,15 +225,30 @@ class SyncPreviewDialog(ctk.CTkToplevel):
 
         def _worker():
             try:
-                # Réapplique les changements (cette fois avec apply_changes=True)
-                result = self.registry.sync_from_api(
-                    self.token, apply_changes=True)
-                self.applied = True
-                self.after(0, lambda: self._show_applied(result))
+                # Le diff affiché est celui qui est écrit. Pas de second
+                # téléchargement de toute la liste.
+                self.registry.apply_sync_result(self.preview)
             except Exception as e:
-                self.after(0, lambda: self._show_error(str(e)))
+                self._apply_error = str(e)
+            finally:
+                self._apply_done = True
 
         threading.Thread(target=_worker, daemon=True).start()
+        self.after(200, self._poll_apply)
+
+    def _poll_apply(self):
+        if not self._ui_alive():
+            return
+        if not self._apply_done:
+            self.after(200, self._poll_apply)
+            return
+        if self._apply_error:
+            self._show_error(self._apply_error)
+            self.apply_btn.configure(state="normal", text="Appliquer")
+            self.cancel_btn.configure(state="normal")
+            return
+        self.applied = True
+        self._show_applied(self.preview or {})
 
     def _show_applied(self, result: dict):
         self._append("")

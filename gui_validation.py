@@ -50,7 +50,9 @@ from taxon_index import genus_code_for, is_known, load_taxon_index, suggest
 from taxons import classify_taxon
 from vigiechiro_api import (
     ApiError, VigieChiroClient, entries_from_donnees,
-    load_observation_sidecar, save_observation_sidecar,
+    load_observation_sidecar, observations_base_stem,
+    observations_validation_stem, pick_observations_xlsx,
+    save_observation_sidecar, stacked_observation_copies,
 )
 
 
@@ -1533,13 +1535,11 @@ class ValidationView(ctk.CTkToplevel):
         if not self.rows:
             return
 
-        stem = self.xlsx_path.stem
-        # Si le fichier d'origine se termine déjà par _KG ou similaire, on
-        # écrase tel quel ; sinon on ajoute le suffixe initiales.
-        if stem.endswith(f"_{self.initiales}"):
-            out_path = self.xlsx_path
-        else:
-            out_path = self.xlsx_path.with_name(f"{stem}_{self.initiales}.xlsx")
+        # Toujours le même fichier : tableur téléchargé + initiales courantes.
+        # Ouvrir une copie déjà suffixée (_AB, puis _AB_AC) ne doit pas
+        # en empiler une nouvelle.
+        stem = observations_validation_stem(self.xlsx_path.stem, self.initiales)
+        out_path = self.xlsx_path.with_name(f"{stem}.xlsx")
 
         try:
             import openpyxl
@@ -1564,6 +1564,27 @@ class ValidationView(ctk.CTkToplevel):
             except Exception:
                 pass
 
+        # Copies empilées (_AB_AC, _AB_AC_AD…) : le contenu vient d'être
+        # réécrit dans le fichier à un seul suffixe. On retire les chaînes.
+        base = observations_base_stem(out_path.stem)
+        for extra in stacked_observation_copies(out_path.parent, base):
+            try:
+                if extra.resolve() == out_path.resolve():
+                    continue
+            except OSError:
+                continue
+            try:
+                extra.unlink()
+            except OSError:
+                continue
+            side = extra.with_suffix(".sync.json")
+            try:
+                if side.is_file():
+                    side.unlink()
+            except OSError:
+                pass
+
+        self.xlsx_path = out_path
         self._dirty = False
         try:
             self.title(f"Validation — {self.session_path.name}")
@@ -1591,13 +1612,23 @@ class ValidationView(ctk.CTkToplevel):
 # Helper : trouver l'xlsx d'observations dans une session
 # ---------------------------------------------------------------------------
 
-def find_observations_xlsx(session_path: Path) -> Path | None:
-    """Cherche un fichier observations compatible (sans _cleanup)."""
+def find_observations_xlsx(session_path: Path,
+                           initiales: str | None = None) -> Path | None:
+    """Tableur d'observations (sans ``_cleanup``).
+
+    Préfère la copie de validation à un seul suffixe. Une chaîne
+    ``_AB_AC`` n'est ouverte que s'il n'y a pas de fichier plus simple.
+    """
     candidates: list[Path] = []
-    # Priorité : version _<initiales> si existe (validation en cours)
-    # Sinon l'original téléchargé
-    for p in session_path.iterdir():
-        if not p.is_file():
+    try:
+        children = list(Path(session_path).iterdir())
+    except OSError:
+        return None
+    for p in children:
+        try:
+            if not p.is_file():
+                continue
+        except OSError:
             continue
         n = p.name.lower()
         if not n.endswith(".xlsx"):
@@ -1606,8 +1637,4 @@ def find_observations_xlsx(session_path: Path) -> Path | None:
             continue
         if n.startswith("participation-") and "observations" in n:
             candidates.append(p)
-    if not candidates:
-        return None
-    # Plus récent en priorité
-    candidates.sort(key=lambda p: p.stat().st_mtime, reverse=True)
-    return candidates[0]
+    return pick_observations_xlsx(candidates, initiales)
