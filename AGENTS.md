@@ -89,20 +89,24 @@ dans un texte lu par un humain. Voix « je » sur le contenu public.
 Déjà tranché dans la SPEC : #4 §0.1, #7 §0.2, #8 §0.3, #9 et #10 §0.4.
 #8, #9 et #10 sont fermées. #11 est fermée depuis le 2026-10-08 (§0.5).
 
-Relues le 2026-10-18. #12 et #13 sont confirmées par Benjamin
-sur l'exe 0.8.2. Le seuil de confiance demandé ensuite est dans
-l'exe publié 0.8.5. #13 reste ouverte, comme il l'a demandé. Aucune n'oppose
-le cadre ChiroSurf.
+Réponses postées le 2026-10-26, sur l'exe 0.8.5.
+Fermées : #12, #14, #15, #16, #17, #18, #19.
+#13 reste ouverte, comme Benjamin l'a demandé.
+#16 est fermée. La pastille lit toujours le dossier.
+La nuit du 12 août 2026, carré 430827, Z1, passage 2, ne se relance pas.
+Ne pas rouvrir #16, et ne pas la compter comme réparée.
+Aucune n'oppose le cadre ChiroSurf.
 
 | Issue | Sujet | Piste |
 |---|---|---|
-| #12 | Seuil de confiance sur l'onglet Activité, données non validées. | Dans l'exe publié 0.8.5. Menu « Confiance min. ». Les lignes déjà identifiées restent. « Interprétation _Vu » ignore ce menu et ne change pas de calcul. | 
-| #14 | Vérifier / Réparer listait tous les WAV sur une nuit déjà analysée. Le correctif 0.8.2 est validé. Suite : un lot de 40 à 50 nuits, jeton expiré en cours d'envoi. | L'envoi groupé de l'exe publié 0.8.5 saute aussi le listing si l'état est TERMINE ou FINI. Un jeton mort arrête le lot. Les nuits suivantes ne sont pas lancées. |
-| #15 | Heures, températures et météo avant l'envoi groupé. | Dans l'exe publié 0.8.5. Les 0.8.3 et 0.8.4 ne sont pas publiées. Le formulaire de métadonnées porte les heures, les températures, le vent et la couverture. Re-deviner relit le log sans effacer le vent saisi. L'envoi groupé envoie ces valeurs sans ouvrir de formulaire et sans lister les WAV. Chaque nuit déjà renseignée garde son carré, son point et ses conditions. |
-| #16 | Pastille verte, participation absente du portail (carré 430827, 12 août 2026). | La pastille lit le disque. Un `Data_k` vide n'est plus un envoi réussi. Ne pas relancer cette nuit. |
-| #17 | Plusieurs exe pendant un upload de plusieurs jours. | **Non.** D14, une instance. Le suivi de lot ne prend pas les clics : les autres nuits restent consultables. |
-| #18 | Trente nuits d'un contrat renommées Pass1, le CSV Tadarida dit Pass2. | Si les WAV ont déjà un `PassN` différent de la méta, aucun fichier n'est renommé. |
-| #19 | La carte ne montre pas les points des carrés créés par quelqu'un d'autre. | Dans l'exe publié 0.8.5. Les 0.8.3 et 0.8.4 ne sont pas publiées. La carte affiche les carrés où j'ai une participation, même si quelqu'un d'autre a créé le carré. En choix de point, ces points restent cliquables dans les 5 km. |
+| #12 | Seuil de confiance sur l'onglet Activité, données non validées. Fermée le 2026-10-26. | Dans l'exe publié 0.8.5. Menu « Confiance min. ». Les lignes déjà identifiées restent. « Interprétation _Vu » ignore ce menu et ne change pas de calcul. |
+| #13 | « Choisir sur la carte » ouvrait mal l'onglet. Ouverte. | Correctif dans la 0.8.2, toujours là en 0.8.5. Benjamin laisse ouvert. Ne pas fermer sans lui. |
+| #14 | Vérifier / Réparer listait tous les WAV sur une nuit déjà analysée. Fermée le 2026-10-26. | Le correctif 0.8.2 est validé. L'envoi groupé de la 0.8.5 saute aussi le listing si l'état est TERMINE ou FINI. Un jeton mort arrête le lot. Les nuits suivantes ne sont pas lancées. |
+| #15 | Heures, températures et météo avant l'envoi groupé. Fermée le 2026-10-26. | Dans l'exe publié 0.8.5. Le formulaire porte les heures, les températures, le vent et la couverture. Re-deviner relit le log sans effacer le vent saisi. Le lot envoie ces valeurs sans formulaire et sans lister les WAV. |
+| #16 | Pastille verte, participation absente du portail (carré 430827, 12 août 2026). Fermée le 2026-10-26. | La pastille lit le disque. Un `Data_k` vide n'est plus un envoi réussi. Cette fermeture ne répare pas la nuit. Ne pas la relancer. |
+| #17 | Plusieurs exe pendant un upload de plusieurs jours. Fermée le 2026-10-26. | **Non.** D14, une instance. Le suivi de lot ne prend pas les clics : les autres nuits restent consultables. |
+| #18 | Trente nuits d'un contrat renommées Pass1, le CSV Tadarida dit Pass2. Fermée le 2026-10-26. | Si les WAV ont déjà un `PassN` différent de la méta, aucun fichier n'est renommé. Les dossiers déjà réécrits ne sont pas réparés par l'exe. Ne pas relancer Préparer dessus. |
+| #19 | La carte ne montre pas les points des carrés créés par quelqu'un d'autre. Fermée le 2026-10-26. | Dans l'exe publié 0.8.5. La carte affiche les carrés où j'ai une participation, même si quelqu'un d'autre a créé le carré. En choix de point, ces points restent cliquables dans les 5 km. |
 
 Batch Préparer (SPEC §0.6, pas d'issue GitHub, exe 0.8.2) : une nuit
 ignorée n'est pas un succès. Log Titley : pas de listing WAV, horaire

@@ -48,6 +48,9 @@ L'exe publié précédent reste celui de la
 - Le tutoriel décrit l'exe 0.8.5. Le PDF est régénéré.
   `docs/sitemap.xml` date la page et le PDF au 2026-10-26.
   Note : [`docs/RELEASE_v0.8.5.md`](docs/RELEASE_v0.8.5.md).
+- Réponses postées le 2026-10-26 sur les issues #12 à #19.
+  Fermées : #12, #14, #15, #16, #17, #18, #19. #13 reste ouverte.
+  #16 est fermée sans relancer la nuit du 12 août 2026.
 
 ## [0.8.4] - 2026-10-22
 
