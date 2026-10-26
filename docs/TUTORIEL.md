@@ -8,7 +8,7 @@
 
 ![Icône ChiroTool](captures/icon_256.png)
 
-**Version 0.8.4** · Tutoriel utilisateur. Pré-release : [v0.8.4](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.4). La 0.8.3 n'est pas publiée. La version stable reste [v0.8.1](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.1) tant que cette pré-release n'est pas promue.
+**Version 0.8.5** · Tutoriel utilisateur. Release stable : [v0.8.5](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.5). Les 0.8.3 et 0.8.4 ne sont pas publiées. L'exe publié précédent est la [v0.8.2](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.2).
 
 </div>
 
@@ -103,7 +103,7 @@ ChiroTool est un **logiciel portable** : pas d'installation, pas de droits
 administrateur requis.
 
 1. Récupérez le fichier **`ChiroTool.exe`** (≈ 36 Mo) auprès de votre référent ou
-   sur la [pré-release v0.8.4](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.4).
+   sur la [v0.8.5](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.5).
 2. Placez-le où vous voulez (Bureau, clé USB, disque dur externe…).
 3. Double-cliquez pour le lancer.
 
@@ -304,12 +304,12 @@ Dans cet assistant :
 - **Date de début** : la date de pose (un bouton 📅 ouvre un calendrier)
 - **N° site Tadarida** : les 6 chiffres du carré (saisie manuelle si besoin)
 - **Point** : Z1, A2, etc.
-- **Passage** : 1, 2… Le menu n'est pas pré-coché à 1 (exe 0.8.4).
+- **Passage** : 1, 2… Le menu n'est pas pré-coché à 1 (exe 0.8.5).
   S'il n'est pas choisi, le lot ignore la nuit, sauf si le Suivi le
   fournit. Un fichier déjà nommé Pass2 n'est pas réécrit Pass1.
 - **N° enregistreur** : choisissez-le dans la liste (il remplit automatiquement
   la série et le micro depuis votre parc « Mes matériels »)
-- **Heure début, heure fin** (exe 0.8.4) : `HH:MM`. Les deux, ou aucune.
+- **Heure début, heure fin** (exe 0.8.5) : `HH:MM`. Les deux, ou aucune.
   Une seule heure est refusée. Si la fin est avant le début, c'est le
   lendemain. Les deux vides ne sont pas enregistrées comme 20:00.
 - **T° début, T° fin** : entiers, optionnels.
@@ -320,7 +320,7 @@ Dans cet assistant :
 > 💡 **Astuce** : créez ou réutilisez un point une fois (carte ou pick depuis
 > les meta) → il devient le *point actif*. Au « Préparer » suivant, carré et
 > point sont préremplis s'il en manque encore un. Une nuit qui a déjà les
-> deux les garde (exe 0.8.4). Sur la fiche d’un marker : **« ★ Utiliser pour la
+> deux les garde (exe 0.8.5). Sur la fiche d’un marker : **« ★ Utiliser pour la
 > prochaine préparation »** (bouton toujours visible en bas de la fiche).
 >
 > **📍 Carte** (barre d’actions) = mode **FOCUS** : zoom sur le point de la
@@ -512,7 +512,7 @@ côté serveur. Au retour, relancez « Upload » sur les nuits concernées (ou u
 
 Le batch **n'ouvre pas** l'assistant métadonnées. Il transmet les heures
 et la météo déjà enregistrées sur chaque nuit, sans lister les WAV
-(exe 0.8.4). Une nuit sans carré, point ou passage
+(exe 0.8.5). Une nuit sans carré, point ou passage
 (jamais préparée à la main) est **ignorée**. Le journal nomme cette nuit,
 et le bilan ne la compte plus comme un succès. Une nuit déjà renommée et déjà expansée n'est
 pas refaite : les fichiers restent. S'il ne manque que l'expansion, elle
@@ -529,7 +529,7 @@ fermeture de cette fenêtre. Les nuits non cochées restent utilisables.
 Si une nuit n'a pas bougé parce que le carré ou le point manquait,
 **▶ Préparer** cette nuit **seule** (l'assistant peut les saisir), puis
 relancer le batch. Détail :
-[Nouveautés v0.8.4](#nouveautes-v084).
+[Nouveautés v0.8.5](#nouveautes-v085).
 
 ---
 
@@ -836,6 +836,12 @@ de ChiroTool. Ils ne remplacent pas l'évaluation d'activité du logiciel extern
   (bandes de confiance Tadarida, `_Vu` nuit par nuit). Distinct de
   « identifications validées seulement ». Les deux cases s'excluent. Sans `_Vu`, un rappel s'affiche :
   la relecture vise un fichier produit dans le logiciel externe.
+- **Confiance min.** (exe 0.8.5) : aucune, 50 %, 60 %, 70 %, 75 %, 80 %
+  ou 90 %. Les lignes sans identification humaine dont la proba Tadarida
+  est absente ou sous le seuil ne sont pas dessinées. Les lignes déjà
+  identifiées restent. Le menu est inutilisé si « Identifications
+  validées seulement » ou « Interprétation _Vu » est coché. Cette
+  relecture ne change pas.
 - Un `_Vu` dans `chirosurf/`, `Data_k/` **ou à la racine de la session**
   **remplace le tableur pour cette nuit seulement**. Les autres nuits de
   la participation restent lues dans l'xlsx. Cocher la relecture, chiros ou
@@ -1041,7 +1047,7 @@ canal `_0_`, tag `_T_`, préfixe `NOISE_`, espaces.
 Déposez ensuite ce dossier de WAV dans ChiroTool et lancez **Préparer**
 (rename + TE×10 + tranches 5 s) comme une nuit SM4. Le SM2 n'écrit pas de
 `Summary.txt` SM4 : dates d'après les noms de fichiers. Heures et météo
-se saisissent dans les métadonnées de la nuit (exe 0.8.4), ou dans
+se saisissent dans les métadonnées de la nuit (exe 0.8.5), ou dans
 l'assistant de participation pour un envoi unitaire.
 
 Si l'appareil enregistre déjà en **WAV trigger**, sautez Kaleidoscope.
@@ -1194,19 +1200,19 @@ Envoyez-le à votre référent ou via la page Issues du projet, cela aide à
 diagnostiquer.
 
 **« La synchronisation API ralentit, le compteur s'arrête, puis la fenêtre se fige. »**
-Corrigé dans l'exe 0.8.4. Le compteur avance sur l'interface. Appliquer
+Corrigé dans l'exe 0.8.5. Le compteur avance sur l'interface. Appliquer
 le résultat ne retélécharge plus toute la liste. Fermer la fenêtre arrête
 la récupération sans écrire le registre.
 
 **« Valider a créé plusieurs Excel presque identiques (`_AB`, puis `_AB_AC`). »**
-Corrigé dans l'exe 0.8.4. Un enregistrement réécrit un seul
+Corrigé dans l'exe 0.8.5. Un enregistrement réécrit un seul
 `participation-<id>-observations_<initiales>.xlsx` et retire les chaînes
 déjà empilées, s'il existe un tableur plus simple. Les fichiers déjà
 présents restent jusqu'à cet enregistrement. Vérifier / Réparer réécrit
 le tableur téléchargé, sous le même nom.
 
 **« Une nuit exportée, pas encore envoyée, bloque chez un collègue. Le site web l'accepte. »**
-Corrigé dans l'exe 0.8.4. L'export emporte le manifeste. Si l'identifiant
+Corrigé dans l'exe 0.8.5. L'export emporte le manifeste. Si l'identifiant
 de participation n'est pas éditable avec le compte qui envoie, ChiroTool
 crée une participation sur ce compte. Ouvrez `ChiroTool_export_…`, pas
 le dossier `Data_k`.
@@ -1232,8 +1238,8 @@ ChiroTool couvre la grande majorité des cas, mais pas (encore) tout :
   .WAC »).
 - **Modifier une participation déjà créée** (météo erronée…) :
   **Vérifier / Réparer** pousse les heures et la météo déjà enregistrées
-  sur cette nuit (exe 0.8.4). Le portail web reste utilisable.
-  Voir [Nouveautés v0.8.4](#nouveautes-v084).
+  sur cette nuit (exe 0.8.5). Le portail web reste utilisable.
+  Voir [Nouveautés v0.8.5](#nouveautes-v085).
 - **Supprimer un carré créé par erreur** : action réservée aux administrateurs
   Vigie-Chiro (contactez l'équipe du programme).
 - **Participation multi-nuits** : **📊 Synthèse** n'affiche le menu Nuit
@@ -1272,7 +1278,7 @@ ChiroTool couvre la grande majorité des cas, mais pas (encore) tout :
 | **Fenêtres** | Après **Afficher le bureau** (Win+D), recliquer ChiroTool ramène la progression. Plus besoin de tuer le process |
 | **Dates** | WAV font foi si Summary cumulé |
 | **SM2** | `.wac` / `.w4v` : conversion Kaleidoscope Lite en amont (issue #6) |
-| **v0.8.4** | La 0.8.3 n'est pas publiée. Heures, températures, vent et couverture dans les métadonnées de chaque nuit. Le lot les envoie sans formulaire. Un passage déjà écrit dans les noms n'est pas réécrit. Sans passage, la nuit est ignorée et le journal la nomme. Un `Data_k` vide n'est pas un envoi réussi, ni une préparation réussie. Points d'un carré créé par quelqu'un d'autre, violets, cliquables dans les 5 km. La fenêtre de lot ne bloque plus les autres nuits. Sync API réactive. Un seul tableur de validation. Une nuit exportée pas encore envoyée est créée sur le compte qui envoie |
+| **v0.8.5** | Release stable. Les 0.8.3 et 0.8.4 ne sont pas publiées : heures, températures, vent et couverture, lot, carte, sync, tableur et export sont dans cet exe. En plus : menu « Confiance min. » sur l'onglet Activité. Une nuit déjà analysée sur le portail n'est plus listée dans l'envoi groupé. Une seule instance. La pastille verte reste lue sur le dossier |
 
 La **v0.6** (carte pick/FOCUS, Vérifier / Réparer, export USB, météo non
 bloquante, CSV par nuit) reste le socle : voir le
@@ -1289,13 +1295,26 @@ Conception / dev : [`SPEC_v06_parcours.md`](SPEC_v06_parcours.md) · issues
 [#10](https://github.com/kevin-guille/ChiroTool/issues/10),
 [#11](https://github.com/kevin-guille/ChiroTool/issues/11).
 
-### Nouveautés v0.8.4
+### Nouveautés v0.8.5
 
-Livré dans l'exe 0.8.4 (pré-release du 2026-10-22). La 0.8.3 n'a pas
-été publiée : ce qui suit reprend aussi ce qui avait été préparé pour
-elle. La version stable publiée reste la 0.8.1 tant que cette
-pré-release n'est pas promue. L'exe 0.8.2 ne contient pas les points
-ci-dessous.
+Livré dans l'exe 0.8.5 (release stable du 2026-10-26). Les 0.8.3 et
+0.8.4 n'ont pas été publiées : ce qui suit reprend aussi ce qui avait
+été préparé pour elles. L'exe publié précédent est la 0.8.2.
+
+- **Confiance min., onglet Activité**
+  ([#12](https://github.com/kevin-guille/ChiroTool/issues/12)).
+  Menu : aucune, 50 %, 60 %, 70 %, 75 %, 80 %, 90 %. Les lignes sans
+  identification humaine passent ce seuil de proba Tadarida. Les lignes
+  déjà identifiées restent. Le menu est inutilisé avec
+  « Identifications validées seulement » ou « Interprétation _Vu ».
+  Cette relecture ne change pas.
+- **Envoi groupé, nuit déjà analysée**
+  ([#14](https://github.com/kevin-guille/ChiroTool/issues/14)).
+  Si le portail dit la nuit terminée, les WAV ne sont pas listés et
+  ne sont pas renvoyés. Le tableur manquant est téléchargé sans
+  attendre Tadarida. S'il est déjà dans le dossier, la nuit est
+  marquée envoyée. Une seule instance : la fenêtre de suivi reste
+  ouverte, les autres nuits restent utilisables.
 
 - **Sync API**. Le compteur avance sur l'interface, par paquets.
   Fermer la fenêtre arrête la récupération sans écrire le registre.

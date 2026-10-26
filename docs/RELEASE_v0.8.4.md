@@ -1,6 +1,10 @@
 # ChiroTool v0.8.4 : lot, sync, tableur
 
-Pré-release du 2026-10-22. La 0.8.3 n'est pas publiée.
+**Non publiée.** Le contenu est repris par la release stable 0.8.5.
+Les deux limites en fin de note (listing du lot, seuil Activité)
+sont levées dans cette 0.8.5.
+
+Pré-release locale du 2026-10-22. La 0.8.3 n'est pas publiée.
 Cette note reprend son contenu, et ajoute la sync, le tableur
 de validation et l'export vers un autre compte.
 La Latest reste la

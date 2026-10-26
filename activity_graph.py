@@ -227,6 +227,42 @@ def _contact_key_from_filename(fname_s: str, taxon: str, bin_minutes: int):
     return key, mins
 
 
+def _min_tadarida_threshold(value) -> float | None:
+    """Seuil 0–1. ``50`` ou ``"50"`` veut dire 50 %. Illisible → None."""
+    if value is None or value == "":
+        return None
+    if isinstance(value, str):
+        value = value.strip().replace(",", ".")
+        if not value:
+            return None
+    try:
+        thr = float(value)
+    except (TypeError, ValueError):
+        return None
+    if thr != thr or thr < 0.0 or thr == float("inf"):
+        return None
+    if thr > 1.0:
+        thr = thr / 100.0
+    return thr
+
+
+def _tadarida_proba_value(value) -> float | None:
+    """Probabilité Tadarida lisible, sinon None. Virgule acceptée."""
+    if value in (None, ""):
+        return None
+    if isinstance(value, str):
+        value = value.strip().replace(",", ".")
+        if not value:
+            return None
+    try:
+        x = float(value)
+    except (TypeError, ValueError):
+        return None
+    if x != x or x < 0.0 or x == float("inf"):
+        return None
+    return x
+
+
 def aggregate_rows(headers, rows, *,
                    bin_minutes: int = 30,
                    taxon_filter: str | None = None,
@@ -234,6 +270,7 @@ def aggregate_rows(headers, rows, *,
                    use_observer_taxon: bool = False,
                    chiros_only: bool = False,
                    use_mnhn: bool = False,
+                   min_tadarida_prob: float | None = None,
                    ) -> dict[tuple[str, str, int | None, str, str], list[int]]:
     """Agrège des lignes d'observations en
     ``{(site, point, passage, night_date, taxon): bins}``.
@@ -246,7 +283,12 @@ def aggregate_rows(headers, rows, *,
     - ``use_mnhn`` : relecture d’un ``_Vu`` produit dans le logiciel externe
       (même règle que la Synthèse). Ce calcul n’est pas l’évaluation
       d’activité du logiciel externe.
-      Prime sur ``use_only_validated`` et ``use_observer_taxon``.
+      Prime sur ``use_only_validated``, ``use_observer_taxon`` et
+      ``min_tadarida_prob``.
+    - ``min_tadarida_prob`` : sur les lignes sans identification humaine,
+      ignore une proba Tadarida absente ou inférieure au seuil.
+      Les lignes avec ``validateur_taxon`` ou ``observateur_taxon``
+      restent. Inutilisé quand ``use_mnhn`` est vrai.
     """
     if bin_minutes <= 0 or 1440 % bin_minutes != 0:
         raise ValueError("bin_minutes doit diviser 1440 (1, 5, 15, 30, 60…)")
@@ -259,6 +301,7 @@ def aggregate_rows(headers, rows, *,
     idx_validateur = idx.get("validateur_taxon")
     idx_observateur = idx.get("observateur_taxon")
     idx_tadarida = idx.get("tadarida_taxon")
+    idx_proba = idx.get("tadarida_probabilite")
     if idx_filename is None:
         return {}
 
@@ -289,6 +332,8 @@ def aggregate_rows(headers, rows, *,
             _add(str(fname), taxon)
         return result
 
+    thr = _min_tadarida_threshold(min_tadarida_prob)
+
     for r in rows:
         if not r or len(r) <= idx_filename:
             continue
@@ -309,6 +354,10 @@ def aggregate_rows(headers, rows, *,
         else:
             if use_only_validated and not (val_s or obs_s):
                 continue
+            if thr is not None and not (val_s or obs_s):
+                p = _tadarida_proba_value(_cell(r, idx_proba))
+                if p is None or p < thr:
+                    continue
             row_lookup = {i: r[i] if i < len(r) else None for i in range(len(r))}
             taxon = best_taxon(row_lookup, idx_validateur,
                                 idx_observateur, idx_tadarida) or "(?)"
@@ -509,6 +558,7 @@ def aggregate_xlsx(xlsx_path: Path, *,
                     use_observer_taxon: bool = False,
                     chiros_only: bool = False,
                     use_mnhn: bool = False,
+                    min_tadarida_prob: float | None = None,
                     ) -> dict[tuple[str, str, int | None, str, str], list[int]]:
     """Agrège un xlsx **ou** un CSV ``_Vu`` par nuit."""
     result: dict[tuple[str, str, int | None, str, str], list[int]] = {}
@@ -521,6 +571,7 @@ def aggregate_xlsx(xlsx_path: Path, *,
             use_observer_taxon=use_observer_taxon,
             chiros_only=chiros_only,
             use_mnhn=use_mnhn,
+            min_tadarida_prob=min_tadarida_prob,
         )
         for k, bins in partial.items():
             if k not in result:

@@ -514,7 +514,9 @@ def run_upload_flow(session_path: Path, meta, token: str,
     ``participation_payload`` : payload collecté par le wizard GUI
     (météo, config, commentaire, dates). Si None, des défauts sont utilisés.
     """
-    from pipeline import run_phase_upload, run_phase_wait, run_phase_fetch
+    from pipeline import (
+        run_phase_fetch, run_phase_upload, run_phase_wait, upload_followup,
+    )
 
     def worker(log, progress=None):
         log(f"Session : {session_path}")
@@ -536,6 +538,18 @@ def run_upload_flow(session_path: Path, meta, token: str,
         if dry_run:
             log("(dry-run → on saute wait + fetch)")
             return r
+        mode = upload_followup(r)
+        if mode == "done":
+            log("Nuit déjà analysée, tableur déjà dans le dossier.")
+            return r
+        if mode == "fetch":
+            log("")
+            log("=== Phase FETCH (nuit déjà analysée) ===")
+            return _capture_stdout(
+                lambda: run_phase_fetch(
+                    session_path, token=token, force=False, progress=progress),
+                log,
+            )
 
         log("")
         log("=== Phase WAIT Tadarida ===")

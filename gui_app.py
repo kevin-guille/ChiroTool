@@ -849,7 +849,7 @@ class ChiroToolApp(ctk.CTk):
         import threading
         from concurrent.futures import ThreadPoolExecutor, as_completed
         from credentials import load_token
-        from pipeline import run_phase_fetch, run_phase_wait
+        from pipeline import run_phase_fetch, run_phase_wait, upload_followup
 
         token = load_token()
         if not token:
@@ -869,6 +869,24 @@ class ChiroToolApp(ctk.CTk):
                     log(f"{tag} {msg}")
 
             try:
+                mode = upload_followup(entry.get("result"))
+                if mode == "done":
+                    _slog("nuit déjà analysée, tableur déjà dans le dossier")
+                    return entry
+                if mode == "fetch":
+                    _slog("nuit déjà analysée, téléchargement du tableur")
+                    r_fetch = run_phase_fetch(session_path, token=token,
+                                                force=False)
+                    if r_fetch.get("error"):
+                        _slog(f"⚠ fetch erreur : {r_fetch['error']}")
+                    else:
+                        _slog(
+                            "✓ fetch OK "
+                            f"({r_fetch.get('n_contacts', '?')} contacts)"
+                        )
+                    entry["fetch"] = r_fetch
+                    return entry
+
                 _slog("⏳ wait Tadarida (poll 60s)…")
                 r_wait = run_phase_wait(session_path, token=token,
                                           poll_interval=60)
@@ -1303,8 +1321,8 @@ class ChiroToolApp(ctk.CTk):
                 "Fermer ChiroTool arrête l'envoi local des fichiers. "
                 "Si Tadarida a déjà démarré sur Vigie-Chiro, elle continue.\n\n"
                 "Au prochain lancement, Upload reprend l'envoi. "
-                "Si la nuit est déjà analysée, Vérifier / Réparer "
-                "récupère le tableur sans relister les WAV.\n\n"
+                "Si le portail dit la nuit déjà analysée, Upload et "
+                "Vérifier / Réparer ne relistent pas les WAV.\n\n"
                 "Fermer quand même ?",
             ):
                 return

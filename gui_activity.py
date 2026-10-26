@@ -87,6 +87,7 @@ class ActivityPanel(ctk.CTkFrame):
         self._use_mnhn = False
         self._chiros_only = False
         self._observer_taxon = False
+        self._min_tadarida_prob = None
         # Mode d'agrégation : "cumul" (toute la sélection sommée) ou
         # "par_point" (1 courbe par point dans la sélection)
         self._group_by_point = False
@@ -106,7 +107,7 @@ class ActivityPanel(ctk.CTkFrame):
     def _build_toolbar(self):
         bar = ctk.CTkFrame(self, fg_color="transparent")
         bar.grid(row=0, column=0, columnspan=2, sticky="ew", padx=8, pady=(8, 4))
-        bar.grid_columnconfigure(5, weight=1)
+        bar.grid_columnconfigure(7, weight=1)
 
         ctk.CTkLabel(
             bar, text="Activité",
@@ -139,13 +140,26 @@ class ActivityPanel(ctk.CTkFrame):
             command=self._on_mnhn_toggle,
         ).grid(row=0, column=4, padx=(0, 8))
 
+        # Seuil d'affichage des lignes sans identification humaine.
+        # Inutilisé avec « validées seulement » ou « Interprétation _Vu ».
+        ctk.CTkLabel(bar, text="Confiance min. :",
+                      font=ctk.CTkFont(size=11)).grid(
+            row=0, column=5, padx=(0, 4))
+        self.conf_var = ctk.StringVar(value="aucune")
+        self.conf_menu = ctk.CTkOptionMenu(
+            bar, variable=self.conf_var, width=90,
+            values=["aucune", "50 %", "60 %", "70 %", "75 %", "80 %", "90 %"],
+            command=self._on_conf_change,
+        )
+        self.conf_menu.grid(row=0, column=6, padx=(0, 8))
+
         ctk.CTkButton(
             bar, text="⟳ Recharger", height=28, width=110,
             fg_color=("gray85", "gray25"),
             text_color=("gray15", "gray90"),
             hover_color=("gray75", "gray35"),
             command=self.refresh,
-        ).grid(row=0, column=6, padx=(0, 4))
+        ).grid(row=0, column=8, padx=(0, 4))
 
         # Bouton "Exporter" : capture le graphe + légende en PNG (sans perte).
         # Format unique PNG : qualité parfaite, supporte la transparence, taille
@@ -157,14 +171,14 @@ class ActivityPanel(ctk.CTkFrame):
             text_color="white",
             hover_color=("#1158c7", "#1158c7"),
             command=self._on_export_png,
-        ).grid(row=0, column=7, padx=(0, 8))
+        ).grid(row=0, column=9, padx=(0, 8))
 
         self.status_lbl = ctk.CTkLabel(
             bar, text="(aucun workspace)",
             font=ctk.CTkFont(size=10),
             text_color=("gray40", "gray60"), anchor="e",
         )
-        self.status_lbl.grid(row=0, column=5, sticky="e", padx=(0, 8))
+        self.status_lbl.grid(row=0, column=7, sticky="e", padx=(0, 8))
 
     # =========================================================================
     # UI : panneau filtres (gauche)
@@ -430,13 +444,28 @@ class ActivityPanel(ctk.CTkFrame):
         self._reload_from_disk()
 
     def _agg_kwargs(self) -> dict:
+        thr = None
+        if not self._only_validated and not self._use_mnhn:
+            thr = self._min_tadarida_prob
         return dict(
             bin_minutes=self._bin_minutes,
             use_only_validated=self._only_validated,
             use_observer_taxon=self._observer_taxon,
             chiros_only=self._chiros_only,
             use_mnhn=self._use_mnhn,
+            min_tadarida_prob=thr,
         )
+
+    def _sync_conf_menu(self):
+        """Le seuil ne s'applique pas aux lignes déjà identifiées, ni au _Vu."""
+        busy = self._only_validated or self._use_mnhn
+        menu = getattr(self, "conf_menu", None)
+        if menu is None:
+            return
+        try:
+            menu.configure(state="disabled" if busy else "normal")
+        except Exception:
+            pass
 
     def _schedule(self, fn, *args):
         """after(0) depuis un thread : ignore si la fenêtre est déjà fermée."""
@@ -882,11 +911,25 @@ class ActivityPanel(ctk.CTkFrame):
         self._bin_minutes = bins.get(value, 30)
         self._reaggregate()
 
+    def _on_conf_change(self, value: str):
+        labels = {
+            "aucune": None,
+            "50 %": 0.50,
+            "60 %": 0.60,
+            "70 %": 0.70,
+            "75 %": 0.75,
+            "80 %": 0.80,
+            "90 %": 0.90,
+        }
+        self._min_tadarida_prob = labels.get(value)
+        self._reaggregate()
+
     def _on_validated_toggle(self):
         if self.validated_var.get():
             self.mnhn_var.set(False)
             self._use_mnhn = False
         self._only_validated = bool(self.validated_var.get())
+        self._sync_conf_menu()
         self._reaggregate()
 
     def _on_mnhn_toggle(self):
@@ -896,6 +939,7 @@ class ActivityPanel(ctk.CTkFrame):
             self.observer_taxon_var.set(False)
             self._observer_taxon = False
         self._use_mnhn = bool(self.mnhn_var.get())
+        self._sync_conf_menu()
         self._reaggregate()
 
     def _on_chiros_toggle(self):
@@ -1027,6 +1071,10 @@ class ActivityPanel(ctk.CTkFrame):
             sub_parts.append("relecture _Vu")
         if self._only_validated:
             sub_parts.append("validés humains uniquement")
+        if (self._min_tadarida_prob is not None
+                and not self._use_mnhn and not self._only_validated):
+            pct = int(round(self._min_tadarida_prob * 100))
+            sub_parts.append(f"confiance min. {pct} %")
         if self._observer_taxon:
             sub_parts.append("taxons observateur")
         if self._chiros_only:

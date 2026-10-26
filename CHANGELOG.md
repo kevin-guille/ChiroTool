@@ -3,9 +3,59 @@
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 Les versions publiées suivent le SemVer du fichier `version.py` / tags GitHub.
 
+## [0.8.5] - 2026-10-26
+
+`version.py` = `0.8.5` (build 2026-10-26). **Release stable**, à publier
+en Latest (pas en pré-release).
+Les builds locaux 0.8.3 (2026-10-18) et 0.8.4 (2026-10-22) ne sont pas
+publiés. Cette version reprend leur contenu et ajoute le seuil de
+confiance de l'onglet Activité et le raccourci des nuits déjà analysées
+dans l'envoi groupé.
+`ChiroTool.exe` : 37471903 octets, FileVersion 0.8.5.0, SHA-256
+`5653D4FC53D646820AF8B378A2A44BFFAC45C9999B627BA37852068C6E414B4B`.
+La Latest publiée reste
+[v0.8.1](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.1)
+tant que cette release n'est pas créée.
+L'exe publié précédent reste celui de la
+[v0.8.2](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.2).
+
+### Ajouté
+
+- **Activité** : menu « Confiance min. » (aucune, 50 %, 60 %, 70 %,
+  75 %, 80 %, 90 %). Une ligne sans identification humaine est ignorée
+  si sa proba Tadarida est absente ou sous le seuil. Une ligne avec
+  taxon observateur ou validateur reste. Le menu est inutilisé quand
+  « Identifications validées seulement » ou « Interprétation _Vu »
+  est coché. La relecture d'un `_Vu` ne change pas.
+
+### Corrigé
+
+- **Envoi groupé** : si le portail dit la nuit TERMINE ou FINI, les WAV
+  ne sont pas listés et ne sont pas renvoyés. Le tableur manquant est
+  téléchargé sans attendre Tadarida. S'il est déjà dans le dossier, la
+  nuit est marquée envoyée. Une lecture d'état en échec ne saute pas
+  le listing. Un jeton expiré arrête toujours le lot.
+
+### Inchangé
+
+- Une seule instance. Pendant un lot, la fenêtre de suivi reste ouverte
+  et les autres nuits restent utilisables dans la même fenêtre.
+- La pastille verte reste lue sur le dossier de la nuit.
+- Une nuit que le portail marque déjà terminée n'est pas revérifiée
+  fichier par fichier.
+
+### Documentation
+
+- Le tutoriel décrit l'exe 0.8.5. Le PDF est régénéré.
+  `docs/sitemap.xml` date la page et le PDF au 2026-10-26.
+  Note : [`docs/RELEASE_v0.8.5.md`](docs/RELEASE_v0.8.5.md).
+
 ## [0.8.4] - 2026-10-22
 
-`version.py` = `0.8.4` (build 2026-10-22). **Pré-release**.
+**Non publiée.** Le tag `v0.8.4` n'est pas créé. Son contenu est livré
+par la 0.8.5.
+
+`version.py` = `0.8.4` (build 2026-10-22). **Pré-release locale**.
 La 0.8.3 du 2026-10-18 n'est pas publiée. Cette version reprend
 son contenu (lot, métadonnées, carte) et ajoute les trois correctifs
 ci-dessous.

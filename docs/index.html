@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
-<title>ChiroTool — Automatiser le traitement Vigie-Chiro Point Fixe (chiroptères)</title>
-<meta name="description" content="ChiroTool v0.8.4 prépare, envoie et suit les nuits Vigie-Chiro Point Fixe (MNHN) : renommage, TE×10, upload, Tadarida, synthèse de campagne, CSV par nuit optionnel, Titley, Vérifier/Réparer, carte, nettoyage et registre. Logiciel libre, pas un outil officiel du MNHN.">
+<title>ChiroTool : automatiser le traitement Vigie-Chiro Point Fixe (chiroptères)</title>
+<meta name="description" content="ChiroTool v0.8.5 prépare, envoie et suit les nuits Vigie-Chiro Point Fixe (MNHN) : renommage, TE×10, upload, Tadarida, synthèse de campagne, CSV par nuit optionnel, Titley, Vérifier/Réparer, carte, nettoyage et registre. Logiciel libre, pas un outil officiel du MNHN.">
 <meta name="keywords" content="ChiroTool, Vigie-Chiro, Point Fixe, chiroptères, chauves-souris, Tadarida, Kaleidoscope, expansion temporelle, bioacoustique, ultrasons, MNHN, logiciel libre, open source, bureau d'études, Kevin Guille">
 <meta name="author" content="Kevin Guille">
 <link rel="canonical" href="https://kevin-guille.github.io/ChiroTool/">
@@ -13,14 +13,14 @@
 <!-- Open Graph / réseaux sociaux -->
 <meta property="og:type" content="website">
 <meta property="og:locale" content="fr_FR">
-<meta property="og:title" content="ChiroTool v0.8.4 : le traitement Vigie-Chiro Point Fixe automatisé">
+<meta property="og:title" content="ChiroTool v0.8.5 : le traitement Vigie-Chiro Point Fixe automatisé">
 <meta property="og:description" content="Logiciel libre pour naturalistes et BE : renommage, TE×10 (Titley compris), upload, Tadarida, synthèse de campagne, CSV par nuit optionnel.">
 <meta property="og:url" content="https://kevin-guille.github.io/ChiroTool/">
 <meta property="og:image" content="https://kevin-guille.github.io/ChiroTool/captures/05-fenetre-principale.png">
 <meta property="og:site_name" content="ChiroTool">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="ChiroTool v0.8.4 : traitement Vigie-Chiro Point Fixe automatisé">
-<meta name="twitter:description" content="v0.8.4 : préparation, envoi et suivi des nuits Point Fixe. TE×10 Titley intégral.">
+<meta name="twitter:title" content="ChiroTool v0.8.5 : traitement Vigie-Chiro Point Fixe automatisé">
+<meta name="twitter:description" content="v0.8.5 : préparation, envoi et suivi des nuits Point Fixe. TE×10 Titley intégral.">
 <meta name="twitter:image" content="https://kevin-guille.github.io/ChiroTool/captures/05-fenetre-principale.png">
 
 <link rel="icon" type="image/png" href="captures/icon_256.png">
@@ -36,10 +36,10 @@
       "operatingSystem": "Windows",
       "applicationCategory": "ScientificApplication",
       "applicationSubCategory": "Bioacoustique / traitement Vigie-Chiro",
-      "softwareVersion": "0.8.4",
+      "softwareVersion": "0.8.5",
       "description": "Logiciel libre qui prépare, envoie et suit les enregistrements ultrason du protocole Vigie-Chiro Point Fixe (MNHN) : renommage, expansion temporelle TE×10, participation et upload API, suivi Tadarida, synthèse de campagne, CSV optionnel pour ouvrir une nuit dans le logiciel externe, Titley Swift/Ranger, Vérifier/Réparer, carte, nettoyage, registre. ChiroTool n'est pas un outil officiel du MNHN.",
       "url": "https://kevin-guille.github.io/ChiroTool/",
-      "downloadUrl": "https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.4",
+      "downloadUrl": "https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.5",
       "softwareHelp": "https://kevin-guille.github.io/ChiroTool/ChiroTool-Tutoriel.pdf",
       "license": "https://opensource.org/licenses/MIT",
       "inLanguage": "fr",
@@ -375,12 +375,12 @@
     <a class="brand" href="#">
       <img src="captures/icon_256.png" alt="Logo ChiroTool">
       ChiroTool
-      <span class="ver">v0.8.4</span>
+      <span class="ver">v0.8.5</span>
     </a>
     <span class="spacer"></span>
     <div class="links">
       <a class="link hide-sm" href="#pourquoi">Pourquoi</a>
-      <a class="link hide-sm" href="#nouveautes">v0.8.4</a>
+      <a class="link hide-sm" href="#nouveautes">v0.8.5</a>
       <a class="link hide-sm" href="#fonctions">Fonctions</a>
       <a class="link hide-sm" href="#apercu">Aperçu</a>
       <a class="link hide-sm" href="#public">Pour qui</a>
@@ -393,7 +393,7 @@
 <header class="hero">
   <div class="wrap hero-grid">
     <div>
-      <div class="pill"><span class="dot"></span> pré-release v0.8.4 : lot, sync, tableur</div>
+      <div class="pill"><span class="dot"></span> v0.8.5 : activité, lot, sync</div>
       <h1>Préparer, envoyer et suivre vos nuits chiroptères.</h1>
       <p class="tag">Logiciel libre pour le protocole Vigie-Chiro Point Fixe (MNHN).</p>
       <p class="lead">
@@ -419,7 +419,7 @@
       <div class="hero-shot-wrap">
         <img class="hero-shot" src="captures/05-fenetre-principale.png"
              alt="Fenêtre principale de ChiroTool : liste des nuits et détail de session">
-        <div class="hero-badge">Interface v0.8.4 · préparation et suivi</div>
+        <div class="hero-badge">Interface v0.8.5 · préparation et suivi</div>
       </div>
     </div>
   </div>
@@ -501,8 +501,8 @@
   <div class="wrap">
     <div class="banner-v">
       <div>
-        <strong>Pré-release v0.8.4</strong>
-        <span> : la 0.8.3 n'est pas publiée. Heures et météo dans les métadonnées de chaque nuit, transmises par l'envoi groupé sans formulaire (issue #15). Un passage déjà écrit n'est pas réécrit, un Data_k vide n'est plus un envoi réussi ni une préparation réussie, le journal nomme les nuits ignorées, un jeton expiré arrête le lot, et la fenêtre de suivi ne bloque plus les autres nuits (issues #14, #16, #17, #18). Les points d'un carré créé par quelqu'un d'autre restent cliquables dans les 5 km, en violet (issue #19). La sync API reste réactive au-delà de plusieurs centaines de nuits. Un enregistrement de validation n'empile plus les tableurs. Une nuit exportée pas encore envoyée est créée sur le compte qui envoie. On remplace seulement l'exe : dossiers, registre et participations déjà créées restent. Stable : v0.8.1. La relecture d'un fichier _Vu ne change pas.</span>
+        <strong>v0.8.5</strong>
+        <span> : release stable. Les 0.8.3 et 0.8.4 ne sont pas publiées. Menu « Confiance min. » sur l'onglet Activité (issue #12). Une nuit déjà analysée sur le portail n'est plus listée dans l'envoi groupé (issue #14). Heures et météo transmises par le lot sans formulaire (issue #15). Un passage déjà écrit n'est pas réécrit, un Data_k vide n'est plus un envoi réussi, le journal nomme les nuits ignorées, un jeton expiré arrête le lot. Une seule instance : la fenêtre de suivi ne bloque plus les autres nuits (issues #17, #18). Les points d'un carré créé par quelqu'un d'autre restent cliquables dans les 5 km, en violet (issue #19). La sync API reste réactive. Un enregistrement de validation n'empile plus les tableurs. Une nuit exportée pas encore envoyée est créée sur le compte qui envoie. On remplace seulement l'exe : dossiers, registre et participations déjà créées restent. La pastille verte reste lue sur le dossier. La relecture d'un fichier _Vu ne change pas.</span>
       </div>
       <a class="btn outline sm" href="https://github.com/kevin-guille/ChiroTool/releases">Voir les releases →</a>
     </div>
@@ -732,14 +732,14 @@
 
 <section id="telecharger" class="dl">
   <div class="wrap">
-    <div class="pill" style="margin:0 auto 18px"><span class="dot"></span> pré-release v0.8.4 · 22 octobre 2026</div>
-    <h2>Téléchargez ChiroTool v0.8.4</h2>
+    <div class="pill" style="margin:0 auto 18px"><span class="dot"></span> v0.8.5 · 26 octobre 2026</div>
+    <h2>Téléchargez ChiroTool v0.8.5</h2>
     <p>
       Logiciel portable Windows (≈&nbsp;36&nbsp;Mo). Aucune installation,
       aucun droit administrateur. Traitez une nuit test dès ce soir.
     </p>
     <div class="cta">
-      <a class="btn lg" href="https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.4">⬇ Pré-release v0.8.4 (.exe)</a>
+      <a class="btn lg" href="https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.5">⬇ ChiroTool v0.8.5 (.exe)</a>
       <a class="btn lg ghost" href="ChiroTool-Tutoriel.pdf">📖 Tutoriel complet (PDF)</a>
       <a class="btn lg ghost" href="https://github.com/kevin-guille/ChiroTool">Code source</a>
     </div>
@@ -773,7 +773,7 @@
       <h4>Le projet</h4>
       <p>
         <a href="https://github.com/kevin-guille/ChiroTool">Code source (GitHub)</a><br>
-        <a href="https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.4">Télécharger la pré-release</a><br>
+        <a href="https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.5">Télécharger v0.8.5</a><br>
         <a href="ChiroTool-Tutoriel.pdf">Tutoriel PDF</a><br>
         <a href="https://github.com/kevin-guille/ChiroTool/blob/main/README.md">README</a><br>
         <a href="https://github.com/kevin-guille/ChiroTool/blob/main/CHANGELOG.md">Changelog</a><br>

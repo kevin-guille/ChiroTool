@@ -966,7 +966,12 @@ class TestEmptyDataKIsNotUploaded:
         def unreadable(self, pid):
             raise TokenExpiredError("token Vigie-Chiro invalide ou expiré")
 
+        def participation_status(self, participation_id):
+            return {"etat": "EN_COURS"}
+
         monkeypatch.setattr(VigieChiroClient, "get_participation", unreadable)
+        monkeypatch.setattr(VigieChiroClient, "participation_status",
+                            participation_status)
         monkeypatch.setattr(VigieChiroClient, "list_participation_files", listed)
         monkeypatch.setattr(VigieChiroClient, "upload_wav", upload_wav)
         res = run_phase_upload(
@@ -1086,6 +1091,112 @@ class TestEmptyDataKIsNotUploaded:
         assert "drop_foreign_participation" not in steps
         assert ("wav", "part1", "f0.wav") in uploaded
         assert not res.get("error")
+
+    def _owner_get(self):
+        from types import SimpleNamespace
+
+        def get_participation(self, pid):
+            return SimpleNamespace(
+                raw={"_id": pid, "observateur": {"_id": "colleague"}},
+            )
+
+        return get_participation
+
+    def test_terminal_night_does_not_list_wavs(self, tmp_path, monkeypatch):
+        """TERMINE ou FINI : pas de listing, pas d'envoi. Tableur manquant : fetch."""
+        from manifest import Manifest
+        from pipeline import run_phase_upload, upload_followup
+        from vigiechiro_api import VigieChiroClient
+
+        session = self._ready(tmp_path, 3)
+        uploaded = self._patch_upload_client(
+            monkeypatch, get_participation=self._owner_get())
+
+        def status(self, pid):
+            return {"etat": "fini"}
+
+        monkeypatch.setattr(VigieChiroClient, "participation_status", status)
+        res = run_phase_upload(
+            session, self._meta(), dry_run=False, token="x" * 16, max_workers=1)
+        kinds = [item[0] for item in uploaded]
+        assert "list" not in kinds
+        assert "wav" not in kinds
+        assert res.get("already_analyzed") is True
+        assert res.get("skip_wait") is True
+        assert res.get("fetch_without_wait") is True
+        assert upload_followup(res) == "fetch"
+        assert not res.get("error")
+        loaded = Manifest.load(session)
+        assert not loaded.is_done("upload")
+        assert loaded.meta.get("vigiechiro_participation_id") == "part1"
+
+    def test_terminal_night_with_xlsx_skips_fetch(self, tmp_path, monkeypatch):
+        from manifest import Manifest
+        from pipeline import run_phase_upload, upload_followup
+        from vigiechiro_api import VigieChiroClient
+
+        session = self._ready(tmp_path, 2)
+        (session / "participation-part1-observations.xlsx").write_bytes(b"PK")
+        uploaded = self._patch_upload_client(
+            monkeypatch, get_participation=self._owner_get())
+
+        def status(self, pid):
+            return {"etat": "TERMINE"}
+
+        monkeypatch.setattr(VigieChiroClient, "participation_status", status)
+        res = run_phase_upload(
+            session, self._meta(), dry_run=False, token="x" * 16, max_workers=1)
+        kinds = [item[0] for item in uploaded]
+        assert "list" not in kinds
+        assert "wav" not in kinds
+        assert res.get("fetch_skipped") is True
+        assert upload_followup(res) == "done"
+        assert Manifest.load(session).is_done("upload")
+
+    def test_unreadable_status_still_lists_files(self, tmp_path, monkeypatch):
+        """Un état illisible n'est pas une nuit déjà analysée."""
+        from pipeline import run_phase_upload
+        from vigiechiro_api import VigieChiroClient
+
+        session = self._ready(tmp_path, 1)
+        uploaded = self._patch_upload_client(
+            monkeypatch, get_participation=self._owner_get())
+
+        def status(self, pid):
+            raise OSError("offline")
+
+        monkeypatch.setattr(VigieChiroClient, "participation_status", status)
+        res = run_phase_upload(
+            session, self._meta(), dry_run=False, token="x" * 16, max_workers=1)
+        assert ("list", "part1") in uploaded
+        assert ("wav", "part1", "f0.wav") in uploaded
+        assert not res.get("already_analyzed")
+        assert not res.get("stop_batch")
+
+    def test_status_token_expired_stops_before_listing(
+            self, tmp_path, monkeypatch):
+        from manifest import Manifest
+        from pipeline import run_phase_upload
+        from vigiechiro_api import TokenExpiredError, VigieChiroClient
+
+        session = self._ready(tmp_path, 2)
+        uploaded = self._patch_upload_client(
+            monkeypatch, get_participation=self._owner_get())
+
+        def status(self, pid):
+            raise TokenExpiredError("token Vigie-Chiro invalide ou expiré")
+
+        monkeypatch.setattr(VigieChiroClient, "participation_status", status)
+        res = run_phase_upload(
+            session, self._meta(), dry_run=False, token="x" * 16, max_workers=1)
+        kinds = [item[0] for item in uploaded]
+        assert "list" not in kinds
+        assert "wav" not in kinds
+        assert res.get("stop_batch") is True
+        assert "expir" in res.get("error", "").lower()
+        loaded = Manifest.load(session)
+        assert not loaded.is_done("upload")
+        assert loaded.meta.get("vigiechiro_participation_id") == "part1"
 
 
 # =========================================================================
@@ -1764,6 +1875,48 @@ class TestActivityAggregate:
         assert syn["total_contacts"] == 102
         assert sum(sum(b) for b in out.values()) == 102
         assert {k[-1] for k in out} == {"Nyclei"}
+
+    def test_min_tadarida_keeps_human_ids(self):
+        from activity_graph import aggregate_rows
+        headers = ["nom du fichier", "tadarida_taxon", "tadarida_probabilite",
+                   "observateur_taxon", "validateur_taxon"]
+        rows = [
+            [self._fname(), "Pippip", 0.9, "", ""],
+            [self._fname("211000"), "Pippip", 0.2, "", ""],
+            [self._fname("212000"), "Barbar", 0.1, "Barbar", ""],
+            [self._fname("213000"), "Nyclei", "", "", "Nyclei"],
+            [self._fname("214000"), "Pipnat", None, "", ""],
+            [self._fname("215000"), "Myodau", "0,8", "", ""],
+        ]
+        out = aggregate_rows(
+            headers, rows, bin_minutes=60, min_tadarida_prob=0.5)
+        assert {k[-1] for k in out} == {"Pippip", "Barbar", "Nyclei", "Myodau"}
+        out50 = aggregate_rows(
+            headers, rows, bin_minutes=60, min_tadarida_prob=50)
+        assert {k[-1] for k in out50} == {"Pippip", "Barbar", "Nyclei", "Myodau"}
+
+    def test_min_tadarida_does_not_change_vu_reread(self):
+        from activity_graph import aggregate_rows
+        headers = ["nom du fichier", "tadarida_taxon", "tadarida_probabilite",
+                   "observateur_taxon"]
+
+        def fname(i):
+            total = 21 * 3600 + i
+            h, rem = divmod(total, 3600)
+            m, s = divmod(rem, 60)
+            return (f"Car212097-2026-Pass1-Z1-SMU03126_20260821_"
+                    f"{h:02d}{m:02d}{s:02d}.wav")
+
+        rows = ([[fname(0), "Nyclei", 0.95, "Nyclei"]]
+                + [[fname(1 + i), "Nyclei", 0.95, ""] for i in range(70)]
+                + [[fname(71 + i), "Nyclei", 0.85, ""] for i in range(7)]
+                + [[fname(78 + i), "Nyclei", 0.40, ""] for i in range(24)])
+        plain = aggregate_rows(headers, rows, bin_minutes=30, use_mnhn=True)
+        filtered = aggregate_rows(
+            headers, rows, bin_minutes=30, use_mnhn=True,
+            min_tadarida_prob=0.99)
+        assert sum(sum(b) for b in plain.values()) == 71
+        assert sum(sum(b) for b in filtered.values()) == 71
 
     def test_vu_csv_does_not_hide_other_nights(self, tmp_path):
         """Un _Vu nuit 1 ne doit pas faire disparaître la nuit 2 de l'xlsx."""

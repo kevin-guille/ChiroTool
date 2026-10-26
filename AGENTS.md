@@ -50,20 +50,25 @@ dans un texte lu par un humain. Voix « je » sur le contenu public.
   (trois commits plus tôt : `924cbe2`, `f1d4e2c`, `a140a94`, scan et pastille).
   L'exe publié correspond à `a140a94`, pas à l'arbre du tag.
   Ne pas déplacer ce tag sans demande explicite.
-- Pré-release locale **0.8.4** (build 2026-10-22). `version.py` = `0.8.4`.
-  L'exe est `dist\ChiroTool.exe`, 37469168 octets, FileVersion 0.8.4.0,
-  SHA-256 `EA70113C659FE8A5A8955BB278FFF59F3F71D18D09BC76C416F6FC010FF96A15`.
-  La 0.8.3 n'est pas publiée. Le tag GitHub `v0.8.4` et l'asset ne sont
-  pas publiés tant que Kevin ne le demande pas. Latest reste `v0.8.1`.
-  L'asset publié reste celui de la 0.8.2 tant que cette release n'est
-  pas créée.
-  Ce binaire reprend le contenu prévu pour la 0.8.3 (journal des nuits
-  ignorées, préparation qui laisse `Data_k` sans WAV en erreur, heures
-  et météo, points violets) et les trois correctifs du §0.9 (sync API,
-  tableur de validation, export vers un autre compte).
-  L'exe local 0.8.3 du 2026-10-18 (37463806 octets, SHA-256
+- Release stable locale **0.8.5** (build 2026-10-26), prévue en Latest,
+  pas en pré-release. `version.py` = `0.8.5`. Les builds 0.8.3 et 0.8.4
+  ne sont pas publiés. Le tag GitHub `v0.8.5` et l'asset ne sont pas
+  publiés tant que Kevin ne le demande pas. Latest publiée reste
+  `v0.8.1`. L'asset publié reste celui de la 0.8.2 tant que cette
+  release n'est pas créée.
+  Ce binaire reprend le contenu prévu pour la 0.8.3 et la 0.8.4
+  (journal des nuits ignorées, `Data_k` vide en erreur, heures et
+  météo, points violets, sync API, tableur de validation, export vers
+  un autre compte) plus le seuil « Confiance min. » de l'onglet Activité
+  (#12) et le raccourci TERMINE / FINI dans l'envoi groupé (#14).
+  L'exe local 0.8.4 du 2026-10-22 (37469168 octets, SHA-256
+  `EA70113C659FE8A5A8955BB278FFF59F3F71D18D09BC76C416F6FC010FF96A15`)
+  n'est plus le binaire courant. L'exe 0.8.3 du 2026-10-18
+  (37463806 octets, SHA-256
   `15AE87D81D04FF7F29116878625EF0C935E397194127E7FCA03AB4A0CBB80D33`)
-  n'est plus le binaire courant.
+  non plus. L'exe local 0.8.5 du 2026-10-26 fait 37471903 octets,
+  FileVersion 0.8.5.0, SHA-256
+  `5653D4FC53D646820AF8B378A2A44BFFAC45C9999B627BA37852068C6E414B4B`.
 - Un `Data_k` déjà rempli n'est plus « incomplet » s'il manque des
   tranches de 5 s. Ne pas rétablir ce contrôle sur la pastille, Upload,
   Vérifier / Réparer ou Valider. Une nuit dont le manifest a `renamed`
@@ -88,17 +93,19 @@ Déjà tranché dans la SPEC : #4 §0.1, #7 §0.2, #8 §0.3, #9 et #10 §0.4.
 #8, #9 et #10 sont fermées. #11 est fermée depuis le 2026-10-08 (§0.5).
 
 Relues le 2026-10-18. #12 et #13 sont confirmées par Benjamin
-sur l'exe 0.8.2. Leurs nouveaux messages (seuil de confiance, « je laisse
-ouvert ») ne sont pas des bugs ouverts. Aucune n'oppose le cadre ChiroSurf.
+sur l'exe 0.8.2. Le seuil de confiance demandé ensuite est dans l'exe
+local 0.8.5. #13 reste ouverte, comme il l'a demandé. Aucune n'oppose
+le cadre ChiroSurf.
 
 | Issue | Sujet | Piste |
 |---|---|---|
-| #14 | Vérifier / Réparer listait tous les WAV sur une nuit déjà analysée. Le correctif 0.8.2 est validé. Suite : un lot de 40 à 50 nuits, jeton expiré en cours d'envoi. | Si l'état est TERMINE ou FINI, pas de listing. Un jeton mort arrête le lot. Les nuits suivantes ne sont pas lancées. |
-| #15 | Heures, températures et météo avant l'envoi groupé. | Dans l'exe 0.8.4, pas dans l'exe publié 0.8.2. La 0.8.3 n'est pas publiée. Le formulaire de métadonnées porte les heures, les températures, le vent et la couverture. Re-deviner relit le log sans effacer le vent saisi. L'envoi groupé envoie ces valeurs sans ouvrir de formulaire et sans lister les WAV. Chaque nuit déjà renseignée garde son carré, son point et ses conditions. |
+| #12 | Seuil de confiance sur l'onglet Activité, données non validées. | Dans l'exe local 0.8.5, pas encore publié. Menu « Confiance min. ». Les lignes déjà identifiées restent. « Interprétation _Vu » ignore ce menu et ne change pas de calcul. | 
+| #14 | Vérifier / Réparer listait tous les WAV sur une nuit déjà analysée. Le correctif 0.8.2 est validé. Suite : un lot de 40 à 50 nuits, jeton expiré en cours d'envoi. | L'envoi groupé de l'exe local 0.8.5 saute aussi le listing si l'état est TERMINE ou FINI. Un jeton mort arrête le lot. Les nuits suivantes ne sont pas lancées. |
+| #15 | Heures, températures et météo avant l'envoi groupé. | Dans l'exe local 0.8.5, pas dans l'exe publié 0.8.2. Les 0.8.3 et 0.8.4 ne sont pas publiées. Le formulaire de métadonnées porte les heures, les températures, le vent et la couverture. Re-deviner relit le log sans effacer le vent saisi. L'envoi groupé envoie ces valeurs sans ouvrir de formulaire et sans lister les WAV. Chaque nuit déjà renseignée garde son carré, son point et ses conditions. |
 | #16 | Pastille verte, participation absente du portail (carré 430827, 12 août 2026). | La pastille lit le disque. Un `Data_k` vide n'est plus un envoi réussi. Ne pas relancer cette nuit. |
 | #17 | Plusieurs exe pendant un upload de plusieurs jours. | **Non.** D14, une instance. Le suivi de lot ne prend pas les clics : les autres nuits restent consultables. |
 | #18 | Trente nuits d'un contrat renommées Pass1, le CSV Tadarida dit Pass2. | Si les WAV ont déjà un `PassN` différent de la méta, aucun fichier n'est renommé. |
-| #19 | La carte ne montre pas les points des carrés créés par quelqu'un d'autre. | Dans l'exe 0.8.4, pas dans l'exe publié 0.8.2. La 0.8.3 n'est pas publiée. La carte affiche les carrés où j'ai une participation, même si quelqu'un d'autre a créé le carré. En choix de point, ces points restent cliquables dans les 5 km. |
+| #19 | La carte ne montre pas les points des carrés créés par quelqu'un d'autre. | Dans l'exe local 0.8.5, pas dans l'exe publié 0.8.2. Les 0.8.3 et 0.8.4 ne sont pas publiées. La carte affiche les carrés où j'ai une participation, même si quelqu'un d'autre a créé le carré. En choix de point, ces points restent cliquables dans les 5 km. |
 
 Batch Préparer (SPEC §0.6, pas d'issue GitHub, exe 0.8.2) : une nuit
 ignorée n'est pas un succès. Log Titley : pas de listing WAV, horaire
@@ -120,7 +127,7 @@ sans lister les WAV. Une heure vide n'est pas remplacée par 20:00 dans
 le cache. Chaque nuit déjà renseignée garde son carré, son point et ses
 conditions. Le dernier point créé ne remplit une nuit que si le carré
 ou le point manque encore, et seulement à l'ouverture du formulaire.
-Le tutoriel le dit dans « Nouveautés v0.8.4 », et le parcours
+Le tutoriel le dit dans « Nouveautés v0.8.5 », et le parcours
 étape par étape décrit cet exe.
 
 Le formulaire de métadonnées ne pré-coche plus le passage 1. Tant que le
@@ -139,8 +146,8 @@ dossier) restent utilisables.
 
 ## Gardes (sync, tableur, export)
 
-Dans l'exe 0.8.4. SPEC §0.9. La 0.8.3 n'est pas publiée.
-Ne pas les retirer du tutoriel, du PDF ou de la note 0.8.4.
+Dans l'exe 0.8.5. SPEC §0.9. Les 0.8.3 et 0.8.4 ne sont pas publiées.
+Ne pas les retirer du tutoriel, du PDF ou de la note 0.8.5.
 
 Sync API (`gui_registry.SyncPreviewDialog`, `registry.sync_from_api`) :
 le fil réseau n'appelle pas Tk. Le compteur est un entier lu sur le
@@ -167,8 +174,14 @@ Réseau illisible ou jeton expiré : garder l'identifiant. Sans
 identifiant dans le manifeste, ce contrôle ne change rien.
 
 Ne pas installer un harness tiers. Ne pas modifier les profils Grok Bot.
-Les briefs SuperBot (21 septembre, 28 septembre, 5 octobre 2026) servent
-à ces gardes, pas à élargir une flotte de bots.
+Ne pas répondre au widget t6s6. Pas de nouvel agent.
+Dernier brief SuperBot lisible : 26 octobre 2026 (t11s1).
+Ces briefs servent à ces gardes, pas à élargir une flotte de bots.
+La piste du 12 octobre (l'approbation se reverrouille) est morte
+depuis le 19 octobre (t9s2). Une garde qui échoue reste un refus.
+Le dépôt harness 1.0 (25 octobre) n'est plus une référence à suivre.
+La ligne SRID du 22 octobre (t11s0) et les cartes brouillon de la
+v0.75.5 visent d'autres dossiers, pas celui-ci.
 
 ## Astra (Codex)
 

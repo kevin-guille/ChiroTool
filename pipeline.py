@@ -152,6 +152,21 @@ def batch_bilan_lines(results: list, total: int | None = None) -> list[str]:
     return lines
 
 
+def upload_followup(result: dict | None) -> str:
+    """Après un upload sans erreur : ``wait_fetch``, ``fetch`` ou ``done``.
+
+    Une nuit déjà analysée (TERMINE ou FINI) n'attend pas Tadarida.
+    Le tableur est téléchargé seulement s'il manque en local.
+    """
+    if not isinstance(result, dict):
+        return "wait_fetch"
+    if result.get("skip_wait") and result.get("fetch_without_wait"):
+        return "fetch"
+    if result.get("skip_wait") or result.get("fetch_skipped"):
+        return "done"
+    return "wait_fetch"
+
+
 # ---------------------------------------------------------------------------
 # Résolution des métadonnées
 # ---------------------------------------------------------------------------
@@ -912,6 +927,73 @@ def run_phase_upload(session: Path, meta: SessionMeta, dry_run: bool,
         uploaded: list[str] = []
         failed: list[tuple[str, str]] = []
 
+        # Nuit déjà analysée : même raccourci que Vérifier / Réparer.
+        # Une lecture d'état en échec ne saute pas le listing, et un
+        # jeton expiré arrête le lot avant tout envoi.
+        etat_u = ""
+        try:
+            status = client.participation_status(part_id)
+            if isinstance(status, dict):
+                etat_u = (status.get("etat") or "").strip().upper()
+        except Exception as exc:
+            from vigiechiro_api import TokenExpiredError
+            if isinstance(exc, TokenExpiredError):
+                return {
+                    "phase": "upload",
+                    "error": str(exc),
+                    "stop_batch": True,
+                }
+            etat_u = ""
+        if etat_u in ("TERMINE", "FINI"):
+            from repair import find_local_observations_xlsx
+            has_xlsx = find_local_observations_xlsx(session) is not None
+            print(
+                "  nuit déjà analysée sur le portail "
+                f"({etat_u}) : pas de comparaison des WAV",
+                flush=True,
+            )
+            out["steps"].append({
+                "step": "skip_wav_listing",
+                "reason": "etat_terminal",
+                "etat": etat_u,
+                "has_xlsx": has_xlsx,
+            })
+            out["already_analyzed"] = True
+            out["skip_wait"] = True
+            out["etat"] = etat_u
+            if has_xlsx:
+                out["fetch_skipped"] = True
+                m.record_action(
+                    "upload",
+                    status="ok",
+                    params={"participation_id": part_id},
+                    stats={
+                        "etat": etat_u,
+                        "coverage_skipped": True,
+                        "has_xlsx": True,
+                        "n_wavs": n_local,
+                    },
+                    notes=(
+                        "nuit déjà analysée sur le portail, "
+                        "tableur local présent, pas de comparaison des WAV"
+                    ),
+                    tool_version=TOOL_VERSION,
+                )
+                m.save(session)
+                log_to_campaign(
+                    session, phase="upload", action="upload_wavs",
+                    status="ok",
+                    stats={"etat": etat_u, "coverage_skipped": True},
+                    tool_version=TOOL_VERSION,
+                )
+            else:
+                out["fetch_without_wait"] = True
+                print(
+                    "  tableur absent : téléchargement sans attendre Tadarida",
+                    flush=True,
+                )
+            return out
+
         # REPRISE D'UPLOAD : si la participation existait déjà (création
         # précédente interrompue), on liste les fichiers déjà uploadés côté
         # serveur et on les exclut de la queue. Évite de créer des doublons
@@ -1523,12 +1605,15 @@ def advance(
         result.errors.append(r["error"])
         return result
     result.phases_done.append("upload")
+    follow = upload_followup(r)
     if stop_after == "upload":
         return result
 
     # Phase 3 — wait
     print(f"\n━━━ Phase 3/5 : WAIT Tadarida ━━━")
-    if dry_run:
+    if follow != "wait_fetch":
+        print("  nuit déjà analysée : pas d'attente Tadarida")
+    elif dry_run:
         print("  dry-run → skip wait")
     else:
         r = run_phase_wait(final_session, token=token, poll_interval=poll_interval)
@@ -1543,7 +1628,9 @@ def advance(
 
     # Phase 4 — fetch
     print(f"\n━━━ Phase 4/5 : FETCH observations ━━━")
-    if dry_run:
+    if follow == "done":
+        print("  tableur déjà présent")
+    elif dry_run:
         print("  dry-run → skip fetch")
     else:
         r = run_phase_fetch(final_session, token=token, force=force)
