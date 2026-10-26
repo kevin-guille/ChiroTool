@@ -7,8 +7,10 @@ sont levées dans cette 0.8.5.
 Pré-release locale du 2026-10-22. La 0.8.3 n'est pas publiée.
 Cette note reprend son contenu, et ajoute la sync, le tableur
 de validation et l'export vers un autre compte.
-La Latest reste la
+À la date de ce build, la Latest était la
 [v0.8.1](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.1).
+La Latest est maintenant la
+[v0.8.5](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.5).
 L'exe publié précédent reste la
 [v0.8.2](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.2).
 

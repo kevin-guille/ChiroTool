@@ -70,8 +70,9 @@ Vigie-Chiro) ; CSV pour ouvrir une nuit dans le logiciel externe déjà en 0.7.1
   l'envoi), #14 nuit déjà analysée sans comparer les WAV, #12 espèces de
   la nuit affichée, libellés, batch Préparer (§0.6). Le calcul de relecture
   d'un `_Vu` ne change pas. Dossiers, manifests et registre existants
-  restent en place (schéma du registre inchangé). Latest reste 0.8.1 tant
-  que la pré-release n'est pas promue
+  restent en place (schéma du registre inchangé). Elle n'a pas été
+  promue. La Latest est la
+  [v0.8.5](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.5)
   ([v0.8.2](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.2)).
 - **v0.8.3** (2026-10-18) : build local, **non publié**. Le tag
   v0.8.3 n'est pas créé. Le contenu est repris dans la 0.8.4.
@@ -79,30 +80,29 @@ Vigie-Chiro) ; CSV pour ouvrir une nuit dans le logiciel externe déjà en 0.7.1
   v0.8.4 n'est pas créé. Le contenu est repris dans la 0.8.5.
   Exe local : 37469168 octets, SHA-256
   `EA70113C659FE8A5A8955BB278FFF59F3F71D18D09BC76C416F6FC010FF96A15`.
-- **v0.8.5** (2026-10-26, release stable, prévue en Latest) : code sur
-  `origin/main` (`fc44307`). Le tag et l'asset ne sont pas encore créés.
-  Elle reprend la 0.8.3 et la 0.8.4 (lot, métadonnées, carte, sync, tableur, export)
+- **v0.8.5** (2026-10-26, **Latest** publiée) : tag `v0.8.5` sur
+  `fc44307`. Elle reprend la 0.8.3 et la 0.8.4 (lot, métadonnées, carte, sync, tableur, export)
   et ajoute le seuil « Confiance min. » de l'onglet Activité (#12) et
   le raccourci TERMINE / FINI dans l'envoi groupé (#14). Une seule
-  instance. `version.py` = 0.8.5. Exe local : 37471903 octets,
+  instance. `version.py` = 0.8.5. Asset : 37471903 octets,
   FileVersion 0.8.5.0, SHA-256
   `5653D4FC53D646820AF8B378A2A44BFFAC45C9999B627BA37852068C6E414B4B`
   ([v0.8.5](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.5)).
 
 | Document | Rôle |
 |----------|------|
-| [`docs/SPEC_v06_parcours.md`](docs/SPEC_v06_parcours.md) | **Source de vérité** (v0.8.1 Latest publiée ; pré-release 0.8.2 §0.7 ; v0.8.5 stable §0.8 à §0.10, les 0.8.3 et 0.8.4 ne sont pas publiées ; §0.1 #4 ; §0.2 #7 ; §0.3 #8 ; §0.4 #9/#10 ; §0.5 #11 ; §0.6 batch Préparer ; D14 une seule instance) |
+| [`docs/SPEC_v06_parcours.md`](docs/SPEC_v06_parcours.md) | **Source de vérité** (v0.8.5 Latest publiée, §0.8 à §0.10 ; pré-release 0.8.2 §0.7 ; v0.8.1 ancienne Latest ; les 0.8.3 et 0.8.4 ne sont pas publiées ; §0.1 #4 ; §0.2 #7 ; §0.3 #8 ; §0.4 #9/#10 ; §0.5 #11 ; §0.6 batch Préparer ; D14 une seule instance) |
 | [`CHANGELOG.md`](CHANGELOG.md) | Versions publiées + *Suite possible* |
 | [`docs/RELEASE_v0.6.0.md`](docs/RELEASE_v0.6.0.md) | Note de release GitHub v0.6 |
 | [`docs/RELEASE_v0.7.0.md`](docs/RELEASE_v0.7.0.md) | Note de release GitHub v0.7 |
 | [`docs/RELEASE_v0.7.1.md`](docs/RELEASE_v0.7.1.md) | Note de pre-release GitHub v0.7.1 (issue #7, remplacée) |
 | [`docs/RELEASE_v0.7.2.md`](docs/RELEASE_v0.7.2.md) | Note de release GitHub v0.7.2 (remplacée par 0.8.1) |
 | [`docs/RELEASE_v0.8.0.md`](docs/RELEASE_v0.8.0.md) | Note de pre-release GitHub v0.8.0 (2026-09-09, remplacée par 0.8.1) |
-| [`docs/RELEASE_v0.8.1.md`](docs/RELEASE_v0.8.1.md) | Note de release GitHub v0.8.1 (Latest stable, 2026-09-19, SHA exe) |
+| [`docs/RELEASE_v0.8.1.md`](docs/RELEASE_v0.8.1.md) | Note de release GitHub v0.8.1 (ancienne Latest, 2026-09-19, SHA exe) |
 | [`docs/RELEASE_v0.8.2.md`](docs/RELEASE_v0.8.2.md) | Note de pré-release GitHub v0.8.2 (2026-09-24, SHA exe) |
 | [`docs/RELEASE_v0.8.3.md`](docs/RELEASE_v0.8.3.md) | Note locale v0.8.3, non publiée (contenu repris en 0.8.4) |
 | [`docs/RELEASE_v0.8.4.md`](docs/RELEASE_v0.8.4.md) | Note locale v0.8.4, non publiée (contenu repris en 0.8.5) |
-| [`docs/RELEASE_v0.8.5.md`](docs/RELEASE_v0.8.5.md) | Note de release stable v0.8.5 (2026-10-26, prévue en Latest) |
+| [`docs/RELEASE_v0.8.5.md`](docs/RELEASE_v0.8.5.md) | Note de release GitHub v0.8.5 (Latest, 2026-10-26, SHA exe) |
 | [`docs/TUTORIEL.md`](docs/TUTORIEL.md) | Guide utilisateur (pick, Synthèse, CSV optionnel pour le logiciel externe, repair) |
 | [`docs/ChiroTool-Tutoriel.pdf`](docs/ChiroTool-Tutoriel.pdf) | PDF généré via `python docs/build_pdf.py` |
 | [`docs/sitemap.xml`](docs/sitemap.xml) | Dates (`lastmod`) de la page et du PDF publiés. À avancer quand l'un des deux change. |

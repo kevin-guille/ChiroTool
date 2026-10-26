@@ -41,7 +41,12 @@ dans un texte lu par un humain. Voix « je » sur le contenu public.
 
 ## Version et git
 
-- Stable publiée : tag GitHub Latest `v0.8.1` (exe du 2026-09-19,
+- Stable publiée : tag GitHub Latest `v0.8.5` (2026-10-26).
+  Le tag pointe sur `fc44307`. Asset `ChiroTool.exe`, 37471903 octets,
+  FileVersion 0.8.5.0, SHA-256
+  `5653D4FC53D646820AF8B378A2A44BFFAC45C9999B627BA37852068C6E414B4B`.
+  `version.py` = `0.8.5`. Les builds 0.8.3 et 0.8.4 ne sont pas publiés.
+- Stable précédente : tag `v0.8.1` (exe du 2026-09-19,
   SHA-256 `14C620BC40BC1E2DB9059653B6830E5B107A1726DCF0107DB3D16BD4123B19AE`).
 - Pré-release publiée le 2026-09-24 : tag `v0.8.2`, pas Latest.
   Asset `ChiroTool.exe`, 37465004 octets, SHA-256
@@ -50,13 +55,7 @@ dans un texte lu par un humain. Voix « je » sur le contenu public.
   (trois commits plus tôt : `924cbe2`, `f1d4e2c`, `a140a94`, scan et pastille).
   L'exe publié correspond à `a140a94`, pas à l'arbre du tag.
   Ne pas déplacer ce tag sans demande explicite.
-- Le code de la **0.8.5** est sur `origin/main` (`fc44307`, poussé
-  le 2026-10-26). Release stable, prévue en Latest, pas en pré-release.
-  `version.py` = `0.8.5`. Les builds 0.8.3 et 0.8.4 ne sont pas publiés.
-  Le tag GitHub `v0.8.5` et l'asset ne sont pas créés. Latest publiée
-  reste `v0.8.1`. L'asset publié reste celui de la 0.8.2 tant que
-  cette release n'est pas créée.
-  Ce binaire reprend le contenu prévu pour la 0.8.3 et la 0.8.4
+- L'exe Latest reprend le contenu prévu pour la 0.8.3 et la 0.8.4
   (journal des nuits ignorées, `Data_k` vide en erreur, heures et
   météo, points violets, sync API, tableur de validation, export vers
   un autre compte) plus le seuil « Confiance min. » de l'onglet Activité
@@ -66,9 +65,7 @@ dans un texte lu par un humain. Voix « je » sur le contenu public.
   n'est plus le binaire courant. L'exe 0.8.3 du 2026-10-18
   (37463806 octets, SHA-256
   `15AE87D81D04FF7F29116878625EF0C935E397194127E7FCA03AB4A0CBB80D33`)
-  non plus. L'exe local 0.8.5 du 2026-10-26 fait 37471903 octets,
-  FileVersion 0.8.5.0, SHA-256
-  `5653D4FC53D646820AF8B378A2A44BFFAC45C9999B627BA37852068C6E414B4B`.
+  non plus.
 - Un `Data_k` déjà rempli n'est plus « incomplet » s'il manque des
   tranches de 5 s. Ne pas rétablir ce contrôle sur la pastille, Upload,
   Vérifier / Réparer ou Valider. Une nuit dont le manifest a `renamed`
@@ -93,19 +90,19 @@ Déjà tranché dans la SPEC : #4 §0.1, #7 §0.2, #8 §0.3, #9 et #10 §0.4.
 #8, #9 et #10 sont fermées. #11 est fermée depuis le 2026-10-08 (§0.5).
 
 Relues le 2026-10-18. #12 et #13 sont confirmées par Benjamin
-sur l'exe 0.8.2. Le seuil de confiance demandé ensuite est dans le
-code 0.8.5 sur `main`. #13 reste ouverte, comme il l'a demandé. Aucune n'oppose
+sur l'exe 0.8.2. Le seuil de confiance demandé ensuite est dans
+l'exe publié 0.8.5. #13 reste ouverte, comme il l'a demandé. Aucune n'oppose
 le cadre ChiroSurf.
 
 | Issue | Sujet | Piste |
 |---|---|---|
-| #12 | Seuil de confiance sur l'onglet Activité, données non validées. | Code sur `main` (`fc44307`), exe pas encore en release. Menu « Confiance min. ». Les lignes déjà identifiées restent. « Interprétation _Vu » ignore ce menu et ne change pas de calcul. | 
-| #14 | Vérifier / Réparer listait tous les WAV sur une nuit déjà analysée. Le correctif 0.8.2 est validé. Suite : un lot de 40 à 50 nuits, jeton expiré en cours d'envoi. | L'envoi groupé, code sur `main` (`fc44307`), saute aussi le listing si l'état est TERMINE ou FINI. L'exe n'est pas encore en release. Un jeton mort arrête le lot. Les nuits suivantes ne sont pas lancées. |
-| #15 | Heures, températures et météo avant l'envoi groupé. | Code sur `main` (`fc44307`), pas dans l'exe publié 0.8.2. Les 0.8.3 et 0.8.4 ne sont pas publiées. Le formulaire de métadonnées porte les heures, les températures, le vent et la couverture. Re-deviner relit le log sans effacer le vent saisi. L'envoi groupé envoie ces valeurs sans ouvrir de formulaire et sans lister les WAV. Chaque nuit déjà renseignée garde son carré, son point et ses conditions. |
+| #12 | Seuil de confiance sur l'onglet Activité, données non validées. | Dans l'exe publié 0.8.5. Menu « Confiance min. ». Les lignes déjà identifiées restent. « Interprétation _Vu » ignore ce menu et ne change pas de calcul. | 
+| #14 | Vérifier / Réparer listait tous les WAV sur une nuit déjà analysée. Le correctif 0.8.2 est validé. Suite : un lot de 40 à 50 nuits, jeton expiré en cours d'envoi. | L'envoi groupé de l'exe publié 0.8.5 saute aussi le listing si l'état est TERMINE ou FINI. Un jeton mort arrête le lot. Les nuits suivantes ne sont pas lancées. |
+| #15 | Heures, températures et météo avant l'envoi groupé. | Dans l'exe publié 0.8.5. Les 0.8.3 et 0.8.4 ne sont pas publiées. Le formulaire de métadonnées porte les heures, les températures, le vent et la couverture. Re-deviner relit le log sans effacer le vent saisi. L'envoi groupé envoie ces valeurs sans ouvrir de formulaire et sans lister les WAV. Chaque nuit déjà renseignée garde son carré, son point et ses conditions. |
 | #16 | Pastille verte, participation absente du portail (carré 430827, 12 août 2026). | La pastille lit le disque. Un `Data_k` vide n'est plus un envoi réussi. Ne pas relancer cette nuit. |
 | #17 | Plusieurs exe pendant un upload de plusieurs jours. | **Non.** D14, une instance. Le suivi de lot ne prend pas les clics : les autres nuits restent consultables. |
 | #18 | Trente nuits d'un contrat renommées Pass1, le CSV Tadarida dit Pass2. | Si les WAV ont déjà un `PassN` différent de la méta, aucun fichier n'est renommé. |
-| #19 | La carte ne montre pas les points des carrés créés par quelqu'un d'autre. | Code sur `main` (`fc44307`), pas dans l'exe publié 0.8.2. Les 0.8.3 et 0.8.4 ne sont pas publiées. La carte affiche les carrés où j'ai une participation, même si quelqu'un d'autre a créé le carré. En choix de point, ces points restent cliquables dans les 5 km. |
+| #19 | La carte ne montre pas les points des carrés créés par quelqu'un d'autre. | Dans l'exe publié 0.8.5. Les 0.8.3 et 0.8.4 ne sont pas publiées. La carte affiche les carrés où j'ai une participation, même si quelqu'un d'autre a créé le carré. En choix de point, ces points restent cliquables dans les 5 km. |
 
 Batch Préparer (SPEC §0.6, pas d'issue GitHub, exe 0.8.2) : une nuit
 ignorée n'est pas un succès. Log Titley : pas de listing WAV, horaire

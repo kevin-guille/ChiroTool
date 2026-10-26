@@ -5,18 +5,16 @@ Les versions publiées suivent le SemVer du fichier `version.py` / tags GitHub.
 
 ## [0.8.5] - 2026-10-26
 
-`version.py` = `0.8.5` (build 2026-10-26). **Release stable**, à publier
-en Latest (pas en pré-release). Le code est sur `origin/main`
-(`fc44307`). Le tag et l'asset ne sont pas encore créés.
+`version.py` = `0.8.5` (build 2026-10-26). **Release GitHub Latest**
+du 2026-10-26. Le tag `v0.8.5` pointe sur `fc44307`.
 Les builds locaux 0.8.3 (2026-10-18) et 0.8.4 (2026-10-22) ne sont pas
 publiés. Cette version reprend leur contenu et ajoute le seuil de
 confiance de l'onglet Activité et le raccourci des nuits déjà analysées
 dans l'envoi groupé.
 `ChiroTool.exe` : 37471903 octets, FileVersion 0.8.5.0, SHA-256
 `5653D4FC53D646820AF8B378A2A44BFFAC45C9999B627BA37852068C6E414B4B`.
-La Latest publiée reste
-[v0.8.1](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.1)
-tant que cette release n'est pas créée.
+Elle remplace la Latest
+[v0.8.1](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.1).
 L'exe publié précédent reste celui de la
 [v0.8.2](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.2).
 
@@ -62,9 +60,9 @@ son contenu (lot, métadonnées, carte) et ajoute les trois correctifs
 ci-dessous.
 `ChiroTool.exe` : 37469168 octets, SHA-256
 `EA70113C659FE8A5A8955BB278FFF59F3F71D18D09BC76C416F6FC010FF96A15`.
-La Latest reste
+À la date de ce build, la Latest était la
 [v0.8.1](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.1).
-L'exe publié précédent reste celui de la
+L'exe publié précédent était celui de la
 [v0.8.2](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.2).
 
 ### Corrigé

@@ -3,8 +3,10 @@
 Non publiée. Le tag v0.8.3 n'est pas créé. Le contenu est repris
 dans [v0.8.4](RELEASE_v0.8.4.md).
 
-Pré-release locale du 2026-10-18. La Latest reste la
+Pré-release locale du 2026-10-18. À cette date, la Latest était la
 [v0.8.1](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.1).
+La Latest est maintenant la
+[v0.8.5](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.5).
 
 `ChiroTool.exe`, 37463806 octets, SHA-256
 `15AE87D81D04FF7F29116878625EF0C935E397194127E7FCA03AB4A0CBB80D33`.

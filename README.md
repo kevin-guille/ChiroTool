@@ -50,17 +50,15 @@ Idéal pour les **bureaux d’études**, **associations** et **observateurs** qu
 
 ## Nouveautés v0.8
 
-La **v0.8.5** (2026-10-26, code sur `main`,
+La **v0.8.5** (2026-10-26, **Latest**,
 [tag v0.8.5](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.5),
 SHA-256 `5653D4FC53D646820AF8B378A2A44BFFAC45C9999B627BA37852068C6E414B4B`)
-est la release stable, à publier en Latest. Le tag et l'asset ne sont
-pas encore créés. Les builds 0.8.3 et 0.8.4 ne sont pas publiés :
+est la release stable. Les builds 0.8.3 et 0.8.4 ne sont pas publiés :
 cette note reprend leur contenu.
 L'exe publié précédent reste la
 [v0.8.2](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.2).
-La Latest en ligne reste la
-[v0.8.1](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.1)
-tant que la v0.8.5 n'est pas créée.
+Elle remplace la
+[v0.8.1](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.1).
 
 | | Nouveauté | Bénéfice terrain |
 |---|-----------|------------------|
@@ -95,7 +93,7 @@ reste l'exe publié précédent.
 
 Note : [`docs/RELEASE_v0.8.2.md`](docs/RELEASE_v0.8.2.md).
 
-La **v0.8.1** (release GitHub du 2026-09-19, **Latest**,
+La **v0.8.1** (release GitHub du 2026-09-19, ancienne Latest,
 [tag v0.8.1](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.1),
 SHA-256 `14C620BC40BC1E2DB9059653B6830E5B107A1726DCF0107DB3D16BD4123B19AE`)
 remplace la [v0.8.0](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.0).

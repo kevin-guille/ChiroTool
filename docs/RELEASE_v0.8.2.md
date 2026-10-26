@@ -4,9 +4,8 @@
 > [v0.8.2](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.2).
 > SHA-256 de l'asset `ChiroTool.exe` :
 > `5106C7F58CFE1741962454FF1EC1F218B123805328EC65002567E44BD5AB7CEB`.
-> La Latest reste
-> [v0.8.1](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.1)
-> tant que cette pré-release n'est pas promue.
+> Elle n'a pas été promue. La Latest est la
+> [v0.8.5](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.5).
 
 À tester sur les retours de Benjamin :
 [#11](https://github.com/kevin-guille/ChiroTool/issues/11),
