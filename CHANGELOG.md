@@ -6,7 +6,8 @@ Les versions publiées suivent le SemVer du fichier `version.py` / tags GitHub.
 ## [0.8.5] - 2026-10-26
 
 `version.py` = `0.8.5` (build 2026-10-26). **Release stable**, à publier
-en Latest (pas en pré-release).
+en Latest (pas en pré-release). Le code est sur `origin/main`
+(`fc44307`). Le tag et l'asset ne sont pas encore créés.
 Les builds locaux 0.8.3 (2026-10-18) et 0.8.4 (2026-10-22) ne sont pas
 publiés. Cette version reprend leur contenu et ajoute le seuil de
 confiance de l'onglet Activité et le raccourci des nuits déjà analysées

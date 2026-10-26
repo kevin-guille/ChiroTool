@@ -1,15 +1,14 @@
 # ChiroTool v0.8.5 : activité, lot, sync
 
-Release stable du 2026-10-26, à publier en Latest.
+Release stable du 2026-10-26.
 Les builds 0.8.3 et 0.8.4 ne sont pas publiés.
 Cette note reprend leur contenu, et ajoute le seuil de confiance
 de l'onglet Activité et le raccourci des nuits déjà analysées
 dans l'envoi groupé.
 L'exe publié précédent reste la
 [v0.8.2](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.2).
-La Latest en ligne reste la
-[v0.8.1](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.1)
-tant que cette release n'est pas créée.
+Cette release remplace la Latest
+[v0.8.1](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.1).
 
 `ChiroTool.exe` : 37471903 octets, FileVersion 0.8.5.0, SHA-256
 `5653D4FC53D646820AF8B378A2A44BFFAC45C9999B627BA37852068C6E414B4B`.

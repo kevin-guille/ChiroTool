@@ -79,8 +79,9 @@ Vigie-Chiro) ; CSV pour ouvrir une nuit dans le logiciel externe déjà en 0.7.1
   v0.8.4 n'est pas créé. Le contenu est repris dans la 0.8.5.
   Exe local : 37469168 octets, SHA-256
   `EA70113C659FE8A5A8955BB278FFF59F3F71D18D09BC76C416F6FC010FF96A15`.
-- **v0.8.5** (2026-10-26, release stable, prévue en Latest) : reprend
-  la 0.8.3 et la 0.8.4 (lot, métadonnées, carte, sync, tableur, export)
+- **v0.8.5** (2026-10-26, release stable, prévue en Latest) : code sur
+  `origin/main` (`fc44307`). Le tag et l'asset ne sont pas encore créés.
+  Elle reprend la 0.8.3 et la 0.8.4 (lot, métadonnées, carte, sync, tableur, export)
   et ajoute le seuil « Confiance min. » de l'onglet Activité (#12) et
   le raccourci TERMINE / FINI dans l'envoi groupé (#14). Une seule
   instance. `version.py` = 0.8.5. Exe local : 37471903 octets,
