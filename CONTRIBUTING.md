@@ -82,11 +82,12 @@ Vigie-Chiro) ; CSV pour ouvrir une nuit dans le logiciel externe déjà en 0.7.1
   `EA70113C659FE8A5A8955BB278FFF59F3F71D18D09BC76C416F6FC010FF96A15`.
 - **v0.8.5** (2026-10-26, **Latest** publiée) : tag `v0.8.5` sur
   `fc44307`. Elle reprend la 0.8.3 et la 0.8.4 (lot, métadonnées, carte, sync, tableur, export)
-  et ajoute le seuil « Confiance min. » de l'onglet Activité (#12) et
-  le raccourci TERMINE / FINI dans l'envoi groupé (#14). Une seule
-  instance. `version.py` = 0.8.5. Asset : 37471903 octets,
+  et ajoute le seuil « Confiance min. » de l'onglet Activité (#12),
+  le raccourci TERMINE / FINI dans l'envoi groupé (#14), et le fond
+  OSM identifié comme ChiroTool. Une seule
+  instance. `version.py` = 0.8.5. Asset : 37474903 octets,
   FileVersion 0.8.5.0, SHA-256
-  `5653D4FC53D646820AF8B378A2A44BFFAC45C9999B627BA37852068C6E414B4B`
+  `8759593FA5C0A6FA95CEE4A67C0FC68D84B93E6570673264A73C198079EC9502`
   ([v0.8.5](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.5)).
 
 | Document | Rôle |

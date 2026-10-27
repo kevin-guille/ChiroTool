@@ -11,8 +11,8 @@ Les builds locaux 0.8.3 (2026-10-18) et 0.8.4 (2026-10-22) ne sont pas
 publiés. Cette version reprend leur contenu et ajoute le seuil de
 confiance de l'onglet Activité et le raccourci des nuits déjà analysées
 dans l'envoi groupé.
-`ChiroTool.exe` : 37471903 octets, FileVersion 0.8.5.0, SHA-256
-`5653D4FC53D646820AF8B378A2A44BFFAC45C9999B627BA37852068C6E414B4B`.
+`ChiroTool.exe` : 37474903 octets, FileVersion 0.8.5.0, SHA-256
+`8759593FA5C0A6FA95CEE4A67C0FC68D84B93E6570673264A73C198079EC9502`.
 Elle remplace la Latest
 [v0.8.1](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.1).
 L'exe publié précédent reste celui de la
@@ -34,6 +34,9 @@ L'exe publié précédent reste celui de la
   téléchargé sans attendre Tadarida. S'il est déjà dans le dossier, la
   nuit est marquée envoyée. Une lecture d'état en échec ne saute pas
   le listing. Un jeton expiré arrête toujours le lot.
+- **Carte** : les tuiles OpenStreetMap partent avec le User-Agent
+  ChiroTool, vers `https://tile.openstreetmap.org`. Le fond OSM ne
+  s'affiche plus en « Access blocked ».
 
 ### Inchangé
 

@@ -42,9 +42,9 @@ dans un texte lu par un humain. Voix « je » sur le contenu public.
 ## Version et git
 
 - Stable publiée : tag GitHub Latest `v0.8.5` (2026-10-26).
-  Le tag pointe sur `fc44307`. Asset `ChiroTool.exe`, 37471903 octets,
+  Le tag pointe sur `fc44307`. Asset `ChiroTool.exe`, 37474903 octets,
   FileVersion 0.8.5.0, SHA-256
-  `5653D4FC53D646820AF8B378A2A44BFFAC45C9999B627BA37852068C6E414B4B`.
+  `8759593FA5C0A6FA95CEE4A67C0FC68D84B93E6570673264A73C198079EC9502`.
   `version.py` = `0.8.5`. Les builds 0.8.3 et 0.8.4 ne sont pas publiés.
 - Stable précédente : tag `v0.8.1` (exe du 2026-09-19,
   SHA-256 `14C620BC40BC1E2DB9059653B6830E5B107A1726DCF0107DB3D16BD4123B19AE`).
@@ -59,7 +59,9 @@ dans un texte lu par un humain. Voix « je » sur le contenu public.
   (journal des nuits ignorées, `Data_k` vide en erreur, heures et
   météo, points violets, sync API, tableur de validation, export vers
   un autre compte) plus le seuil « Confiance min. » de l'onglet Activité
-  (#12) et le raccourci TERMINE / FINI dans l'envoi groupé (#14).
+  (#12), le raccourci TERMINE / FINI dans l'envoi groupé (#14),
+  et le fond OSM identifié comme ChiroTool. La tuile
+  « Access blocked » ne s'affiche plus.
   L'exe local 0.8.4 du 2026-10-22 (37469168 octets, SHA-256
   `EA70113C659FE8A5A8955BB278FFF59F3F71D18D09BC76C416F6FC010FF96A15`)
   n'est plus le binaire courant. L'exe 0.8.3 du 2026-10-18

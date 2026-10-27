@@ -44,8 +44,12 @@ from gui_config import config_dir
 #   - ORTHOIMAGERY.ORTHOPHOTOS : photos aériennes haute résolution
 #   - GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2 : carte topographique IGN (Scan25 équivalent)
 TILE_SERVERS = {
+    # URL canonique (politique d'usage OSM). Le sous-domaine a.tile n'est
+    # plus le point d'entrée supporté. Le téléchargement identifie ChiroTool :
+    # le User-Agent de la librairie (« TkinterMapView ») est refusé, OSM
+    # renvoie alors une image « Access blocked » (en-tête x-blocked).
     "OSM (OpenStreetMap)": (
-        "https://a.tile.openstreetmap.org/{z}/{x}/{y}.png", 19),
+        "https://tile.openstreetmap.org/{z}/{x}/{y}.png", 19),
     "IGN — Photos aériennes": (
         "https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0"
         "&LAYER=ORTHOIMAGERY.ORTHOPHOTOS&STYLE=normal&FORMAT=image/jpeg"
@@ -67,6 +71,15 @@ TILE_SERVERS = {
 # les zoom/dezoom, incompatible avec un usage "navigation fluide".
 DEFAULT_TILE = "OSM (OpenStreetMap)"
 
+# Mention de licence, affichée sur la carte. Obligatoire pour les tuiles OSM.
+TILE_ATTRIBUTION = {
+    "OSM (OpenStreetMap)": "© OpenStreetMap",
+    "IGN — Photos aériennes": "© IGN",
+    "IGN — Plan topo": "© IGN",
+    "Satellite (Esri)": "© Esri",
+    "OpenTopoMap (topo)": "© OpenStreetMap, OpenTopoMap",
+}
+
 # Zoom en dessous duquel on agrège les points en clusters
 CLUSTER_ZOOM_THRESHOLD = 12
 # Taille d'une cellule de grille en pixels écran (plus grand = clusters plus agressifs)
@@ -82,6 +95,132 @@ try:
 except Exception:
     NOMINATIM_UA = "ChiroTool (+https://github.com/kevin-guille/ChiroTool)"
 NOMINATIM_MIN_INTERVAL_S = 1.05  # petit buffer de sécurité au-dessus de 1 s
+
+# Tuiles : même identification que Nominatim. OSM bloque les User-Agent
+# génériques (librairie, python-requests) et sert une PNG « Access blocked »
+# en HTTP 200 avec l'en-tête x-blocked. Il ne faut pas l'afficher.
+_TILE_TIMEOUT_S = 20
+
+
+def tile_response_blocked(status_code: int, headers) -> bool:
+    """Vrai si OSM (ou un autre serveur) a renvoyé la tuile d'interdiction."""
+    if status_code >= 400:
+        return True
+    if not headers:
+        return False
+    return bool(headers.get("x-blocked"))
+
+
+def fetch_map_tile(url: str) -> bytes:
+    """Télécharge une tuile en s'identifiant comme ChiroTool.
+
+    Lève ``requests.HTTPError`` si le serveur refuse (403, ou HTTP 200 avec
+    l'en-tête ``x-blocked``). L'appelant ne doit pas afficher ce contenu.
+    """
+    import requests
+    response = requests.get(
+        url,
+        headers={"User-Agent": NOMINATIM_UA},
+        timeout=_TILE_TIMEOUT_S,
+    )
+    try:
+        if tile_response_blocked(response.status_code, response.headers):
+            raise requests.HTTPError(
+                f"tuile refusee HTTP {response.status_code}",
+                response=response,
+            )
+        return response.content
+    finally:
+        response.close()
+
+
+def _request_map_tile(self, zoom: int, x: int, y: int, db_cursor=None):
+    """Remplace ``TkinterMapView.request_image``.
+
+    Même lecture du cache SQLite que la librairie. Le téléchargement réseau
+    passe par :func:`fetch_map_tile` pour ne plus envoyer le User-Agent
+    « TkinterMapView », que les serveurs OSM refusent.
+    """
+    import io
+    import sqlite3
+
+    import requests
+    from PIL import Image, ImageTk, UnidentifiedImageError
+
+    if db_cursor is not None:
+        try:
+            db_cursor.execute(
+                "SELECT t.tile_image FROM tiles t "
+                "WHERE t.zoom=? AND t.x=? AND t.y=? AND t.server=?;",
+                (zoom, x, y, self.tile_server),
+            )
+            result = db_cursor.fetchone()
+            if result is not None:
+                image = Image.open(io.BytesIO(result[0]))
+                image_tk = ImageTk.PhotoImage(image)
+                self.tile_image_cache[f"{zoom}{x}{y}"] = image_tk
+                return image_tk
+            if self.use_database_only:
+                return self.empty_tile_image
+        except sqlite3.OperationalError:
+            if self.use_database_only:
+                return self.empty_tile_image
+        except Exception:
+            return self.empty_tile_image
+
+    try:
+        url = (self.tile_server
+               .replace("{x}", str(x))
+               .replace("{y}", str(y))
+               .replace("{z}", str(zoom)))
+        image = Image.open(io.BytesIO(fetch_map_tile(url)))
+
+        if self.overlay_tile_server is not None:
+            url = (self.overlay_tile_server
+                   .replace("{x}", str(x))
+                   .replace("{y}", str(y))
+                   .replace("{z}", str(zoom)))
+            image_overlay = Image.open(io.BytesIO(fetch_map_tile(url)))
+            image = image.convert("RGBA")
+            image_overlay = image_overlay.convert("RGBA")
+            if image_overlay.size is not (self.tile_size, self.tile_size):
+                resample = getattr(Image, "LANCZOS", Image.Resampling.LANCZOS)
+                image_overlay = image_overlay.resize(
+                    (self.tile_size, self.tile_size), resample)
+            image.paste(image_overlay, (0, 0), image_overlay)
+
+        if not self.running:
+            return self.empty_tile_image
+        image_tk = ImageTk.PhotoImage(image)
+        self.tile_image_cache[f"{zoom}{x}{y}"] = image_tk
+        return image_tk
+
+    except UnidentifiedImageError:
+        self.tile_image_cache[f"{zoom}{x}{y}"] = self.empty_tile_image
+        return self.empty_tile_image
+    except requests.HTTPError:
+        # Refus stable (politique d'usage). On mémorise la tuile vide pour
+        # ne pas marteler le serveur depuis le préchargement de la librairie.
+        self.tile_image_cache[f"{zoom}{x}{y}"] = self.empty_tile_image
+        return self.empty_tile_image
+    except requests.ConnectionError:
+        return self.empty_tile_image
+    except Exception:
+        return self.empty_tile_image
+
+
+def _install_map_tile_client() -> None:
+    """Branche le client tuiles sur le widget, une seule fois."""
+    if tkintermapview is None:
+        return
+    current = tkintermapview.TkinterMapView.request_image
+    if getattr(current, "_chirotool_tiles", False):
+        return
+    _request_map_tile._chirotool_tiles = True  # type: ignore[attr-defined]
+    tkintermapview.TkinterMapView.request_image = _request_map_tile
+
+
+_install_map_tile_client()
 
 
 def _points_from_raw(raw: dict) -> list[dict]:
@@ -626,6 +765,14 @@ class MapPanel(ctk.CTkFrame):
         )
         self.map.grid(row=1, column=0, sticky="nsew", padx=8, pady=(0, 8))
 
+        self.attrib_lbl = ctk.CTkLabel(
+            self.map, text="",
+            font=ctk.CTkFont(size=9),
+            fg_color=("#ffffff", "#1c1c1c"),
+            text_color=("#333333", "#dddddd"),
+            corner_radius=3,
+        )
+
         # Position par défaut : centre de la France métropolitaine
         self.map.set_position(46.8, 2.4)
         self.map.set_zoom(6)
@@ -640,6 +787,15 @@ class MapPanel(ctk.CTkFrame):
             self.map.set_tile_server(url, max_zoom=max_zoom)
         except Exception:
             pass
+        text = TILE_ATTRIBUTION.get(choice, "")
+        if not hasattr(self, "attrib_lbl"):
+            return
+        self.attrib_lbl.configure(text=text)
+        if text:
+            self.attrib_lbl.place(relx=1.0, rely=1.0, x=-8, y=-8, anchor="se")
+            self.attrib_lbl.lift()
+        else:
+            self.attrib_lbl.place_forget()
 
     # -- Chargement des sites ----------------------------------------------
 

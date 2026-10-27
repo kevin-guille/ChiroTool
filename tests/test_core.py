@@ -2293,6 +2293,90 @@ class TestNominatimUserAgent:
         assert __version__ in gui_map.NOMINATIM_UA
 
 
+class TestMapTiles:
+    """OSM refuse le User-Agent de tkintermapview (tuile « Access blocked »)."""
+
+    def test_osm_url_is_canonical(self):
+        import gui_map
+        url, zoom = gui_map.TILE_SERVERS["OSM (OpenStreetMap)"]
+        assert url == "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+        assert zoom == 19
+
+    def test_widget_uses_chirotool_tile_client(self):
+        import tkintermapview
+        import gui_map
+        assert tkintermapview.TkinterMapView.request_image is gui_map._request_map_tile
+        assert gui_map._request_map_tile._chirotool_tiles is True
+
+    def test_fetch_sends_app_user_agent(self, monkeypatch):
+        import gui_map
+        seen = {}
+
+        class Resp:
+            status_code = 200
+            headers: dict = {}
+            content = b"\x89PNG-ok"
+
+            def close(self):
+                seen["closed"] = True
+
+        def fake_get(url, headers=None, timeout=None):
+            seen["url"] = url
+            seen["headers"] = headers
+            seen["timeout"] = timeout
+            return Resp()
+
+        monkeypatch.setattr("requests.get", fake_get)
+        data = gui_map.fetch_map_tile("https://tile.openstreetmap.org/6/32/22.png")
+        assert data == b"\x89PNG-ok"
+        assert seen["headers"]["User-Agent"] == gui_map.NOMINATIM_UA
+        assert "TkinterMapView" not in seen["headers"]["User-Agent"]
+        assert seen["closed"] is True
+
+    def test_fetch_rejects_access_blocked_tile(self, monkeypatch):
+        import requests
+        import gui_map
+
+        class Resp:
+            status_code = 200
+            headers = {"x-blocked": "Access denied"}
+            content = b"blocked-png"
+
+            def close(self):
+                pass
+
+        monkeypatch.setattr("requests.get", lambda *a, **k: Resp())
+        with pytest.raises(requests.HTTPError):
+            gui_map.fetch_map_tile("https://tile.openstreetmap.org/6/32/22.png")
+
+    def test_request_image_drops_blocked_tile(self, monkeypatch):
+        import gui_map
+
+        class Resp:
+            status_code = 200
+            headers = {"x-blocked": "Access denied"}
+            content = b"blocked-png"
+
+            def close(self):
+                pass
+
+        monkeypatch.setattr("requests.get", lambda *a, **k: Resp())
+
+        class Dummy:
+            tile_server = "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+            overlay_tile_server = None
+            running = True
+            tile_image_cache: dict = {}
+            empty_tile_image = "empty"
+            tile_size = 256
+            use_database_only = False
+
+        dummy = Dummy()
+        out = gui_map._request_map_tile(dummy, 6, 32, 22, None)
+        assert out == "empty"
+        assert dummy.tile_image_cache["63222"] == "empty"
+
+
 # =========================================================================
 # carte : points sur carres d'autres observateurs (sites externes)
 # =========================================================================

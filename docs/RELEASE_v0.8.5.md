@@ -4,7 +4,7 @@ Release stable du 2026-10-26. Les builds 0.8.3 et 0.8.4 ne sont pas publiés. Ce
 
 L'exe publié précédent reste la [v0.8.2](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.2). Cette release remplace la Latest [v0.8.1](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.1).
 
-`ChiroTool.exe` : 37471903 octets, FileVersion 0.8.5.0, SHA-256 `5653D4FC53D646820AF8B378A2A44BFFAC45C9999B627BA37852068C6E414B4B`.
+`ChiroTool.exe` : 37474903 octets, FileVersion 0.8.5.0, SHA-256 `8759593FA5C0A6FA95CEE4A67C0FC68D84B93E6570673264A73C198079EC9502`.
 
 On remplace l'exe. Dossiers, registre (schéma 3), Suivi, WAV et participations déjà créées restent.
 
@@ -16,7 +16,7 @@ On remplace l'exe. Dossiers, registre (schéma 3), Suivi, WAV et participations 
 - **Data_k vide.** Un `Data_k` vide n'est plus un envoi réussi. Aucune participation n'est créée. Une préparation qui laisse le `Data_k` vide n'est pas un succès non plus.
 - **Une seule instance.** La fenêtre de suivi ne bloque plus les autres nuits. Les nuits cochées restent prises jusqu'à la fermeture de cette fenêtre.
 - **Métadonnées.** Heure de début, heure de fin, deux températures, vent, couverture. Re-deviner relit le log ou le Summary pour les heures et les températures. Le vent saisi reste. Le lot envoie ces valeurs sans ouvrir de formulaire. Deux nuits déjà renseignées restent distinctes.
-- **Carte.** Un carré créé par quelqu'un d'autre apparaît s'il porte une de mes participations, ou s'il est déjà mémorisé. Ces points sont violets, cliquables dans les 5 km. Les miens restent verts.
+- **Carte.** Un carré créé par quelqu'un d'autre apparaît s'il porte une de mes participations, ou s'il est déjà mémorisé. Ces points sont violets, cliquables dans les 5 km. Les miens restent verts. Le fond OpenStreetMap s'identifie comme ChiroTool. Il ne s'affiche plus en « Access blocked ».
 - **Sync API.** Le compteur avance sur l'interface, par paquets. Fermer la fenêtre arrête la récupération sans écrire le registre. Appliquer n'a plus à retélécharger toute la liste.
 - **Tableur.** Un enregistrement réécrit un seul fichier `participation-<id>-observations_<initiales>.xlsx`. Ouvrir une copie déjà suffixée n'en empile plus une autre. Les chaînes `_AB_AC` déjà présentes sont retirées à l'enregistrement suivant, s'il existe un tableur plus simple. Le téléchargement d'origine et une copie à un seul suffixe restent.
 - **Export.** Le manifeste est copié tel quel. Si l'identifiant de participation n'est pas éditable avec le compte qui envoie, une participation est créée sur ce compte. Un trou de réseau ou un jeton expiré laisse l'identifiant en place. Sans identifiant dans le manifeste, rien ne change de ce côté.

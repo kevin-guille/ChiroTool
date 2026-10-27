@@ -52,7 +52,7 @@ Idéal pour les **bureaux d’études**, **associations** et **observateurs** qu
 
 La **v0.8.5** (2026-10-26, **Latest**,
 [tag v0.8.5](https://github.com/kevin-guille/ChiroTool/releases/tag/v0.8.5),
-SHA-256 `5653D4FC53D646820AF8B378A2A44BFFAC45C9999B627BA37852068C6E414B4B`)
+SHA-256 `8759593FA5C0A6FA95CEE4A67C0FC68D84B93E6570673264A73C198079EC9502`)
 est la release stable. Les builds 0.8.3 et 0.8.4 ne sont pas publiés :
 cette note reprend leur contenu.
 L'exe publié précédent reste la
@@ -65,7 +65,7 @@ Elle remplace la
 | 📈 | **Activité** | Menu « Confiance min. » pour les lignes sans identification humaine. Celles déjà identifiées restent. La relecture d'un `_Vu` ne change pas ([#12](https://github.com/kevin-guille/ChiroTool/issues/12)) |
 | ▶ | **Lot** | Une nuit déjà analysée sur le portail n'est plus listée WAV par WAV. Un Pass2 déjà écrit n'est pas réécrit Pass1. Le journal nomme les nuits ignorées. Un `Data_k` vide n'est plus un envoi réussi. Un jeton expiré arrête le lot. Une seule instance : la fenêtre de suivi ne bloque plus les autres nuits ([#14](https://github.com/kevin-guille/ChiroTool/issues/14), [#17](https://github.com/kevin-guille/ChiroTool/issues/17), [#18](https://github.com/kevin-guille/ChiroTool/issues/18)) |
 | 🌡 | **Métadonnées** | Heures, températures, vent et couverture sur chaque nuit. L'envoi groupé les transmet sans formulaire. Deux nuits déjà renseignées restent distinctes ([#15](https://github.com/kevin-guille/ChiroTool/issues/15)) |
-| 🗺️ | **Carte** | Un carré créé par quelqu'un d'autre apparaît s'il porte une de mes participations. Ces points restent cliquables dans les 5 km, en violet ([#19](https://github.com/kevin-guille/ChiroTool/issues/19)) |
+| 🗺️ | **Carte** | Un carré créé par quelqu'un d'autre apparaît s'il porte une de mes participations. Ces points restent cliquables dans les 5 km, en violet ([#19](https://github.com/kevin-guille/ChiroTool/issues/19)). Le fond OpenStreetMap s'identifie comme ChiroTool |
 | 🔄 | **Sync API** | Le compteur avance sur l'interface. Appliquer n'a plus à retélécharger toute la liste. Fermer la fenêtre arrête sans écrire |
 | 📊 | **Tableur** | Un enregistrement de validation réécrit un seul fichier, sans empiler `_AB` puis `_AB_AC` |
 | 📤 | **Export** | Une nuit pas encore envoyée, qui porte déjà un identifiant d'un autre compte, est créée sur le compte qui envoie |
